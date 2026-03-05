@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Pill capsule shadow -->
+    <path
+        android:fillColor="#00000020"
+        android:pathData="M26,36 C26,26 34,18 44,18 L44,18 C54,18 62,26 62,36 L62,72 C62,82 54,90 44,82 L44,82 C34,90 26,82 26,72 Z"
+        android:fillAlpha="0.1"/>
+
+    <!-- Pill capsule - blue/teal top part -->
+    <path
+        android:fillColor="#29B6F6"
+        android:pathData="M28,54 L28,38 C28,28 36,20 46,20 L46,20 C56,20 64,28 64,38 L64,54 Z" />
+
+    <!-- Pill blue gradient overlay -->
+    <path
+        android:fillColor="#4FC3F7"
+        android:pathData="M28,54 L28,45 C28,35 36,27 46,27 L46,27 C50,27 54,29 57,32 L57,54 Z"
+        android:fillAlpha="0.6" />
+
+    <!-- Pill capsule - white bottom part -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,54 L64,54 L64,70 C64,80 56,88 46,88 L46,88 C36,88 28,80 28,70 Z" />
+
+    <!-- Pill white shine -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M33,62 Q38,58 43,62 Q38,66 33,62 Z"
+        android:fillAlpha="0.7" />
+
+    <!-- Pill capsule shine highlight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,30 Q40,26 46,30 Q40,34 34,30 Z"
+        android:fillAlpha="0.5" />
+
+    <!-- Clock - white outer circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,58 m-24,0 a24,24 0,1 1,48 0 a24,24 0,1 1,-48 0" />
+
+    <!-- Clock - teal ring -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M68,58 m-20,0 a20,20 0,1 1,40 0 a20,20 0,1 1,-40 0" />
+
+    <!-- Clock - white inner face -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,58 m-16,0 a16,16 0,1 1,32 0 a16,16 0,1 1,-32 0" />
+
+    <!-- Clock tick - 12 o'clock -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M67,44 L69,44 L69,48 L67,48 Z" />
+
+    <!-- Clock tick - 3 o'clock -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M80,57 L80,59 L76,59 L76,57 Z" />
+
+    <!-- Clock tick - 6 o'clock -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M67,68 L69,68 L69,72 L67,72 Z" />
+
+    <!-- Clock tick - 9 o'clock -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M56,57 L56,59 L60,59 L60,57 Z" />
+
+    <!-- Clock hour hand pointing to ~10 -->
+    <path
+        android:fillColor="#37474F"
+        android:strokeColor="#37474F"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M68,58 L62,50" />
+
+    <!-- Clock minute hand pointing to ~2 -->
+    <path
+        android:fillColor="#37474F"
+        android:strokeColor="#37474F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M68,58 L76,52" />
+
+    <!-- Clock center dot -->
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M68,58 m-2.5,0 a2.5,2.5 0,1 1,5 0 a2.5,2.5 0,1 1,-5 0" />
+
+    <!-- Notification badge - orange circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M86,38 m-9,0 a9,9 0,1 1,18 0 a9,9 0,1 1,-18 0" />
+
+    <path
+        android:fillColor="#FFA726"
+        android:pathData="M86,38 m-7,0 a7,7 0,1 1,14 0 a7,7 0,1 1,-14 0" />
+
+    <!-- Number 1 on notification badge -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M85,33 L87,33 L87,43 L85,43 Z M84,33 L85,33 L85,35 L84,35 Z" />
+
+</vector>
+

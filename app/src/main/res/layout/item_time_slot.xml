@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/slotText"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:background="@drawable/bg_time_slot_available"
+    android:gravity="center"
+    android:minWidth="90dp"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="10dp"
+    android:fontFamily="sans-serif-medium"
+    android:textColor="@color/premium_primary"
+    android:textSize="14sp"
+    tools:text="09:00" />
+

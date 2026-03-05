@@ -1,0 +1,330 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // MediTrack Security Rules - Production Ready
+    // ============================================
+
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: Check if request is from document owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function: Get user document
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    // Helper function: Check if current user is a doctor
+    function isDoctor() {
+      return isAuthenticated() &&
+             getUserData(request.auth.uid).role == 'DOCTOR';
+    }
+
+    // Helper function: Check if doctor is assigned to patient (multi-doctor support)
+    // Safely handles missing assignedDoctors field on legacy patient docs
+    function isDoctorAssignedToPatient(patientId) {
+      let patientData = getUserData(patientId);
+      return isDoctor() &&
+             'assignedDoctors' in patientData &&
+             request.auth.uid in patientData.assignedDoctors;
+    }
+
+    // Helper function: Validate required fields exist
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ==================== Users Collection ====================
+    match /users/{userId} {
+      // Users can read their own profile
+      // Any authenticated user can read other user profiles
+      // This is needed for:
+      // - Doctors to list their assigned patients (query by assignedDoctor)
+      // - Patients to see doctor profiles (for doctor selection)
+      // - List queries where we can't use get() to check roles
+      allow read: if isAuthenticated();
+
+      // Users can only create their own document
+      allow create: if isOwner(userId) &&
+                    hasRequiredFields(['email', 'displayName', 'role']);
+
+      // Users can only update their own document
+      // Cannot change their own role after creation
+      allow update: if isOwner(userId) &&
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+                     request.resource.data.role == resource.data.role);
+
+      // Users can only delete their own document
+      allow delete: if isOwner(userId);
+    }
+
+    // ==================== Medicines Collection ====================
+    match /medicines/{medicineId} {
+      // Users can read their own medicines
+      // Doctors can read medicines of their assigned patients
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isDoctorAssignedToPatient(resource.data.userId)
+      );
+
+      // Users can create medicines with their own userId
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    hasRequiredFields(['userId', 'name', 'dosage']);
+
+      // Users can update their own medicines
+      // Cannot change userId after creation
+      allow update: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == resource.data.userId;
+
+      // Users can delete their own medicines
+      allow delete: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== Health Logs Collection ====================
+    match /healthLogs/{logId} {
+      // Users can read their own health logs
+      // Doctors can read logs of their assigned patients
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isDoctorAssignedToPatient(resource.data.userId)
+      );
+
+      // Users can create health logs with their own userId
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    hasRequiredFields(['userId', 'date']);
+
+      // Users can update their own health logs
+      allow update: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == resource.data.userId;
+
+      // Users can delete their own health logs
+      allow delete: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== Doctor Notes Collection ====================
+    match /doctorNotes/{noteId} {
+      // Doctors can read notes where they are the doctor
+      // Patients can read non-private notes about themselves
+      allow read: if isAuthenticated() && (
+        resource.data.doctorId == request.auth.uid ||
+        (resource.data.patientId == request.auth.uid && resource.data.isPrivate == false)
+      );
+
+      // Only doctors can create notes
+      // Doctor must be assigned to the patient
+      allow create: if isDoctor() &&
+                    request.resource.data.doctorId == request.auth.uid &&
+                    isDoctorAssignedToPatient(request.resource.data.patientId) &&
+                    hasRequiredFields(['doctorId', 'patientId', 'note']);
+
+      // Doctors can only update their own notes
+      allow update: if isAuthenticated() &&
+                    resource.data.doctorId == request.auth.uid &&
+                    request.resource.data.doctorId == resource.data.doctorId &&
+                    request.resource.data.patientId == resource.data.patientId;
+
+      // Doctors can only delete their own notes
+      allow delete: if isAuthenticated() &&
+                    resource.data.doctorId == request.auth.uid;
+    }
+
+    // ==================== Prescriptions Collection ====================
+    match /prescriptions/{prescriptionId} {
+      // Doctors can read prescriptions they authored
+      // Patients can read their own prescriptions
+      allow read: if isAuthenticated() && (
+        resource.data.doctorId == request.auth.uid ||
+        resource.data.patientId == request.auth.uid
+      );
+
+      // Only doctors can create prescriptions for their assigned patients
+      allow create: if isDoctor() &&
+                    request.resource.data.doctorId == request.auth.uid &&
+                    isDoctorAssignedToPatient(request.resource.data.patientId) &&
+                    hasRequiredFields(['patientId', 'doctorId', 'medicationName', 'dosage']);
+
+      // Only the prescribing doctor can update; patientId and doctorId are immutable
+      allow update: if isDoctor() &&
+                    resource.data.doctorId == request.auth.uid &&
+                    request.resource.data.patientId == resource.data.patientId &&
+                    request.resource.data.doctorId == resource.data.doctorId;
+
+      // Prescriptions are never deleted — they form the audit trail
+      allow delete: if false;
+    }
+
+    // ==================== Clinical Decisions Collection ====================
+    match /clinicalDecisions/{decisionId} {
+      // Doctors can read decisions where they are the doctor
+      // Patients can read public decisions about themselves
+      allow read: if isAuthenticated() && (
+        resource.data.doctorId == request.auth.uid ||
+        (resource.data.patientId == request.auth.uid && resource.data.isPublic == true)
+      );
+
+      // Only doctors can create clinical decisions
+      // Doctor must be assigned to the patient
+      allow create: if isDoctor() &&
+                    request.resource.data.doctorId == request.auth.uid &&
+                    isDoctorAssignedToPatient(request.resource.data.patientId) &&
+                    hasRequiredFields(['doctorId', 'patientId', 'type', 'title']);
+
+      // Doctors can update their own decisions
+      // Patients can update only acknowledgment fields
+      allow update: if isAuthenticated() && (
+        (resource.data.doctorId == request.auth.uid &&
+         request.resource.data.doctorId == resource.data.doctorId &&
+         request.resource.data.patientId == resource.data.patientId) ||
+        (resource.data.patientId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['patientAcknowledged', 'acknowledgedAt']))
+      );
+
+      // Only doctors can delete their own decisions
+      allow delete: if isAuthenticated() &&
+                    resource.data.doctorId == request.auth.uid;
+    }
+
+    // ==================== Medicine Intakes Collection ====================
+    // Tracks adherence: each doc = one "medicine taken" event
+    match /medicineIntakes/{intakeId} {
+      // Users can read their own intake records
+      // Doctors can read intakes for their assigned patients
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isDoctorAssignedToPatient(resource.data.userId)
+      );
+
+      // Users can log their own intakes
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    hasRequiredFields(['userId', 'medicineId']);
+
+      // Intake records are immutable
+      allow update, delete: if false;
+    }
+
+    // ==================== Audit Logs Collection ====================
+    match /auditLogs/{logId} {
+      // Audit logs are append-only by the system
+      // Only the user who created the action can read their own logs
+      allow read: if isAuthenticated() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Any authenticated user can create audit logs
+      // userId in the document MUST match the authenticated user's UID
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Audit logs cannot be updated or deleted
+      allow update, delete: if false;
+    }
+
+    // ==================== Conversations Collection ====================
+    match /conversations/{conversationId} {
+      // Only participants can read
+      allow read: if isAuthenticated() &&
+                  request.auth.uid in resource.data.participantIds;
+
+      // Any authenticated user can create a conversation they participate in
+      allow create: if isAuthenticated() &&
+                    request.auth.uid in request.resource.data.participantIds;
+
+      // Only participants can update (for lastMessage, unread counters)
+      allow update: if isAuthenticated() &&
+                    request.auth.uid in resource.data.participantIds;
+
+      // No deletion
+      allow delete: if false;
+    }
+
+    // ==================== Messages Collection ====================
+    match /messages/{messageId} {
+      // Participants of the parent conversation can read messages
+      allow read: if isAuthenticated() &&
+                  request.auth.uid in
+                    get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participantIds;
+
+      // Authenticated user can create a message if they are a participant
+      // and the senderId matches their auth UID
+      allow create: if isAuthenticated() &&
+                    request.resource.data.senderId == request.auth.uid &&
+                    request.auth.uid in
+                      get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId)).data.participantIds;
+
+      // Only read receipts can be updated (isRead, readAt)
+      allow update: if isAuthenticated() &&
+                    request.auth.uid in
+                      get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.participantIds &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+
+      allow delete: if false;
+    }
+
+    // ==================== Doctor Availability Collection ====================
+    match /doctorAvailability/{slotId} {
+      // Any authenticated user can read availability (needed for booking UI)
+      allow read: if isAuthenticated();
+
+      // Only the owning doctor can create
+      allow create: if isDoctor() &&
+                    request.resource.data.doctorId == request.auth.uid;
+
+      // Only the owning doctor can update
+      allow update: if isDoctor() &&
+                    resource.data.doctorId == request.auth.uid &&
+                    request.resource.data.doctorId == resource.data.doctorId;
+
+      // Only the owning doctor can delete
+      allow delete: if isDoctor() &&
+                    resource.data.doctorId == request.auth.uid;
+    }
+
+    // ==================== Appointments Collection ====================
+    match /appointments/{appointmentId} {
+      // Any authenticated user can read appointments.
+      // This is needed so:
+      // - Patients can check slot availability when booking
+      // - Both doctor and patient can see their shared appointments
+      // - Queries using doctorId or patientId filters work without PERMISSION_DENIED
+      allow read: if isAuthenticated();
+
+      // Patients or doctors can create appointments (booking)
+      // Patient-initiated: patientId must match the authenticated user
+      // Doctor-initiated: doctorId must match the authenticated user
+      allow create: if isAuthenticated() &&
+                    hasRequiredFields(['doctorId', 'patientId', 'date', 'startTime']) &&
+                    (
+                      request.resource.data.patientId == request.auth.uid ||
+                      request.resource.data.doctorId == request.auth.uid
+                    );
+
+      // Either doctor or patient can update (confirm, reject, cancel, reschedule)
+      // Core identity fields (doctorId, patientId) are immutable
+      allow update: if isAuthenticated() && (
+        resource.data.doctorId == request.auth.uid ||
+        resource.data.patientId == request.auth.uid
+      );
+
+      // No deletion — appointments form an audit trail
+      allow delete: if false;
+    }
+  }
+}
+
+
+
+

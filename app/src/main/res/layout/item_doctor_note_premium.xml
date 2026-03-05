@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/noteCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/premium_surface"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/premium_border_light"
+    app:strokeWidth="1dp"
+    app:rippleColor="@color/premium_ripple">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="18dp">
+
+        <!-- Category Icon Container -->
+        <FrameLayout
+            android:id="@+id/categoryIconContainer"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_premium_icon_circle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/categoryIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_notes"
+                app:tint="@color/premium_primary" />
+
+        </FrameLayout>
+
+        <!-- Category Badge -->
+        <LinearLayout
+            android:id="@+id/categoryContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_premium_badge"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="10dp"
+            app:layout_constraintStart_toEndOf="@id/categoryIconContainer"
+            app:layout_constraintTop_toTopOf="@id/categoryIconContainer">
+
+            <TextView
+                android:id="@+id/categoryText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/premium_primary_dark"
+                android:textSize="11sp"
+                tools:text="General" />
+
+        </LinearLayout>
+
+        <!-- Private Indicator Badge -->
+        <LinearLayout
+            android:id="@+id/privateContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_premium_badge"
+            android:backgroundTint="@color/premium_warning_surface"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/categoryContainer"
+            app:layout_constraintStart_toEndOf="@id/categoryContainer"
+            app:layout_constraintTop_toTopOf="@id/categoryContainer"
+            tools:visibility="visible">
+
+            <View
+                android:id="@+id/privateIndicator"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/bg_circle_primary"
+                android:backgroundTint="@color/premium_warning" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Private"
+                android:textColor="@color/premium_warning"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- Delete Button -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/deleteButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:cardBackgroundColor="@color/premium_surface_dim"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:rippleColor="@color/premium_ripple">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/premium_text_tertiary" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Note Text -->
+        <TextView
+            android:id="@+id/noteText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:fontFamily="sans-serif"
+            android:lineSpacingMultiplier="1.4"
+            android:textColor="@color/premium_text_primary"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/categoryIconContainer"
+            tools:text="Patient shows improvement in blood pressure readings. Continue current medication and schedule follow-up in 2 weeks." />
+
+        <!-- Date -->
+        <TextView
+            android:id="@+id/dateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="sans-serif"
+            android:textColor="@color/premium_text_tertiary"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/noteText"
+            tools:text="Jan 20, 2026 at 2:30 PM" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

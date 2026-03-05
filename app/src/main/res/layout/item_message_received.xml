@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingEnd="56dp"
+    android:paddingVertical="3dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="@drawable/bg_message_received"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp"
+        android:maxWidth="280dp">
+
+        <TextView
+            android:id="@+id/senderNameText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/premium_primary"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            tools:text="Dr. Sarah" />
+
+        <TextView
+            android:id="@+id/messageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="@color/premium_text_primary"
+            android:textSize="15sp"
+            android:lineSpacingMultiplier="1.2"
+            tools:text="Please remember to take your medication on time" />
+
+        <TextView
+            android:id="@+id/timeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/premium_text_tertiary"
+            android:textSize="11sp"
+            tools:text="10:28" />
+
+    </LinearLayout>
+
+</FrameLayout>
+

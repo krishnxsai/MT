@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="8dp"
+    app:strokeColor="@color/divider"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="100dp"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Blood Pressure Value Display -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Systolic -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_circle_indicator"
+                    android:backgroundTint="@color/medicine_blue" />
+
+                <TextView
+                    android:id="@+id/markerSystolic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/medicine_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="120" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SYS"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="9sp" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:text="/"
+                android:textColor="@color/text_secondary"
+                android:textSize="24sp" />
+
+            <!-- Diastolic -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_circle_indicator"
+                    android:backgroundTint="@color/medicine_teal" />
+
+                <TextView
+                    android:id="@+id/markerDiastolic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/medicine_teal"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="80" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="DIA"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="9sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Unit -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="4dp"
+            android:text="mmHg"
+            android:textColor="@color/text_secondary"
+            android:textSize="10sp" />
+
+        <!-- Date display -->
+        <TextView
+            android:id="@+id/markerDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/text_tertiary"
+            android:textSize="10sp"
+            android:visibility="gone"
+            tools:text="Feb 18, 2026" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
+

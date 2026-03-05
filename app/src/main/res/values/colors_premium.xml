@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================ -->
+    <!-- Premium Medical Design System Colors -->
+    <!-- Modern, Clean, Professional Healthcare -->
+    <!-- ============================================ -->
+
+    <!-- Premium Medical Green Palette -->
+    <color name="premium_primary">#0D9488</color>
+    <color name="premium_primary_dark">#0F766E</color>
+    <color name="premium_primary_light">#2DD4BF</color>
+    <color name="premium_primary_surface">#F0FDFA</color>
+    <color name="premium_primary_container">#CCFBF1</color>
+    <color name="premium_on_primary">#FFFFFF</color>
+
+    <!-- Premium Accent Colors -->
+    <color name="premium_accent">#14B8A6</color>
+    <color name="premium_accent_soft">#99F6E4</color>
+
+    <!-- Premium Surface Hierarchy -->
+    <color name="premium_background">#FAFBFC</color>
+    <color name="premium_surface">#FFFFFF</color>
+    <color name="premium_surface_elevated">#FFFFFF</color>
+    <color name="premium_surface_dim">#F1F5F9</color>
+    <color name="premium_surface_container">#F8FAFC</color>
+
+    <!-- Premium Text Hierarchy -->
+    <color name="premium_text_primary">#0F172A</color>
+    <color name="premium_text_secondary">#475569</color>
+    <color name="premium_text_tertiary">#94A3B8</color>
+    <color name="premium_text_disabled">#CBD5E1</color>
+
+    <!-- Premium Borders & Dividers -->
+    <color name="premium_border">#E2E8F0</color>
+    <color name="premium_border_light">#F1F5F9</color>
+    <color name="premium_divider">#E2E8F0</color>
+
+    <!-- Premium Shadow Colors -->
+    <color name="premium_shadow">#0F172A</color>
+    <color name="premium_shadow_soft">#1E293B</color>
+
+    <!-- Premium Status Colors -->
+    <color name="premium_success">#10B981</color>
+    <color name="premium_success_surface">#ECFDF5</color>
+    <color name="premium_success_container">#D1FAE5</color>
+
+    <color name="premium_warning">#F59E0B</color>
+    <color name="premium_warning_surface">#FFFBEB</color>
+    <color name="premium_warning_container">#FEF3C7</color>
+
+    <color name="premium_error">#EF4444</color>
+    <color name="premium_error_surface">#FEF2F2</color>
+    <color name="premium_error_container">#FEE2E2</color>
+
+    <color name="premium_info">#3B82F6</color>
+    <color name="premium_info_surface">#EFF6FF</color>
+    <color name="premium_info_container">#DBEAFE</color>
+
+    <!-- Premium Priority Colors -->
+    <color name="premium_priority_low">#22C55E</color>
+    <color name="premium_priority_low_bg">#F0FDF4</color>
+    <color name="premium_priority_normal">#3B82F6</color>
+    <color name="premium_priority_normal_bg">#EFF6FF</color>
+    <color name="premium_priority_high">#F97316</color>
+    <color name="premium_priority_high_bg">#FFF7ED</color>
+    <color name="premium_priority_critical">#EF4444</color>
+    <color name="premium_priority_critical_bg">#FEF2F2</color>
+
+    <!-- Premium Gradient Overlays -->
+    <color name="premium_gradient_start">#0D9488</color>
+    <color name="premium_gradient_end">#14B8A6</color>
+    <color name="premium_gradient_overlay_start">#00000000</color>
+    <color name="premium_gradient_overlay_end">#1A0F172A</color>
+
+    <!-- Premium Card Colors -->
+    <color name="premium_card_highlight">#F0FDFA</color>
+    <color name="premium_card_active">#CCFBF1</color>
+
+    <!-- Premium Tab Colors -->
+    <color name="premium_tab_active">#0D9488</color>
+    <color name="premium_tab_inactive">#94A3B8</color>
+    <color name="premium_tab_indicator">#0D9488</color>
+
+    <!-- Premium Input Colors -->
+    <color name="premium_input_background">#F8FAFC</color>
+    <color name="premium_input_stroke">#E2E8F0</color>
+    <color name="premium_input_focused">#0D9488</color>
+
+    <!-- Premium Chip Colors -->
+    <color name="premium_chip_selected">#0D9488</color>
+    <color name="premium_chip_selected_surface">#F0FDFA</color>
+    <color name="premium_chip_unselected">#F1F5F9</color>
+    <color name="premium_chip_text_selected">#0D9488</color>
+    <color name="premium_chip_text_unselected">#64748B</color>
+
+    <!-- Premium Avatar Colors -->
+    <color name="premium_avatar_bg">#F0FDFA</color>
+    <color name="premium_avatar_border">#99F6E4</color>
+
+    <!-- Premium Ripple -->
+    <color name="premium_ripple">#1A0D9488</color>
+</resources>
+
