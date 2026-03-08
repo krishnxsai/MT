@@ -22,7 +22,7 @@
             android:id="@+id/senderNameText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/premium_primary"
+            android:textColor="@color/primary"
             android:textSize="12sp"
             android:fontFamily="sans-serif-medium"
             tools:text="Dr. Sarah" />
@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:textColor="@color/premium_text_primary"
+            android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:lineSpacingMultiplier="1.2"
             tools:text="Please remember to take your medication on time" />
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="4dp"
-            android:textColor="@color/premium_text_tertiary"
+            android:textColor="@color/text_tertiary"
             android:textSize="11sp"
             tools:text="10:28" />
 

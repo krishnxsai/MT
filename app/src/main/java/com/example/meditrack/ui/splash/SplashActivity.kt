@@ -8,9 +8,11 @@ import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import com.example.meditrack.data.model.UserRole
 import com.example.meditrack.databinding.ActivitySplashBinding
+import com.example.meditrack.ui.admin.AdminDashboardActivity
 import com.example.meditrack.ui.auth.LoginActivity
 import com.example.meditrack.ui.doctor.DoctorDashboardActivity
 import com.example.meditrack.ui.main.HomeDashboardActivity
+import com.example.meditrack.ui.pharmacy.PharmacyDashboardActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -50,10 +52,11 @@ class SplashActivity : AppCompatActivity() {
                     }
 
                     val role = userDoc.getString("role")
-                    val intent = if (role == UserRole.DOCTOR.name) {
-                        Intent(this@SplashActivity, DoctorDashboardActivity::class.java)
-                    } else {
-                        Intent(this@SplashActivity, HomeDashboardActivity::class.java)
+                    val intent = when (role) {
+                        UserRole.DOCTOR.name -> Intent(this@SplashActivity, DoctorDashboardActivity::class.java)
+                        UserRole.ADMIN.name -> Intent(this@SplashActivity, AdminDashboardActivity::class.java)
+                        UserRole.PHARMACY.name -> Intent(this@SplashActivity, PharmacyDashboardActivity::class.java)
+                        else -> Intent(this@SplashActivity, HomeDashboardActivity::class.java)
                     }
                     startActivity(intent)
                     finish()

@@ -79,6 +79,8 @@ class MainActivity : AppCompatActivity() {
         binding.profileRoleText.text = when (user.role) {
             UserRole.PATIENT -> getString(R.string.patient)
             UserRole.DOCTOR -> getString(R.string.doctor)
+            UserRole.ADMIN -> getString(R.string.admin)
+            UserRole.PHARMACY -> getString(R.string.pharmacy_store)
         }
 
         if (user.profileImageUrl.isNotEmpty()) {

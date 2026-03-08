@@ -57,7 +57,8 @@ class AppointmentBookingActivity : AppCompatActivity() {
             return
         }
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        try { binding.toolbar.setNavigationOnClickListener { finish() } } catch (_: Exception) {}
+        try { binding.backBtn?.setOnClickListener { finish() } } catch (_: Exception) {}
         if (rescheduleId.isNotEmpty()) {
             binding.doctorNameText.text = if (isDoctorBooking) "Rescheduling for $patientName" else "Reschedule with Dr. $doctorName"
         } else if (isDoctorBooking) {
@@ -189,6 +190,16 @@ class AppointmentBookingActivity : AppCompatActivity() {
                     binding.bookButton.text = if (rescheduleId.isNotEmpty()) "Rescheduling…" else "Booking…"
                 }
                 is Resource.Success -> {
+                    // Schedule a reminder notification 30 min before the appointment
+                    val appt = result.data
+                    if (rescheduleId.isNotEmpty()) {
+                        // Cancel old reminder for the rescheduled appointment
+                        com.example.meditrack.alarm.AppointmentAlarmScheduler(this)
+                            .cancelReminder(rescheduleId)
+                    }
+                    com.example.meditrack.alarm.AppointmentAlarmScheduler(this)
+                        .scheduleReminder(appt)
+
                     val msg = if (rescheduleId.isNotEmpty()) "Appointment rescheduled successfully!" else "Appointment booked successfully!"
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                     finish()

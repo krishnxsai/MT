@@ -25,15 +25,61 @@ class HealthLogListActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupToolbar()
+        setupBottomNavigation()
         setupRecyclerView()
         setupClickListeners()
         observeViewModel()
     }
 
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            finish()
+    override fun onResume() {
+        super.onResume()
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_health_logs
+        setupBottomNavigation()
+    }
+
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_health_logs
+        binding.bottomNavigation?.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.main.HomeDashboardActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_medicines -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.medicine.MedicinesListActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_health_logs -> true // Already here
+                R.id.nav_doctor -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.recommendations.DoctorRecommendationsActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_profile -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.profile.ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                else -> false
+            }
         }
+    }
+
+    private fun setupToolbar() {
+        try {
+            binding.toolbar.setNavigationOnClickListener { finish() }
+        } catch (_: Exception) {}
+        try {
+            binding.backButton?.setOnClickListener { finish() }
+        } catch (_: Exception) {}
     }
 
     private fun setupRecyclerView() {

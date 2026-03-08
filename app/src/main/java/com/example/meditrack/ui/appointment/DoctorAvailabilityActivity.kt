@@ -34,7 +34,8 @@ class DoctorAvailabilityActivity : AppCompatActivity() {
         binding = ActivityDoctorAvailabilityBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        try { binding.toolbar.setNavigationOnClickListener { finish() } } catch (_: Exception) {}
+        try { binding.backBtn?.setOnClickListener { finish() } } catch (_: Exception) {}
 
         setupForm()
         setupRecyclerView()

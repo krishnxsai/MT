@@ -18,8 +18,10 @@ import com.example.meditrack.R
 import com.example.meditrack.data.model.Resource
 import com.example.meditrack.data.model.UserRole
 import com.example.meditrack.databinding.ActivityLoginBinding
+import com.example.meditrack.ui.admin.AdminDashboardActivity
 import com.example.meditrack.ui.doctor.DoctorDashboardActivity
 import com.example.meditrack.ui.main.HomeDashboardActivity
+import com.example.meditrack.ui.pharmacy.PharmacyDashboardActivity
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -187,6 +189,8 @@ class LoginActivity : AppCompatActivity() {
     private fun navigateBasedOnRole(role: UserRole) {
         val intent = when (role) {
             UserRole.DOCTOR -> Intent(this, DoctorDashboardActivity::class.java)
+            UserRole.ADMIN -> Intent(this, AdminDashboardActivity::class.java)
+            UserRole.PHARMACY -> Intent(this, PharmacyDashboardActivity::class.java)
             UserRole.PATIENT -> Intent(this, HomeDashboardActivity::class.java)
         }
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

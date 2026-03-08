@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.example.meditrack.data.model.Appointment
+import com.example.meditrack.data.model.AppointmentStatus
 import com.example.meditrack.data.model.Medicine
 import com.example.meditrack.data.model.RepeatType
 import com.google.firebase.auth.FirebaseAuth
@@ -94,11 +96,58 @@ class BootReceiver : BroadcastReceiver() {
                 }
 
                 Log.d(TAG, "Rescheduled alarms for $scheduledCount medicines")
+
+                // ── Reschedule appointment reminders ──
+                rescheduleAppointmentReminders(context, firestore, userId)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to reschedule alarms: ${e.message}")
             } finally {
                 pendingResult.finish()
             }
+        }
+    }
+
+    private suspend fun rescheduleAppointmentReminders(
+        context: Context,
+        firestore: FirebaseFirestore,
+        userId: String
+    ) {
+        try {
+            val scheduler = AppointmentAlarmScheduler(context)
+            val now = java.util.Date()
+
+            // Check as patient
+            val patientSnap = firestore.collection("appointments")
+                .whereEqualTo("patientId", userId)
+                .whereGreaterThanOrEqualTo("date", now)
+                .get().await()
+
+            // Check as doctor
+            val doctorSnap = firestore.collection("appointments")
+                .whereEqualTo("doctorId", userId)
+                .whereGreaterThanOrEqualTo("date", now)
+                .get().await()
+
+            val allDocs = (patientSnap.documents + doctorSnap.documents).distinctBy { it.id }
+            var count = 0
+
+            for (doc in allDocs) {
+                try {
+                    val data = doc.data ?: continue
+                    val appointment = Appointment.fromMap(doc.id, data)
+                    if (appointment.status == AppointmentStatus.PENDING ||
+                        appointment.status == AppointmentStatus.CONFIRMED
+                    ) {
+                        scheduler.scheduleReminder(appointment)
+                        count++
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to reschedule appt reminder for ${doc.id}: ${e.message}")
+                }
+            }
+            Log.d(TAG, "Rescheduled reminders for $count upcoming appointments")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reschedule appointment reminders: ${e.message}")
         }
     }
 }

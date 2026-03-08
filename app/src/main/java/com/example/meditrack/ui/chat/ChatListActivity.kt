@@ -31,7 +31,8 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        try { binding.toolbar.setNavigationOnClickListener { finish() } } catch (_: Exception) {}
+        try { binding.backBtn?.setOnClickListener { finish() } } catch (_: Exception) {}
     }
 
     private fun setupRecyclerView() {

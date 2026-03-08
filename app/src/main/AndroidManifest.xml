@@ -106,9 +106,24 @@
             android:name=".ui.insights.HealthInsightsActivity"
             android:exported="false" />
 
+        <!-- Risk Dashboard Activity -->
+        <activity
+            android:name=".ui.insights.RiskDashboardActivity"
+            android:exported="false" />
+
         <!-- Doctor Activities -->
         <activity
             android:name=".ui.doctor.DoctorDashboardActivity"
+            android:exported="false" />
+
+        <!-- Admin Dashboard -->
+        <activity
+            android:name=".ui.admin.AdminDashboardActivity"
+            android:exported="false" />
+
+        <!-- Pharmacy Dashboard -->
+        <activity
+            android:name=".ui.pharmacy.PharmacyDashboardActivity"
             android:exported="false" />
 
         <activity
@@ -146,6 +161,16 @@
 
         <activity
             android:name=".ui.appointment.DoctorAvailabilityActivity"
+            android:exported="false" />
+
+        <!-- Refill Orders Activity -->
+        <activity
+            android:name=".ui.order.RefillOrdersActivity"
+            android:exported="false" />
+
+        <!-- Pharmacy List Activity -->
+        <activity
+            android:name=".ui.order.PharmacyListActivity"
             android:exported="false" />
 
         <!-- Full-Screen Alarm Activity -->

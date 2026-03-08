@@ -9,6 +9,8 @@
     app:cardBackgroundColor="@color/card_background"
     app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
+    app:strokeColor="@color/outline_light"
+    app:strokeWidth="1dp"
     app:rippleColor="@color/ripple_primary">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -21,31 +23,26 @@
             android:id="@+id/colorStrip"
             android:layout_width="4dp"
             android:layout_height="0dp"
-            android:layout_marginVertical="4dp"
+            android:layout_marginVertical="2dp"
             android:background="@drawable/bg_rounded_4dp"
             android:backgroundTint="@color/primary"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Medicine Icon Container -->
+        <!-- Hidden icon container (kept for binding) -->
         <FrameLayout
             android:id="@+id/iconContainer"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="14dp"
-            android:background="@drawable/bg_icon_container"
-            android:backgroundTint="@color/primary_container"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/colorStrip"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                 android:id="@+id/medicineIcon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:layout_gravity="center"
-                android:contentDescription="@string/cd_medicine_color"
                 android:src="@drawable/ic_pill"
                 app:tint="@color/primary" />
 
@@ -56,12 +53,12 @@
             android:id="@+id/infoSection"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="16dp"
             android:layout_marginEnd="12dp"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/rightSection"
-            app:layout_constraintStart_toEndOf="@id/iconContainer"
+            app:layout_constraintStart_toEndOf="@id/colorStrip"
             app:layout_constraintTop_toTopOf="parent">
 
             <!-- Medicine Name -->
@@ -72,89 +69,128 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:fontFamily="sans-serif-medium"
-                tools:text="Metformin" />
+                android:textSize="17sp"
+                android:fontFamily="sans-serif-bold"
+                tools:text="Aspirin" />
 
             <!-- Dosage -->
             <TextView
                 android:id="@+id/dosageText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                tools:text="500mg" />
+
+            <!-- Frequency -->
+            <TextView
+                android:id="@+id/frequencyText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp"
-                tools:text="500mg • 1 tablet" />
+                tools:text="Twice daily" />
 
-            <!-- Time Row -->
-            <LinearLayout
+            <!-- Next Due Time -->
+            <TextView
+                android:id="@+id/reminderTime"
                 android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/primary"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                tools:text="Next due: 2:00 PM Today" />
+
+            <!-- Stock Level Indicator -->
+            <LinearLayout
+                android:id="@+id/stockContainer"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:visibility="gone">
 
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:contentDescription="@string/cd_reminder_time"
-                    android:src="@drawable/ic_clock"
-                    app:tint="@color/text_tertiary" />
+                <ProgressBar
+                    android:id="@+id/stockProgressBar"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="6dp"
+                    android:layout_weight="1"
+                    android:max="100"
+                    android:progress="70"
+                    android:progressDrawable="@drawable/bg_stock_progress" />
 
                 <TextView
-                    android:id="@+id/reminderTime"
+                    android:id="@+id/stockText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
+                    android:layout_marginStart="8dp"
                     android:textColor="@color/text_tertiary"
-                    android:textSize="13sp"
-                    tools:text="8:00 AM, 2:00 PM" />
+                    android:textSize="11sp"
+                    tools:text="12 left" />
 
             </LinearLayout>
 
+            <!-- Low Stock Warning -->
+            <TextView
+                android:id="@+id/lowStockWarning"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:drawablePadding="4dp"
+                android:textColor="@color/warning"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:text="⚠ Low stock — refill soon"
+                android:visibility="gone" />
+
         </LinearLayout>
 
-        <!-- Right Section: Status Toggle -->
+        <!-- Right Section: Status Badge -->
         <LinearLayout
             android:id="@+id/rightSection"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!-- Status Badge (Pending / Taken) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/toggleContainer"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
                 app:cardBackgroundColor="@color/status_active_bg"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:strokeColor="@color/status_active"
+                app:strokeWidth="1dp">
 
-                <ImageView
-                    android:id="@+id/toggleIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:contentDescription="@string/cd_toggle_medicine"
-                    android:src="@drawable/ic_check"
-                    app:tint="@color/status_active" />
+                    android:paddingHorizontal="12dp"
+                    android:textColor="@color/status_active"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="Taken" />
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Status Label -->
-            <TextView
-                android:id="@+id/statusText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="@color/status_active"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                tools:text="Active" />
+            <!-- Hidden toggle icon (kept for binding) -->
+            <ImageView
+                android:id="@+id/toggleIcon"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:src="@drawable/ic_check" />
 
         </LinearLayout>
 

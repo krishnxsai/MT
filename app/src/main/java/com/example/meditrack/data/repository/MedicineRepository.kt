@@ -160,5 +160,28 @@ class MedicineRepository {
             Resource.Error(e.message ?: "Failed to update alarm IDs", e)
         }
     }
+
+    /**
+     * Get all active medicines with low stock for the current user.
+     */
+    suspend fun getLowStockMedicines(): Resource<List<Medicine>> = withContext(Dispatchers.IO) {
+        try {
+            val userId = currentUserId ?: return@withContext Resource.Error("User not logged in")
+
+            val snapshot = medicinesCollection
+                .whereEqualTo("userId", userId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            val lowStock = snapshot.documents
+                .mapNotNull { it.toObject(Medicine::class.java) }
+                .filter { it.isActive && it.isLowStock }
+
+            Resource.Success(lowStock)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to check low stock", e)
+        }
+    }
 }
 

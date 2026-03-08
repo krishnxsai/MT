@@ -1,5 +1,6 @@
 package com.example.meditrack.ui.recommendations
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -32,6 +33,7 @@ class DoctorRecommendationsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupToolbar()
+        setupBottomNavigation()
         setupTabs()
         setupRecyclerView()
         setupSwipeRefresh()
@@ -41,8 +43,51 @@ class DoctorRecommendationsActivity : AppCompatActivity() {
         viewModel.refreshAll()
     }
 
+    override fun onResume() {
+        super.onResume()
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_doctor
+        setupBottomNavigation()
+    }
+
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_doctor
+        binding.bottomNavigation?.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.main.HomeDashboardActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_medicines -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.medicine.MedicinesListActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_health_logs -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.healthlog.HealthLogListActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_doctor -> true // Already here
+                R.id.nav_profile -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.profile.ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
     private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        try { binding.toolbar.setNavigationOnClickListener { finish() } } catch (_: Exception) {}
+        try { binding.backBtn?.setOnClickListener { finish() } } catch (_: Exception) {}
     }
 
     private fun setupTabs() {

@@ -4,20 +4,47 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
+    <!-- Modern Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/backBtn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="Manage Availability"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:fontFamily="sans-serif-bold" />
+
+    </LinearLayout>
+
+    <!-- Hidden toolbar for binding compat -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/premium_surface"
-        app:title="Manage Availability"
-        app:titleTextColor="@color/premium_text_primary"
-        app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/premium_text_primary"
-        app:elevation="1dp" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -40,9 +67,9 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardCornerRadius="16dp"
+                    app:cardCornerRadius="18dp"
                     app:cardElevation="0dp"
-                    app:cardBackgroundColor="@color/premium_primary_surface">
+                    app:cardBackgroundColor="@color/primary_container">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -55,8 +82,8 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_calendar"
-                            app:tint="@color/premium_primary"
-                            android:contentDescription="Info" />
+                            app:tint="@color/primary"
+                            android:contentDescription="@null" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -64,7 +91,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Set your recurring weekly availability. Patients will be able to book slots during these hours."
-                            android:textColor="@color/premium_primary_dark"
+                            android:textColor="@color/primary"
                             android:textSize="13sp"
                             android:lineSpacingMultiplier="1.3" />
 
@@ -77,9 +104,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="sans-serif-bold"
                     android:text="Your Availability Slots"
-                    android:textColor="@color/premium_text_primary"
+                    android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -103,7 +130,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="No availability set"
-                        android:textColor="@color/premium_text_tertiary"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="14sp" />
 
                     <TextView
@@ -111,7 +138,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Tap + to add your first slot"
-                        android:textColor="@color/premium_text_tertiary"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="13sp" />
 
                 </LinearLayout>
@@ -121,16 +148,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="24dp"
-                    android:background="@color/premium_border_light" />
+                    android:background="@color/outline_light" />
 
                 <!-- Add new slot form -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="sans-serif-bold"
                     android:text="Add New Slot"
-                    android:textColor="@color/premium_text_primary"
+                    android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
                 <!-- Day of week -->
@@ -139,7 +166,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="Day of Week"
-                    android:textColor="@color/premium_text_secondary"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -149,9 +176,9 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="6dp"
                     android:text="Select day"
-                    android:textColor="@color/premium_text_secondary"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/premium_border" />
+                    android:textColor="@color/text_secondary"
+                    app:cornerRadius="14dp"
+                    app:strokeColor="@color/outline_light" />
 
                 <!-- Time range -->
                 <LinearLayout
@@ -171,7 +198,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Start Time"
-                            android:textColor="@color/premium_text_secondary"
+                            android:textColor="@color/text_secondary"
                             android:textSize="14sp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -181,11 +208,11 @@
                             android:layout_height="48dp"
                             android:layout_marginTop="6dp"
                             android:text="09:00"
-                            android:textColor="@color/premium_text_secondary"
-                            app:cornerRadius="12dp"
+                            android:textColor="@color/text_secondary"
+                            app:cornerRadius="14dp"
                             app:icon="@drawable/ic_clock"
-                            app:iconTint="@color/premium_primary"
-                            app:strokeColor="@color/premium_border" />
+                            app:iconTint="@color/primary"
+                            app:strokeColor="@color/outline_light" />
 
                     </LinearLayout>
 
@@ -200,7 +227,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="End Time"
-                            android:textColor="@color/premium_text_secondary"
+                            android:textColor="@color/text_secondary"
                             android:textSize="14sp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -210,11 +237,11 @@
                             android:layout_height="48dp"
                             android:layout_marginTop="6dp"
                             android:text="17:00"
-                            android:textColor="@color/premium_text_secondary"
-                            app:cornerRadius="12dp"
+                            android:textColor="@color/text_secondary"
+                            app:cornerRadius="14dp"
                             app:icon="@drawable/ic_clock"
-                            app:iconTint="@color/premium_primary"
-                            app:strokeColor="@color/premium_border" />
+                            app:iconTint="@color/primary"
+                            app:strokeColor="@color/outline_light" />
 
                     </LinearLayout>
 
@@ -226,7 +253,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="Slot Duration"
-                    android:textColor="@color/premium_text_secondary"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <com.google.android.material.chip.ChipGroup
@@ -265,14 +292,16 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/saveSlotButton"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="56dp"
                     android:layout_marginTop="24dp"
                     android:layout_marginBottom="32dp"
                     android:text="Add Availability Slot"
-                    android:textSize="15sp"
-                    app:backgroundTint="@color/premium_primary"
-                    app:cornerRadius="14dp"
-                    app:icon="@android:drawable/ic_input_add"
+                    android:textSize="16sp"
+                    android:textAllCaps="false"
+                    android:fontFamily="sans-serif-medium"
+                    app:backgroundTint="@color/primary"
+                    app:cornerRadius="16dp"
+                    app:icon="@drawable/ic_add"
                     app:iconGravity="textStart"
                     app:iconTint="@color/white" />
 
@@ -286,10 +315,9 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/premium_primary"
+            android:indeterminateTint="@color/primary"
             android:visibility="gone" />
 
     </FrameLayout>
 
 </LinearLayout>
-

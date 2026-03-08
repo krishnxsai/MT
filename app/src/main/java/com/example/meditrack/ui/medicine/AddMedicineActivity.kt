@@ -284,7 +284,15 @@ class AddMedicineActivity : AppCompatActivity() {
             repeatType = selectedRepeatType,
             color = selectedColor,
             isActive = existingMedicine?.isActive ?: true,
-            alarmIds = existingMedicine?.alarmIds ?: emptyList()
+            alarmIds = existingMedicine?.alarmIds ?: emptyList(),
+            prescriptionId = existingMedicine?.prescriptionId ?: "",
+            prescribedByDoctor = existingMedicine?.prescribedByDoctor ?: false,
+            // Preserve refill tracking fields
+            currentQuantity = existingMedicine?.currentQuantity ?: -1,
+            totalQuantity = existingMedicine?.totalQuantity ?: -1,
+            lowStockThreshold = existingMedicine?.lowStockThreshold ?: 5,
+            refillReminderEnabled = existingMedicine?.refillReminderEnabled ?: false,
+            lastRefillDate = existingMedicine?.lastRefillDate
         )
 
         if (editingMedicineId != null) {

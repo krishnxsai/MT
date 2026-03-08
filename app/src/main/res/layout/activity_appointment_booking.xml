@@ -4,20 +4,47 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
+    <!-- Modern Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/backBtn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="Book Appointment"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:fontFamily="sans-serif-bold" />
+
+    </LinearLayout>
+
+    <!-- Hidden toolbar for binding compat -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/premium_surface"
-        app:title="Book Appointment"
-        app:titleTextColor="@color/premium_text_primary"
-        app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/premium_text_primary"
-        app:elevation="1dp" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -36,11 +63,11 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="@color/premium_border_light"
-                app:cardBackgroundColor="@color/premium_surface">
+                app:strokeColor="@color/outline_light"
+                app:cardBackgroundColor="@color/surface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -54,15 +81,15 @@
                         android:layout_height="48dp"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/premium_primary_surface">
+                        app:cardBackgroundColor="@color/primary_container">
 
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_person"
-                            app:tint="@color/premium_primary"
-                            android:contentDescription="Doctor" />
+                            app:tint="@color/primary"
+                            android:contentDescription="@null" />
 
                     </com.google.android.material.card.MaterialCardView>
 
@@ -76,8 +103,8 @@
                             android:id="@+id/doctorNameText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/premium_text_primary"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             tools:text="Dr. Sarah Johnson" />
 
@@ -86,7 +113,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Select a date and time below"
-                            android:textColor="@color/premium_text_tertiary"
+                            android:textColor="@color/text_tertiary"
                             android:textSize="13sp" />
 
                     </LinearLayout>
@@ -102,7 +129,7 @@
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Select Date"
-                android:textColor="@color/premium_text_primary"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -112,12 +139,12 @@
                 android:layout_height="52dp"
                 android:layout_marginTop="8dp"
                 android:text="Choose a date"
-                android:textColor="@color/premium_text_secondary"
+                android:textColor="@color/text_secondary"
                 android:textSize="15sp"
                 app:cornerRadius="14dp"
                 app:icon="@drawable/ic_calendar"
-                app:iconTint="@color/premium_primary"
-                app:strokeColor="@color/premium_border" />
+                app:iconTint="@color/primary"
+                app:strokeColor="@color/outline_light" />
 
             <!-- Appointment type -->
             <TextView
@@ -126,7 +153,7 @@
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Appointment Type"
-                android:textColor="@color/premium_text_primary"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <com.google.android.material.chip.ChipGroup
@@ -168,7 +195,7 @@
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Available Time Slots"
-                android:textColor="@color/premium_text_primary"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <TextView
@@ -178,7 +205,7 @@
                 android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:text="Select a date to see available slots"
-                android:textColor="@color/premium_text_tertiary"
+                android:textColor="@color/text_tertiary"
                 android:textSize="14sp"
                 android:padding="24dp" />
 
@@ -197,7 +224,7 @@
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Notes (optional)"
-                android:textColor="@color/premium_text_primary"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -208,7 +235,7 @@
                 app:boxCornerRadiusTopEnd="14dp"
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusBottomEnd="14dp"
-                app:boxStrokeColor="@color/premium_primary"
+                app:boxStrokeColor="@color/primary"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -234,14 +261,15 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bookButton"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="56dp"
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="16dp"
         android:text="Book Appointment"
         android:textSize="16sp"
+        android:textAllCaps="false"
+        android:fontFamily="sans-serif-medium"
         android:enabled="false"
-        app:backgroundTint="@color/premium_primary"
-        app:cornerRadius="14dp" />
+        app:backgroundTint="@color/primary"
+        app:cornerRadius="16dp" />
 
 </LinearLayout>
-

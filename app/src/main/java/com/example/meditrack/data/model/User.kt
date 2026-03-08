@@ -82,6 +82,8 @@ data class User(
 
 enum class UserRole {
     PATIENT,
-    DOCTOR
+    DOCTOR,
+    ADMIN,
+    PHARMACY
 }
 

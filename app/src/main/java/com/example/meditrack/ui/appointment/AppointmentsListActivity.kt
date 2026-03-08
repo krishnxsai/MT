@@ -47,7 +47,8 @@ class AppointmentsListActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        try { binding.toolbar.setNavigationOnClickListener { finish() } } catch (_: Exception) {}
+        try { binding.backBtn?.setOnClickListener { finish() } } catch (_: Exception) {}
     }
 
     private fun observeProfile() {
@@ -106,9 +107,15 @@ class AppointmentsListActivity : AppCompatActivity() {
             isDoctor = isDoctor,
             onConfirm = { appt ->
                 viewModel.confirmAppointment(appt.id)
+                // Schedule reminder for confirmed appointment
+                com.example.meditrack.alarm.AppointmentAlarmScheduler(this)
+                    .scheduleReminder(appt)
             },
             onReject = { appt ->
                 viewModel.rejectAppointment(appt.id)
+                // Cancel any pending reminder
+                com.example.meditrack.alarm.AppointmentAlarmScheduler(this)
+                    .cancelReminder(appt.id)
             },
             onCancel = { appt ->
                 android.app.AlertDialog.Builder(this)
@@ -116,6 +123,9 @@ class AppointmentsListActivity : AppCompatActivity() {
                     .setMessage("Are you sure you want to cancel this appointment?")
                     .setPositiveButton("Cancel Appointment") { _, _ ->
                         viewModel.cancelAppointment(appt.id, "Cancelled by ${if (isDoctor) "doctor" else "patient"}")
+                        // Cancel the reminder
+                        com.example.meditrack.alarm.AppointmentAlarmScheduler(this)
+                            .cancelReminder(appt.id)
                     }
                     .setNegativeButton("Keep", null)
                     .show()

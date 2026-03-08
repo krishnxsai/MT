@@ -1,5 +1,6 @@
 package com.example.meditrack.data.model
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
@@ -26,12 +27,43 @@ data class Medicine(
     @get:PropertyName("prescribedByDoctor") @set:PropertyName("prescribedByDoctor")
     var prescribedByDoctor: Boolean = false,
 
+    // ── Refill tracking fields ──────────────────────────────────
+    /** Current pills/units remaining. -1 means not tracked. */
+    val currentQuantity: Int = -1,
+    /** Total quantity per refill (e.g., 30 tablets). -1 means not set. */
+    val totalQuantity: Int = -1,
+    /** Alert when quantity falls below this. Default 5. */
+    val lowStockThreshold: Int = 5,
+    /** Whether the user wants low-stock reminders. */
+    @get:PropertyName("refillReminderEnabled") @set:PropertyName("refillReminderEnabled")
+    var refillReminderEnabled: Boolean = false,
+    /** Date of the most recent refill. */
+    val lastRefillDate: Date? = null,
+
     @ServerTimestamp
     val createdAt: Date? = null,
     @ServerTimestamp
     val updatedAt: Date? = null
 ) {
     constructor() : this(id = "")
+
+    /** True if refill tracking is enabled (quantity is set). */
+    val isRefillTrackingEnabled: Boolean
+        get() = currentQuantity >= 0
+
+    /** True if current stock is at or below the low-stock threshold. */
+    val isLowStock: Boolean
+        get() = isRefillTrackingEnabled && currentQuantity <= lowStockThreshold
+
+    /** True if completely out of stock. */
+    val isOutOfStock: Boolean
+        get() = isRefillTrackingEnabled && currentQuantity == 0
+
+    /** Percentage of stock remaining (0..100). Returns -1 if not tracked. */
+    val stockPercentage: Int
+        get() = if (totalQuantity > 0 && currentQuantity >= 0)
+            ((currentQuantity.toFloat() / totalQuantity) * 100).toInt().coerceIn(0, 100)
+        else -1
 
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -47,6 +79,11 @@ data class Medicine(
             "alarmIds" to alarmIds,
             "prescriptionId" to prescriptionId,
             "prescribedByDoctor" to prescribedByDoctor,
+            "currentQuantity" to currentQuantity,
+            "totalQuantity" to totalQuantity,
+            "lowStockThreshold" to lowStockThreshold,
+            "refillReminderEnabled" to refillReminderEnabled,
+            "lastRefillDate" to lastRefillDate,
             "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
     }
@@ -72,8 +109,13 @@ data class Medicine(
                 alarmIds = (map["alarmIds"] as? List<*>)?.filterIsInstance<Number>()?.map { it.toInt() } ?: emptyList(),
                 prescriptionId = map["prescriptionId"] as? String ?: "",
                 prescribedByDoctor = map["prescribedByDoctor"] as? Boolean ?: false,
-                createdAt = map["createdAt"] as? Date,
-                updatedAt = map["updatedAt"] as? Date
+                currentQuantity = (map["currentQuantity"] as? Number)?.toInt() ?: -1,
+                totalQuantity = (map["totalQuantity"] as? Number)?.toInt() ?: -1,
+                lowStockThreshold = (map["lowStockThreshold"] as? Number)?.toInt() ?: 5,
+                refillReminderEnabled = map["refillReminderEnabled"] as? Boolean ?: false,
+                lastRefillDate = (map["lastRefillDate"] as? Timestamp)?.toDate(),
+                createdAt = (map["createdAt"] as? Timestamp)?.toDate() ?: map["createdAt"] as? Date,
+                updatedAt = (map["updatedAt"] as? Timestamp)?.toDate() ?: map["updatedAt"] as? Date
             )
         }
     }
@@ -84,4 +126,3 @@ enum class RepeatType {
     WEEKLY,
     AS_NEEDED
 }
-

@@ -99,6 +99,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     /**
      * Log that medicine was taken to Firestore for adherence tracking.
+     * Also decrements the stock count if refill tracking is enabled.
      */
     private fun logMedicineTaken(context: Context, medicineId: String) {
         if (medicineId.isEmpty()) return
@@ -122,6 +123,23 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 .addOnFailureListener { e ->
                     Log.e(TAG, "Failed to log intake: ${e.message}")
                 }
+
+            // Decrement stock if refill tracking is enabled
+            val medRef = firestore.collection("medicines").document(medicineId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(medRef)
+                val current = (snapshot.getLong("currentQuantity") ?: -1)
+                if (current > 0) {
+                    transaction.update(medRef, mapOf(
+                        "currentQuantity" to (current - 1).coerceAtLeast(0),
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    ))
+                }
+            }.addOnSuccessListener {
+                Log.d(TAG, "Stock decremented for: $medicineId")
+            }.addOnFailureListener { e ->
+                Log.e(TAG, "Failed to decrement stock: ${e.message}")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error logging medicine intake: ${e.message}")
         }

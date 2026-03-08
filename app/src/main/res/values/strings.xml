@@ -23,6 +23,8 @@
     <string name="i_am_a">I am a:</string>
     <string name="patient">Patient</string>
     <string name="doctor">Doctor</string>
+    <string name="admin">Admin</string>
+    <string name="pharmacy_store">Pharmacy Store</string>
     <string name="back">Back</string>
 
     <!-- Forgot Password -->
@@ -221,4 +223,109 @@
     <string name="alarm_permission_required">Alarm permission is required for medicine reminders</string>
     <string name="notification_permission_required">Notification permission required for reminders</string>
     <string name="grant_permission">Grant Permission</string>
+
+    <!-- Dashboard UI -->
+    <string name="health_snapshot">Health Snapshot</string>
+    <string name="upcoming_appointment">Upcoming Appointment</string>
+    <string name="recent_update">Recent Update</string>
+    <string name="pending_dose">pending dose</string>
+    <string name="of_medicines">of %1$d medicines</string>
+
+    <!-- Medicines List UI -->
+    <string name="add_new_medicine">Add New Medicine</string>
+    <string name="next_due">Next due:</string>
+    <string name="pending">Pending</string>
+
+    <!-- Profile UI -->
+    <string name="health_information">Health Information</string>
+    <string name="date_of_birth">Date of Birth</string>
+    <string name="blood_type">Blood Type</string>
+    <string name="emergency_contact">Emergency Contact</string>
+    <string name="notifications">Notifications</string>
+    <string name="privacy_settings">Privacy Settings</string>
+    <string name="device_settings">Device Settings</string>
+    <string name="help_support">Help &amp; Support</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_medicines">Medicines</string>
+    <string name="nav_health_logs">Health Logs</string>
+    <string name="nav_doctor">Doctor</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Refill & Stock Tracking -->
+    <string name="refill_orders">Refill Orders</string>
+    <string name="stock_tracking">Stock Tracking</string>
+    <string name="low_stock_alert">Low Stock Alert</string>
+    <string name="request_refill">Request Refill</string>
+    <string name="place_order">Place Order</string>
+    <string name="mark_delivered">Mark Delivered</string>
+    <string name="cancel_order">Cancel Order</string>
+    <string name="order_placed">Refill order placed!</string>
+    <string name="order_updated">Order updated</string>
+    <string name="no_active_orders">No active orders</string>
+    <string name="no_order_history">No order history</string>
+    <string name="out_of_stock">Out of stock — refill needed</string>
+    <string name="low_stock">Low stock — refill soon</string>
+    <string name="stock_remaining">%1$d remaining</string>
+    <string name="out_of_stock_short">Out of stock</string>
+    <string name="order">Order</string>
+    <string name="refill_now">Refill</string>
+    <string name="new_order">New Order</string>
+    <string name="quick_order_title">My Medicines</string>
+    <string name="quick_order_subtitle">Tap any medicine to place a refill order</string>
+    <string name="quick_order_empty_hint">Tap + to order a refill for any of your medicines</string>
+    <string name="order_refill">Order Refill</string>
+
+    <!-- Pharmacy -->
+    <string name="select_pharmacy">Select Pharmacy</string>
+    <string name="no_pharmacies">No pharmacies available</string>
+    <string name="choose_pharmacy">Choose Pharmacy</string>
+    <string name="delivery_available">Delivery</string>
+
+    <!-- Prescription Verification -->
+    <string name="prescription_verified">Prescription verified</string>
+    <string name="prescription_not_verified">No valid prescription</string>
+    <string name="prescription_expired">Prescription expired</string>
+
+    <!-- Transactions -->
+    <string name="transaction_history">Transaction History</string>
+
+    <!-- Admin Dashboard -->
+    <string name="admin_dashboard">Admin Dashboard</string>
+    <string name="admin_dashboard_subtitle">System overview and user management</string>
+    <string name="total_users">Total Users</string>
+    <string name="total_patients">Patients</string>
+    <string name="total_doctors">Doctors</string>
+    <string name="total_pharmacies">Pharmacies</string>
+    <string name="total_admins">Admins</string>
+    <string name="user_management">User Management</string>
+    <string name="search_users">Search users…</string>
+    <string name="no_users_found">No users found</string>
+    <string name="role_label">Role: %s</string>
+    <string name="system_overview">System Overview</string>
+    <string name="manage_users">Manage Users</string>
+    <string name="manage_users_desc">View and manage all registered users</string>
+    <string name="manage_pharmacies">Manage Pharmacies</string>
+    <string name="manage_pharmacies_desc">View registered pharmacies</string>
+
+    <!-- Pharmacy Dashboard -->
+    <string name="pharmacy_dashboard">Pharmacy Dashboard</string>
+    <string name="pharmacy_dashboard_subtitle">Manage your pharmacy and orders</string>
+    <string name="incoming_orders">Incoming Orders</string>
+    <string name="pharmacy_profile">Pharmacy Profile</string>
+    <string name="no_incoming_orders">No incoming orders</string>
+    <string name="order_status_pending">Pending</string>
+    <string name="order_status_processing">Processing</string>
+    <string name="order_status_ready">Ready for Pickup</string>
+    <string name="order_status_completed">Completed</string>
+    <string name="accept_order">Accept</string>
+    <string name="reject_order">Reject</string>
+    <string name="mark_ready">Mark Ready</string>
+    <string name="mark_completed">Mark Completed</string>
+    <string name="total_orders">Total Orders</string>
+    <string name="pending_orders">Pending Orders</string>
+    <string name="completed_orders">Completed Orders</string>
+    <string name="setup_pharmacy_profile">Set Up Pharmacy Profile</string>
+    <string name="setup_pharmacy_subtitle">Complete your pharmacy details to start receiving orders</string>
 </resources>

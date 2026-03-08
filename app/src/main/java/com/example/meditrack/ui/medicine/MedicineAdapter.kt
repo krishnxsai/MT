@@ -1,6 +1,7 @@
 package com.example.meditrack.ui.medicine
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -91,6 +92,37 @@ class MedicineAdapter(
                 colorStrip.backgroundTintList = ContextCompat.getColorStateList(context, colorRes)
                 iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, containerColorRes)
                 medicineIcon.setColorFilter(ContextCompat.getColor(context, colorRes))
+
+                // ── Stock Level Display ──
+                if (medicine.isRefillTrackingEnabled) {
+                    stockContainer.visibility = View.VISIBLE
+                    stockText.text = "${medicine.currentQuantity} left"
+
+                    val pct = medicine.stockPercentage
+                    stockProgressBar.progress = if (pct >= 0) pct else 0
+
+                    // Color the progress bar based on stock level
+                    val progressTint = when {
+                        medicine.isOutOfStock -> R.color.error
+                        medicine.isLowStock -> R.color.warning
+                        else -> R.color.primary
+                    }
+                    stockProgressBar.progressTintList = ContextCompat.getColorStateList(context, progressTint)
+
+                    // Low stock warning
+                    if (medicine.isLowStock && medicine.isActive) {
+                        lowStockWarning.visibility = View.VISIBLE
+                        lowStockWarning.text = if (medicine.isOutOfStock)
+                            "⚠ Out of stock — refill needed"
+                        else
+                            "⚠ Low stock — refill soon"
+                    } else {
+                        lowStockWarning.visibility = View.GONE
+                    }
+                } else {
+                    stockContainer.visibility = View.GONE
+                    lowStockWarning.visibility = View.GONE
+                }
             }
             isBinding = false
         }

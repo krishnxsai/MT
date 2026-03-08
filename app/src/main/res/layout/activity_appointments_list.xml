@@ -4,35 +4,63 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
-    <!-- Toolbar -->
+    <!-- Modern Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="4dp">
+
+        <ImageButton
+            android:id="@+id/backBtn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="Appointments"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:fontFamily="sans-serif-bold" />
+
+    </LinearLayout>
+
+    <!-- Hidden toolbar for binding compat -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/premium_surface"
-        app:title="Appointments"
-        app:titleTextColor="@color/premium_text_primary"
-        app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/premium_text_primary"
-        app:elevation="1dp" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <!-- Tab layout -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:background="@color/premium_surface"
+        android:layout_marginTop="4dp"
+        android:background="@color/background"
         app:tabGravity="fill"
         app:tabMode="fixed"
-        app:tabIndicatorColor="@color/premium_primary"
-        app:tabSelectedTextColor="@color/premium_primary"
-        app:tabTextColor="@color/premium_text_tertiary"
+        app:tabIndicatorColor="@color/primary"
+        app:tabSelectedTextColor="@color/primary"
+        app:tabTextColor="@color/text_tertiary"
         app:tabIndicatorHeight="3dp"
-        app:tabIndicatorFullWidth="false">
+        app:tabIndicatorFullWidth="false"
+        app:tabRippleColor="@color/ripple_primary">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -56,6 +84,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:paddingHorizontal="4dp"
             android:paddingTop="8dp"
             android:paddingBottom="80dp"
             android:overScrollMode="never"
@@ -74,7 +103,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="100dp"
                 android:layout_height="100dp"
-                app:cardBackgroundColor="@color/premium_surface_dim"
+                app:cardBackgroundColor="@color/primary_container"
                 app:cardCornerRadius="50dp"
                 app:cardElevation="0dp">
 
@@ -83,8 +112,8 @@
                     android:layout_height="48dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_calendar"
-                    app:tint="@color/premium_text_tertiary"
-                    android:contentDescription="No appointments" />
+                    app:tint="@color/primary"
+                    android:contentDescription="@null" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -93,9 +122,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="sans-serif-bold"
                 android:text="No Appointments"
-                android:textColor="@color/premium_text_primary"
+                android:textColor="@color/text_primary"
                 android:textSize="18sp" />
 
             <TextView
@@ -105,7 +134,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:text="Your appointments\nwill appear here"
-                android:textColor="@color/premium_text_tertiary"
+                android:textColor="@color/text_tertiary"
                 android:textSize="14sp"
                 android:lineSpacingMultiplier="1.3" />
 
@@ -117,7 +146,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/premium_primary"
+            android:indeterminateTint="@color/primary"
             android:visibility="gone" />
 
         <!-- Book Appointment FAB (patients only) -->
@@ -126,15 +155,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="16dp"
+            android:layout_margin="20dp"
             android:text="Book"
             android:textColor="@color/white"
+            android:fontFamily="sans-serif-medium"
             app:icon="@drawable/ic_add"
             app:iconTint="@color/white"
-            app:backgroundTint="@color/premium_primary"
+            app:backgroundTint="@color/primary"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
             android:visibility="gone" />
 
     </FrameLayout>
 
 </LinearLayout>
-

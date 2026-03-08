@@ -6,11 +6,11 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="6dp"
-    app:cardCornerRadius="16dp"
+    app:cardCornerRadius="18dp"
     app:cardElevation="0dp"
     app:strokeWidth="1dp"
-    app:strokeColor="@color/premium_border_light"
-    app:cardBackgroundColor="@color/premium_surface">
+    app:strokeColor="@color/outline_light"
+    app:cardBackgroundColor="@color/surface">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -30,8 +30,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/premium_text_primary"
+                android:fontFamily="sans-serif-bold"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:maxLines="1"
                 android:ellipsize="end"
@@ -56,7 +56,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/premium_text_tertiary"
+            android:textColor="@color/text_tertiary"
             android:textSize="13sp"
             tools:text="CONSULTATION" />
 
@@ -72,15 +72,15 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_calendar"
-                app:tint="@color/premium_primary"
-                android:contentDescription="Date" />
+                app:tint="@color/primary"
+                android:contentDescription="@null" />
 
             <TextView
                 android:id="@+id/dateText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="@color/premium_text_secondary"
+                android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 tools:text="Mon, Feb 24, 2026" />
 
@@ -97,15 +97,15 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_clock"
-                app:tint="@color/premium_primary"
-                android:contentDescription="Time" />
+                app:tint="@color/primary"
+                android:contentDescription="@null" />
 
             <TextView
                 android:id="@+id/timeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="@color/premium_text_secondary"
+                android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 tools:text="09:00 – 09:30" />
 
@@ -117,7 +117,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="@color/premium_text_tertiary"
+            android:textColor="@color/text_tertiary"
             android:textSize="13sp"
             android:maxLines="2"
             android:ellipsize="end"
@@ -140,7 +140,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:text="Reject"
-                android:textColor="@color/premium_error"
+                android:textColor="@color/error"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -150,7 +150,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:text="Cancel"
-                android:textColor="@color/premium_error"
+                android:textColor="@color/error"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -160,7 +160,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:text="Reschedule"
-                android:textColor="@color/premium_primary"
+                android:textColor="@color/primary"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -171,8 +171,8 @@
                 android:layout_marginStart="8dp"
                 android:text="Confirm"
                 android:textSize="13sp"
-                app:backgroundTint="@color/premium_primary"
-                app:cornerRadius="10dp"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="12dp"
                 android:visibility="gone" />
 
         </LinearLayout>

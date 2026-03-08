@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.example.meditrack.R
 import com.example.meditrack.data.analytics.VitalAlertEngine
+import com.example.meditrack.data.analytics.RiskScoreEngine
+import com.example.meditrack.data.analytics.HealthAnalytics
 import com.example.meditrack.data.model.ClinicalDecision
 import com.example.meditrack.data.model.Medicine
 import com.example.meditrack.data.model.Resource
@@ -20,9 +22,12 @@ import com.example.meditrack.ui.chat.ChatListViewModel
 import com.example.meditrack.ui.appointment.AppointmentsListActivity
 import com.example.meditrack.ui.healthlog.HealthLogListActivity
 import com.example.meditrack.ui.healthlog.HealthLogViewModel
-import com.example.meditrack.ui.medicine.AddMedicineActivity
+import com.example.meditrack.ui.insights.HealthInsightsActivity
+import com.example.meditrack.ui.insights.RiskDashboardActivity
 import com.example.meditrack.ui.medicine.MedicinesListActivity
 import com.example.meditrack.ui.medicine.MedicineViewModel
+import com.example.meditrack.ui.order.PharmacyListActivity
+import com.example.meditrack.ui.order.RefillOrdersActivity
 import com.example.meditrack.ui.profile.ProfileActivity
 import com.example.meditrack.ui.profile.ProfileViewModel
 import com.example.meditrack.ui.recommendations.DoctorRecommendationsViewModel
@@ -39,11 +44,15 @@ class HomeDashboardActivity : AppCompatActivity() {
     private val recommendationsViewModel: DoctorRecommendationsViewModel by viewModels()
     private val chatListViewModel: ChatListViewModel by viewModels()
 
+    private var cachedLogs: List<com.example.meditrack.data.model.HealthLog> = emptyList()
+    private var cachedMedicines: List<Medicine> = emptyList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupBottomNavigation()
         setupClickListeners()
         observeViewModel()
         updateGreeting()
@@ -53,6 +62,45 @@ class HomeDashboardActivity : AppCompatActivity() {
         super.onResume()
         profileViewModel.loadCurrentUser()
         medicineViewModel.loadMedicinesOnce()
+        // Temporarily clear listener to avoid triggering navigation when resetting selection
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_home
+        setupBottomNavigation()
+    }
+
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation?.setOnItemSelectedListener(null)
+        binding.bottomNavigation?.selectedItemId = R.id.nav_home
+        binding.bottomNavigation?.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> true // Already here
+                R.id.nav_medicines -> {
+                    startActivity(Intent(this, MedicinesListActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_health_logs -> {
+                    startActivity(Intent(this, HealthLogListActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_doctor -> {
+                    startActivity(Intent(this, com.example.meditrack.ui.recommendations.DoctorRecommendationsActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                R.id.nav_profile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     private fun setupClickListeners() {
@@ -66,35 +114,16 @@ class HomeDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, MedicinesListActivity::class.java))
         }
 
-        // My Medicines Card
-        binding.myMedicinesCard.setOnClickListener {
-            startActivity(Intent(this, MedicinesListActivity::class.java))
-        }
-
-        // Add Medicine Card
-        binding.addMedicineCard.setOnClickListener {
-            startActivity(Intent(this, AddMedicineActivity::class.java))
-        }
-
-        // Health Log Card
-        binding.healthLogCard.setOnClickListener {
-            startActivity(Intent(this, HealthLogListActivity::class.java))
-        }
-
-        // Profile Settings Card
-        binding.profileSettingsCard.setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
-        }
-
         // Health Insights Card
         binding.healthInsightsCard.setOnClickListener {
             startActivity(Intent(this, com.example.meditrack.ui.insights.HealthInsightsActivity::class.java))
         }
 
-        // Doctor Recommendations Card
-        binding.doctorRecommendationsCard?.setOnClickListener {
-            startActivity(Intent(this, com.example.meditrack.ui.recommendations.DoctorRecommendationsActivity::class.java))
+        // Risk Score Card
+        binding.riskScoreCard.setOnClickListener {
+            startActivity(Intent(this, RiskDashboardActivity::class.java))
         }
+
 
         // Chat Card
         binding.chatCard?.setOnClickListener {
@@ -104,6 +133,16 @@ class HomeDashboardActivity : AppCompatActivity() {
         // Appointments Card
         binding.appointmentsCard?.setOnClickListener {
             startActivity(Intent(this, AppointmentsListActivity::class.java))
+        }
+
+        // Refill Orders Card
+        binding.refillOrdersCard?.setOnClickListener {
+            startActivity(Intent(this, RefillOrdersActivity::class.java))
+        }
+
+        // Pharmacies Card
+        binding.pharmaciesCard?.setOnClickListener {
+            startActivity(Intent(this, PharmacyListActivity::class.java))
         }
     }
 
@@ -133,6 +172,7 @@ class HomeDashboardActivity : AppCompatActivity() {
                 }
                 is Resource.Success -> {
                     updateScheduleCard(result.data)
+                    updateLowStockAlert(result.data)
                 }
                 is Resource.Error -> {
                     // Show error or empty state
@@ -146,6 +186,22 @@ class HomeDashboardActivity : AppCompatActivity() {
             updateAlertBadge(summary)
         }
 
+        // ── Health logs for risk score ──
+        healthLogViewModel.healthLogs.observe(this) { result ->
+            if (result is Resource.Success) {
+                cachedLogs = result.data
+                updateRiskScoreCard()
+            }
+        }
+
+        // ── Medicines for risk score ──
+        medicineViewModel.medicines.observe(this) { result ->
+            if (result is Resource.Success) {
+                cachedMedicines = result.data
+                updateRiskScoreCard()
+            }
+        }
+
         // ── Follow-up date banner ──
         recommendationsViewModel.followUps.observe(this) { result ->
             if (result is Resource.Success) {
@@ -157,6 +213,47 @@ class HomeDashboardActivity : AppCompatActivity() {
         // ── Unread message badge ──
         chatListViewModel.totalUnread.observe(this) { count ->
             updateChatUnreadBadge(count)
+        }
+    }
+
+    /**
+     * Computes and displays a mini risk score on the home dashboard.
+     */
+    private fun updateRiskScoreCard() {
+        try {
+            val recentLogs = HealthAnalytics.getLogsForLastDays(cachedLogs, 30)
+            val adherence = HealthAnalytics.calculateTodayAdherence(cachedMedicines)
+
+            val riskResult = RiskScoreEngine.calculateRiskScore(
+                logs = recentLogs,
+                medicines = cachedMedicines,
+                adherencePercentage = adherence.adherencePercentage
+            )
+
+            binding.riskScoreCard.visibility = View.VISIBLE
+            binding.riskMiniScore.text = riskResult.overallScore.toString()
+            binding.riskMiniGauge.setProgressCompat(riskResult.overallScore, true)
+
+            val (label, badgeColor, gaugeColor) = when (riskResult.category) {
+                RiskScoreEngine.RiskCategory.LOW -> Triple("Low Risk", R.color.medicine_green, R.color.medicine_green)
+                RiskScoreEngine.RiskCategory.MODERATE -> Triple("Moderate", R.color.warning, R.color.warning)
+                RiskScoreEngine.RiskCategory.HIGH -> Triple("High Risk", R.color.medicine_orange, R.color.medicine_orange)
+                RiskScoreEngine.RiskCategory.CRITICAL -> Triple("Critical", R.color.medicine_red, R.color.medicine_red)
+            }
+
+            binding.riskBadge.text = label
+            binding.riskBadge.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(getColor(badgeColor))
+            binding.riskMiniGauge.setIndicatorColor(getColor(gaugeColor))
+
+            val factorCount = riskResult.contributingFactors.size
+            binding.riskSummaryText.text = when {
+                factorCount == 0 -> "All clear — tap for details"
+                factorCount == 1 -> "1 factor detected — tap for details"
+                else -> "$factorCount factors detected — tap for details"
+            }
+        } catch (_: Exception) {
+            binding.riskScoreCard.visibility = View.GONE
         }
     }
 
@@ -351,5 +448,23 @@ class HomeDashboardActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    /**
+     * Show/hide the low stock alert banner based on medicine stock levels.
+     */
+    private fun updateLowStockAlert(medicines: List<Medicine>) {
+        val lowStockMeds = medicines.filter { it.isActive && it.isLowStock }
+        if (lowStockMeds.isNotEmpty()) {
+            binding.lowStockAlertCard.visibility = View.VISIBLE
+            val count = lowStockMeds.size
+            binding.lowStockAlertText.text = "$count medicine${if (count > 1) "s" else ""} running low on stock"
+
+            binding.lowStockAlertCard.setOnClickListener {
+                startActivity(Intent(this, RefillOrdersActivity::class.java))
+            }
+        } else {
+            binding.lowStockAlertCard.visibility = View.GONE
+        }
     }
 }

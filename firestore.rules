@@ -28,6 +28,18 @@ service cloud.firestore {
              getUserData(request.auth.uid).role == 'DOCTOR';
     }
 
+    // Helper function: Check if current user is an admin
+    function isAdmin() {
+      return isAuthenticated() &&
+             getUserData(request.auth.uid).role == 'ADMIN';
+    }
+
+    // Helper function: Check if current user is a pharmacy
+    function isPharmacy() {
+      return isAuthenticated() &&
+             getUserData(request.auth.uid).role == 'PHARMACY';
+    }
+
     // Helper function: Check if doctor is assigned to patient (multi-doctor support)
     // Safely handles missing assignedDoctors field on legacy patient docs
     function isDoctorAssignedToPatient(patientId) {
@@ -46,10 +58,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read their own profile
       // Any authenticated user can read other user profiles
-      // This is needed for:
-      // - Doctors to list their assigned patients (query by assignedDoctor)
-      // - Patients to see doctor profiles (for doctor selection)
-      // - List queries where we can't use get() to check roles
+      // Admins have full read access for user management
       allow read: if isAuthenticated();
 
       // Users can only create their own document
@@ -58,12 +67,15 @@ service cloud.firestore {
 
       // Users can only update their own document
       // Cannot change their own role after creation
-      allow update: if isOwner(userId) &&
+      // Admins can update any user (including role changes)
+      allow update: if isAdmin() ||
+                    (isOwner(userId) &&
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-                     request.resource.data.role == resource.data.role);
+                     request.resource.data.role == resource.data.role));
 
       // Users can only delete their own document
-      allow delete: if isOwner(userId);
+      // Admins can delete any user
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // ==================== Medicines Collection ====================
@@ -76,15 +88,23 @@ service cloud.firestore {
       );
 
       // Users can create medicines with their own userId
+      // Doctors can create medicines for their assigned patients (prescriptions)
       allow create: if isAuthenticated() &&
-                    request.resource.data.userId == request.auth.uid &&
-                    hasRequiredFields(['userId', 'name', 'dosage']);
+                    hasRequiredFields(['userId', 'name', 'dosage']) &&
+                    (
+                      request.resource.data.userId == request.auth.uid ||
+                      isDoctorAssignedToPatient(request.resource.data.userId)
+                    );
 
       // Users can update their own medicines
+      // Doctors can update medicines for their assigned patients
       // Cannot change userId after creation
       allow update: if isAuthenticated() &&
-                    resource.data.userId == request.auth.uid &&
-                    request.resource.data.userId == resource.data.userId;
+                    request.resource.data.userId == resource.data.userId &&
+                    (
+                      resource.data.userId == request.auth.uid ||
+                      isDoctorAssignedToPatient(resource.data.userId)
+                    );
 
       // Users can delete their own medicines
       allow delete: if isAuthenticated() &&
@@ -321,6 +341,68 @@ service cloud.firestore {
 
       // No deletion — appointments form an audit trail
       allow delete: if false;
+    }
+
+    // ==================== Refill Orders Collection ====================
+    match /orders/{orderId} {
+      // Users can read their own orders
+      // Pharmacy users can read orders assigned to their pharmacy
+      // Admins can read all orders
+      allow read: if isAuthenticated() &&
+                  (resource.data.userId == request.auth.uid ||
+                   isAdmin() ||
+                   isPharmacy());
+
+      // Users can create orders with their own userId
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    hasRequiredFields(['userId', 'medicineId', 'medicineName', 'quantity', 'status']);
+
+      // Users can update their own orders (cancellation)
+      // Pharmacy users can update orders (status changes: accept, process, ready, complete)
+      // Admins can update any order
+      allow update: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid ||
+                     isAdmin() ||
+                     isPharmacy());
+
+      // Orders are never deleted — they form an audit trail
+      allow delete: if false;
+    }
+
+    // ==================== Pharmacies Collection ====================
+    match /pharmacies/{pharmacyId} {
+      // All authenticated users can browse pharmacies
+      allow read: if isAuthenticated();
+
+      // Pharmacy-role users can create their own pharmacy (ownerId must match)
+      // Admins can create any pharmacy
+      allow create: if isAuthenticated() &&
+                    (isAdmin() ||
+                     (isPharmacy() && request.resource.data.ownerId == request.auth.uid));
+
+      // Pharmacy owners can update their own pharmacy
+      // Admins can update any pharmacy
+      allow update: if isAuthenticated() &&
+                    (isAdmin() ||
+                     (isPharmacy() && resource.data.ownerId == request.auth.uid));
+
+      // Only admins can delete pharmacies
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Transactions Collection ====================
+    match /transactions/{transactionId} {
+      // Users can only read their own transactions
+      allow read: if isAuthenticated() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Users can create transactions for their own orders
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Transactions are immutable — no updates or deletes
+      allow update, delete: if false;
     }
   }
 }
