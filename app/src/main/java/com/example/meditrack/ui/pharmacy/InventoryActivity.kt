@@ -19,6 +19,8 @@ import com.example.meditrack.databinding.DialogAddInventoryBinding
 import com.example.meditrack.databinding.ItemInventoryBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 class InventoryActivity : AppCompatActivity() {
@@ -126,6 +128,8 @@ class InventoryActivity : AppCompatActivity() {
 
     private fun showAddEditDialog(existingItem: InventoryItem?) {
         val dialogBinding = DialogAddInventoryBinding.inflate(layoutInflater)
+        val dateFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+        var selectedExpiryDate: Date? = existingItem?.expiryDate
 
         // Pre-fill if editing
         existingItem?.let { item ->
@@ -138,6 +142,18 @@ class InventoryActivity : AppCompatActivity() {
             dialogBinding.unitEditText.setText(item.unit)
             dialogBinding.manufacturerEditText.setText(item.manufacturer)
             dialogBinding.batchEditText.setText(item.batchNumber)
+            item.expiryDate?.let { dialogBinding.expiryEditText.setText(dateFormat.format(it)) }
+        }
+
+        // Expiry date picker
+        dialogBinding.expiryEditText.setOnClickListener {
+            val cal = Calendar.getInstance()
+            selectedExpiryDate?.let { cal.time = it }
+            android.app.DatePickerDialog(this, { _, year, month, day ->
+                cal.set(year, month, day)
+                selectedExpiryDate = cal.time
+                dialogBinding.expiryEditText.setText(dateFormat.format(cal.time))
+            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
         }
 
         val title = if (existingItem == null) getString(R.string.add_inventory_item)
@@ -164,7 +180,8 @@ class InventoryActivity : AppCompatActivity() {
                     lowStockThreshold = dialogBinding.thresholdEditText.text?.toString()?.toIntOrNull() ?: 10,
                     unit = dialogBinding.unitEditText.text?.toString()?.trim() ?: "tablets",
                     manufacturer = dialogBinding.manufacturerEditText.text?.toString()?.trim() ?: "",
-                    batchNumber = dialogBinding.batchEditText.text?.toString()?.trim() ?: ""
+                    batchNumber = dialogBinding.batchEditText.text?.toString()?.trim() ?: "",
+                    expiryDate = selectedExpiryDate
                 )
 
                 if (existingItem != null) {

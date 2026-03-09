@@ -16,6 +16,7 @@ import com.example.meditrack.data.model.Resource
 import com.example.meditrack.data.repository.PharmacyRepository
 import com.example.meditrack.databinding.ActivityPharmacyDashboardBinding
 import com.example.meditrack.ui.auth.LoginActivity
+import com.example.meditrack.util.PharmacyNotificationHelper
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
@@ -72,8 +73,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
                         }
                     }
                     is Resource.Error -> {
-                        Toast.makeText(this@PharmacyDashboardActivity, "Verification failed, confirming anyway", Toast.LENGTH_SHORT).show()
-                        viewModel.updateOrderStatus(order.id, OrderStatus.CONFIRMED.name)
+                        Toast.makeText(this@PharmacyDashboardActivity, "Verification failed: ${result.message}", Toast.LENGTH_LONG).show()
                     }
                     is Resource.Loading -> { /* ignore */ }
                 }
@@ -94,6 +94,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
 
     private fun handleReject(order: RefillOrder) {
         viewModel.updateOrderStatus(order.id, OrderStatus.CANCELLED.name)
+        PharmacyNotificationHelper.notifyOrderCancelled(this, order.medicineName, order.id)
         Toast.makeText(this, "Order rejected", Toast.LENGTH_SHORT).show()
     }
 
@@ -150,6 +151,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
                     binding.setupProfileCard.visibility = View.GONE
                     binding.statsLabel.visibility = View.GONE
                     binding.statsCardsLayout.visibility = View.GONE
+                    binding.analyticsLayout.visibility = View.GONE
                     binding.quickActionsLayout.visibility = View.GONE
                 }
                 is Resource.Success -> {
@@ -159,6 +161,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
                         binding.setupProfileCard.visibility = View.VISIBLE
                         binding.statsLabel.visibility = View.GONE
                         binding.statsCardsLayout.visibility = View.GONE
+                        binding.analyticsLayout.visibility = View.GONE
                         binding.quickActionsLayout.visibility = View.GONE
                         binding.emptyStateText.visibility = View.VISIBLE
                         binding.emptyStateText.text = getString(R.string.setup_pharmacy_subtitle)
@@ -167,6 +170,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
                         binding.setupProfileCard.visibility = View.GONE
                         binding.statsLabel.visibility = View.VISIBLE
                         binding.statsCardsLayout.visibility = View.VISIBLE
+                        binding.analyticsLayout.visibility = View.VISIBLE
                         binding.quickActionsLayout.visibility = View.VISIBLE
                     }
                 }
@@ -175,6 +179,7 @@ class PharmacyDashboardActivity : AppCompatActivity() {
                     binding.setupProfileCard.visibility = View.GONE
                     binding.statsLabel.visibility = View.GONE
                     binding.statsCardsLayout.visibility = View.GONE
+                    binding.analyticsLayout.visibility = View.GONE
                     binding.quickActionsLayout.visibility = View.GONE
                     Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
                 }
@@ -209,6 +214,20 @@ class PharmacyDashboardActivity : AppCompatActivity() {
             binding.totalOrdersCount.text = (counts["total"] ?: 0).toString()
             binding.pendingOrdersCount.text = (counts["pending"] ?: 0).toString()
             binding.completedOrdersCount.text = (counts["completed"] ?: 0).toString()
+        }
+
+        viewModel.dailyRevenue.observe(this) { revenue ->
+            binding.dailyRevenueText.text = String.format("$%.2f", revenue)
+        }
+
+        viewModel.topMedicines.observe(this) { medicines ->
+            if (medicines.isNullOrEmpty()) {
+                binding.topMedicinesText.text = getString(R.string.no_data_yet)
+            } else {
+                binding.topMedicinesText.text = medicines.joinToString("\n") { (name, count) ->
+                    "$name — $count orders"
+                }
+            }
         }
     }
 }

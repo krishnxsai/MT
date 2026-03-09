@@ -406,6 +406,7 @@
     <string name="low_stock_threshold">Low Stock Threshold</string>
     <string name="manufacturer">Manufacturer</string>
     <string name="batch_number">Batch Number</string>
+    <string name="expiry_date">Expiry Date</string>
     <string name="item_added">Item added successfully</string>
     <string name="item_updated">Item updated successfully</string>
     <string name="item_deleted">Item removed</string>
@@ -427,6 +428,7 @@
     <!-- Analytics -->
     <string name="daily_revenue">Daily Revenue</string>
     <string name="top_medicines">Top Medicines</string>
+    <string name="no_data_yet">No data yet</string>
 
     <!-- Notification Texts -->
     <string name="new_order_notification">New Order Received</string>
@@ -446,4 +448,12 @@
     <string name="edit_pharmacy_profile">Edit Pharmacy Profile</string>
     <string name="update_profile">Update Profile</string>
     <string name="pharmacy_profile_updated">Pharmacy profile updated successfully</string>
+
+    <!-- Geo / Upload -->
+    <string name="pharmacy_latitude">Latitude</string>
+    <string name="pharmacy_longitude">Longitude</string>
+    <string name="upload_pharmacy_logo">Upload Pharmacy Logo</string>
+    <string name="logo_uploaded">✓ Logo uploaded</string>
+    <string name="uploading_file">Uploading…</string>
+    <string name="upload_failed">Upload failed</string>
 </resources>

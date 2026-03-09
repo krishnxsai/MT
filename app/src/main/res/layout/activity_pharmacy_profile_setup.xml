@@ -165,6 +165,49 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Latitude & Longitude row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/latitudeLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:hint="@string/pharmacy_latitude">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/latitudeEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal|numberSigned" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/longitudeLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:hint="@string/pharmacy_longitude">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/longitudeEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal|numberSigned" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+
             <!-- Phone -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/phoneLayout"
@@ -235,22 +278,47 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- License Document URL -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/licenseDocumentUrlLayout"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            <!-- License Document Upload -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/uploadLicenseButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="@string/license_document_url">
+                android:text="@string/upload_license"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_upload"
+                app:iconGravity="textStart" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/licenseDocumentUrlEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textUri" />
+            <TextView
+                android:id="@+id/licenseUploadStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/success"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
-            </com.google.android.material.textfield.TextInputLayout>
+            <!-- Pharmacy Logo Upload -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/uploadLogoButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/upload_pharmacy_logo"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_upload"
+                app:iconGravity="textStart" />
+
+            <TextView
+                android:id="@+id/logoUploadStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/success"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             <!-- Verification Status (read-only, shown in edit mode) -->
             <TextView

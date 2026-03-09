@@ -42,7 +42,7 @@ object PharmacyNotificationHelper {
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID_NEW_ORDER, notification)
+        manager.notify(NOTIFICATION_ID_NEW_ORDER + medicineName.hashCode(), notification)
     }
 
     /**
@@ -66,7 +66,7 @@ object PharmacyNotificationHelper {
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID_ORDER_CANCELLED, notification)
+        manager.notify(NOTIFICATION_ID_ORDER_CANCELLED + orderId.hashCode(), notification)
     }
 
     /**
@@ -114,7 +114,7 @@ object PharmacyNotificationHelper {
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID_LOW_STOCK, notification)
+        manager.notify(NOTIFICATION_ID_LOW_STOCK + itemCount, notification)
     }
 }
 

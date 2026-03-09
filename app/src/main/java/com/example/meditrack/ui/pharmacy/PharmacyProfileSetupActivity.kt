@@ -1,8 +1,10 @@
 package com.example.meditrack.ui.pharmacy
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.meditrack.R
@@ -12,6 +14,7 @@ import com.example.meditrack.data.repository.PharmacyRepository
 import com.example.meditrack.databinding.ActivityPharmacyProfileSetupBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -22,10 +25,32 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPharmacyProfileSetupBinding
     private val firestore by lazy { FirebaseFirestore.getInstance() }
     private val auth by lazy { FirebaseAuth.getInstance() }
+    private val storage by lazy { FirebaseStorage.getInstance() }
     private val pharmacyRepository = PharmacyRepository()
 
     /** Non-null when editing an existing pharmacy. */
     private var editingPharmacyId: String? = null
+
+    /** Uploaded file URLs cached during this session. */
+    private var licenseDocumentUrl: String = ""
+    private var imageUrl: String = ""
+
+    // ── File pickers ─────────────────────────────────────────
+    private val licensePicker = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { uploadFile(it, "licenses") { url ->
+        licenseDocumentUrl = url
+        binding.licenseUploadStatus.text = getString(R.string.license_uploaded)
+        binding.licenseUploadStatus.visibility = View.VISIBLE
+    }}}
+
+    private val logoPicker = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { uploadFile(it, "logos") { url ->
+        imageUrl = url
+        binding.logoUploadStatus.text = getString(R.string.logo_uploaded)
+        binding.logoUploadStatus.visibility = View.VISIBLE
+    }}}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,7 +97,23 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
         binding.hoursEditText.setText(pharmacy.operatingHours)
         binding.deliverySwitch.isChecked = pharmacy.isDeliveryAvailable
         binding.licenseNumberEditText.setText(pharmacy.licenseNumber)
-        binding.licenseDocumentUrlEditText.setText(pharmacy.licenseDocumentUrl)
+
+        // Lat/Lng
+        if (pharmacy.latitude != 0.0) binding.latitudeEditText.setText(pharmacy.latitude.toString())
+        if (pharmacy.longitude != 0.0) binding.longitudeEditText.setText(pharmacy.longitude.toString())
+
+        // Preserve existing uploaded URLs
+        licenseDocumentUrl = pharmacy.licenseDocumentUrl
+        imageUrl = pharmacy.imageUrl
+
+        if (licenseDocumentUrl.isNotEmpty()) {
+            binding.licenseUploadStatus.text = getString(R.string.license_uploaded)
+            binding.licenseUploadStatus.visibility = View.VISIBLE
+        }
+        if (imageUrl.isNotEmpty()) {
+            binding.logoUploadStatus.text = getString(R.string.logo_uploaded)
+            binding.logoUploadStatus.visibility = View.VISIBLE
+        }
 
         // Show verification status in edit mode
         if (pharmacy.verificationStatus.isNotEmpty()) {
@@ -87,6 +128,14 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.backButton.setOnClickListener { finish() }
+
+        binding.uploadLicenseButton.setOnClickListener {
+            licensePicker.launch("application/*")
+        }
+
+        binding.uploadLogoButton.setOnClickListener {
+            logoPicker.launch("image/*")
+        }
 
         binding.saveButton.setOnClickListener {
             if (validateInputs()) {
@@ -137,12 +186,15 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
             zipCode = binding.zipEditText.text.toString().trim(),
             phone = binding.phoneEditText.text.toString().trim(),
             email = binding.emailEditText.text.toString().trim(),
+            latitude = binding.latitudeEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            longitude = binding.longitudeEditText.text.toString().toDoubleOrNull() ?: 0.0,
             operatingHours = binding.hoursEditText.text.toString().trim(),
             isDeliveryAvailable = binding.deliverySwitch.isChecked,
             isActive = true,
             ownerId = uid,
             licenseNumber = binding.licenseNumberEditText.text.toString().trim(),
-            licenseDocumentUrl = binding.licenseDocumentUrlEditText.text.toString().trim()
+            licenseDocumentUrl = licenseDocumentUrl,
+            imageUrl = imageUrl
         )
 
         lifecycleScope.launch {
@@ -167,6 +219,29 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
                 is Resource.Loading -> { /* handled */ }
             }
         }
+    }
+
+    /**
+     * Upload a file to Firebase Storage under pharmacies/{uid}/{folder}/{timestamp}.
+     */
+    private fun uploadFile(uri: Uri, folder: String, onSuccess: (String) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return
+        val ref = storage.reference
+            .child("pharmacies/$uid/$folder/${System.currentTimeMillis()}")
+
+        Toast.makeText(this, getString(R.string.uploading_file), Toast.LENGTH_SHORT).show()
+
+        ref.putFile(uri)
+            .continueWithTask { task ->
+                if (!task.isSuccessful) throw task.exception!!
+                ref.downloadUrl
+            }
+            .addOnSuccessListener { downloadUrl ->
+                onSuccess(downloadUrl.toString())
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, getString(R.string.upload_failed), Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun showLoading(show: Boolean) {

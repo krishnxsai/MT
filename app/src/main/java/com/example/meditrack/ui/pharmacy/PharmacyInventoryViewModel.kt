@@ -1,16 +1,18 @@
 package com.example.meditrack.ui.pharmacy
 
+import android.app.Application
 import androidx.lifecycle.*
 import com.example.meditrack.data.model.InventoryItem
 import com.example.meditrack.data.model.Resource
 import com.example.meditrack.data.repository.PharmacyInventoryRepository
+import com.example.meditrack.util.PharmacyNotificationHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel for pharmacy inventory management.
  */
-class PharmacyInventoryViewModel : ViewModel() {
+class PharmacyInventoryViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = PharmacyInventoryRepository()
 
@@ -50,6 +52,9 @@ class PharmacyInventoryViewModel : ViewModel() {
         viewModelScope.launch {
             repository.getLowStockItemsFlow(_pharmacyId).collectLatest { result ->
                 _lowStockAlerts.value = result
+                if (result is Resource.Success && result.data.isNotEmpty()) {
+                    PharmacyNotificationHelper.notifyLowStock(getApplication(), result.data.size)
+                }
             }
         }
     }

@@ -157,12 +157,18 @@ class PharmacyDashboardViewModel(application: Application) : AndroidViewModel(ap
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
+                    val statusEntry = mapOf(
+                        "status" to newStatus,
+                        "changedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                        "note" to ""
+                    )
                     firestore.collection("orders")
                         .document(orderId)
                         .update(
                             mapOf(
                                 "status" to newStatus,
-                                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                                "statusHistory" to com.google.firebase.firestore.FieldValue.arrayUnion(statusEntry)
                             )
                         )
                         .await()
