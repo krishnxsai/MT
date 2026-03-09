@@ -12,6 +12,7 @@ import com.example.meditrack.R
 import com.example.meditrack.data.model.HealthLog
 import com.example.meditrack.data.model.Resource
 import com.example.meditrack.databinding.ActivityHealthLogListBinding
+import com.example.meditrack.util.overrideTransitionCompat
 
 class HealthLogListActivity : AppCompatActivity() {
 
@@ -45,26 +46,26 @@ class HealthLogListActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> {
                     startActivity(Intent(this, com.example.meditrack.ui.main.HomeDashboardActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_medicines -> {
                     startActivity(Intent(this, com.example.meditrack.ui.medicine.MedicinesListActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_health_logs -> true // Already here
                 R.id.nav_doctor -> {
                     startActivity(Intent(this, com.example.meditrack.ui.recommendations.DoctorRecommendationsActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_profile -> {
                     startActivity(Intent(this, com.example.meditrack.ui.profile.ProfileActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }

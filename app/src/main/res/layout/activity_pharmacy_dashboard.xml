@@ -127,6 +127,7 @@
                 android:textStyle="bold" />
 
             <LinearLayout
+                android:id="@+id/statsCardsLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -151,6 +152,7 @@
                             android:id="@+id/totalOrdersCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="0"
                             android:textColor="@color/primary"
                             android:textSize="28sp"
                             android:textStyle="bold"
@@ -186,6 +188,7 @@
                             android:id="@+id/pendingOrdersCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="0"
                             android:textColor="@color/warning"
                             android:textSize="28sp"
                             android:textStyle="bold"
@@ -220,6 +223,7 @@
                             android:id="@+id/completedOrdersCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="0"
                             android:textColor="@color/success"
                             android:textSize="28sp"
                             android:textStyle="bold"
@@ -273,6 +277,68 @@
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_pharmacy_order" />
+
+            <!-- Quick Actions -->
+            <LinearLayout
+                android:id="@+id/quickActionsLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quick_actions"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/inventoryButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/inventory"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_medicine"
+                        app:iconGravity="textStart" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/transactionsButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/transactions"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_insights"
+                        app:iconGravity="textStart" />
+
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/editProfileButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/edit_pharmacy_profile"
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_edit"
+                    app:iconGravity="textStart" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

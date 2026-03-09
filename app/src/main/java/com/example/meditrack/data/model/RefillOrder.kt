@@ -105,6 +105,7 @@ data class RefillOrder(
 enum class OrderStatus {
     PENDING,
     CONFIRMED,
+    PREPARING,
     SHIPPED,
     DELIVERED,
     CANCELLED;

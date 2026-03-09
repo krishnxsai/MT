@@ -52,6 +52,15 @@ data class Pharmacy(
     /** UID of the pharmacy-role user who owns/manages this pharmacy. */
     val ownerId: String = "",
 
+    /** License number for regulatory compliance. */
+    val licenseNumber: String = "",
+
+    /** URL of the uploaded license document (e.g., Firebase Storage URL). */
+    val licenseDocumentUrl: String = "",
+
+    /** Verification status: PENDING, APPROVED, REJECTED. */
+    val verificationStatus: String = "PENDING",
+
     @ServerTimestamp
     val createdAt: Date? = null
 ) {
@@ -75,7 +84,10 @@ data class Pharmacy(
         "imageUrl" to imageUrl,
         "estimatedDeliveryTime" to estimatedDeliveryTime,
         "services" to services,
-        "ownerId" to ownerId
+        "ownerId" to ownerId,
+        "licenseNumber" to licenseNumber,
+        "licenseDocumentUrl" to licenseDocumentUrl,
+        "verificationStatus" to verificationStatus
     )
 
     companion object {
@@ -99,6 +111,9 @@ data class Pharmacy(
             estimatedDeliveryTime = map["estimatedDeliveryTime"] as? String ?: "",
             services = (map["services"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
             ownerId = map["ownerId"] as? String ?: "",
+            licenseNumber = map["licenseNumber"] as? String ?: "",
+            licenseDocumentUrl = map["licenseDocumentUrl"] as? String ?: "",
+            verificationStatus = map["verificationStatus"] as? String ?: "PENDING",
             createdAt = (map["createdAt"] as? Timestamp)?.toDate()
         )
     }

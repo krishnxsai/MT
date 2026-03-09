@@ -31,6 +31,7 @@ import com.example.meditrack.ui.order.RefillOrdersActivity
 import com.example.meditrack.ui.profile.ProfileActivity
 import com.example.meditrack.ui.profile.ProfileViewModel
 import com.example.meditrack.ui.recommendations.DoctorRecommendationsViewModel
+import com.example.meditrack.util.overrideTransitionCompat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -76,25 +77,25 @@ class HomeDashboardActivity : AppCompatActivity() {
                 R.id.nav_home -> true // Already here
                 R.id.nav_medicines -> {
                     startActivity(Intent(this, MedicinesListActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_health_logs -> {
                     startActivity(Intent(this, HealthLogListActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_doctor -> {
                     startActivity(Intent(this, com.example.meditrack.ui.recommendations.DoctorRecommendationsActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_profile -> {
                     startActivity(Intent(this, ProfileActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }

@@ -65,6 +65,7 @@ class OrderAdapter(
             val (bgColor, textColor) = when (order.status) {
                 OrderStatus.PENDING -> R.color.warning_container to R.color.warning
                 OrderStatus.CONFIRMED -> R.color.info_container to R.color.info
+                OrderStatus.PREPARING -> R.color.info_container to R.color.info
                 OrderStatus.SHIPPED -> R.color.secondary_container to R.color.secondary
                 OrderStatus.DELIVERED -> R.color.success_container to R.color.success
                 OrderStatus.CANCELLED -> R.color.surface_variant to R.color.text_tertiary

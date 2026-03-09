@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.meditrack.R
 import com.example.meditrack.data.model.*
 import com.example.meditrack.databinding.ActivityDoctorRecommendationsBinding
+import com.example.meditrack.util.overrideTransitionCompat
 import com.google.android.material.tabs.TabLayout
 import java.text.SimpleDateFormat
 import java.util.*
@@ -57,26 +58,26 @@ class DoctorRecommendationsActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> {
                     startActivity(Intent(this, com.example.meditrack.ui.main.HomeDashboardActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_medicines -> {
                     startActivity(Intent(this, com.example.meditrack.ui.medicine.MedicinesListActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_health_logs -> {
                     startActivity(Intent(this, com.example.meditrack.ui.healthlog.HealthLogListActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }
                 R.id.nav_doctor -> true // Already here
                 R.id.nav_profile -> {
                     startActivity(Intent(this, com.example.meditrack.ui.profile.ProfileActivity::class.java))
-                    overridePendingTransition(0, 0)
+                    overrideTransitionCompat(0, 0)
                     finish()
                     true
                 }

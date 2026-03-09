@@ -40,11 +40,28 @@ service cloud.firestore {
              getUserData(request.auth.uid).role == 'PHARMACY';
     }
 
+    // Helper function: Check if current user's account is APPROVED
+    function isApproved() {
+      let userData = getUserData(request.auth.uid);
+      return !('status' in userData) || userData.status == 'APPROVED';
+    }
+
+    // Helper function: Check if current user is an APPROVED doctor
+    function isApprovedDoctor() {
+      return isDoctor() && isApproved();
+    }
+
+    // Helper function: Check if current user is an APPROVED pharmacy
+    function isApprovedPharmacy() {
+      return isPharmacy() && isApproved();
+    }
+
     // Helper function: Check if doctor is assigned to patient (multi-doctor support)
     // Safely handles missing assignedDoctors field on legacy patient docs
+    // REQUIRES the doctor account to be APPROVED
     function isDoctorAssignedToPatient(patientId) {
       let patientData = getUserData(patientId);
-      return isDoctor() &&
+      return isApprovedDoctor() &&
              'assignedDoctors' in patientData &&
              request.auth.uid in patientData.assignedDoctors;
     }
@@ -62,16 +79,20 @@ service cloud.firestore {
       allow read: if isAuthenticated();
 
       // Users can only create their own document
+      // ADMIN role: blocked from normal signup.
+      //   Seed script passes a one-time bootstrapKey to prove it is authorized.
+      //   The field is deleted from the doc right after creation by the script.
       allow create: if isOwner(userId) &&
-                    hasRequiredFields(['email', 'displayName', 'role']);
+                    hasRequiredFields(['email', 'displayName', 'role']) &&
+                    (request.resource.data.role != 'ADMIN' ||
+                     request.resource.data.bootstrapKey == 'MEDITRACK_BOOTSTRAP_2026');
 
       // Users can only update their own document
-      // Cannot change their own role after creation
-      // Admins can update any user (including role changes)
+      // Cannot change their own role or status after creation
+      // Admins can update any user (including role and status changes)
       allow update: if isAdmin() ||
                     (isOwner(userId) &&
-                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-                     request.resource.data.role == resource.data.role));
+                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'verifiedBy', 'verifiedAt', 'rejectionReason']));
 
       // Users can only delete their own document
       // Admins can delete any user
@@ -144,9 +165,9 @@ service cloud.firestore {
         (resource.data.patientId == request.auth.uid && resource.data.isPrivate == false)
       );
 
-      // Only doctors can create notes
+      // Only approved doctors can create notes
       // Doctor must be assigned to the patient
-      allow create: if isDoctor() &&
+      allow create: if isApprovedDoctor() &&
                     request.resource.data.doctorId == request.auth.uid &&
                     isDoctorAssignedToPatient(request.resource.data.patientId) &&
                     hasRequiredFields(['doctorId', 'patientId', 'note']);
@@ -171,14 +192,14 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid
       );
 
-      // Only doctors can create prescriptions for their assigned patients
-      allow create: if isDoctor() &&
+      // Only approved doctors can create prescriptions for their assigned patients
+      allow create: if isApprovedDoctor() &&
                     request.resource.data.doctorId == request.auth.uid &&
                     isDoctorAssignedToPatient(request.resource.data.patientId) &&
                     hasRequiredFields(['patientId', 'doctorId', 'medicationName', 'dosage']);
 
-      // Only the prescribing doctor can update; patientId and doctorId are immutable
-      allow update: if isDoctor() &&
+      // Only the prescribing approved doctor can update; patientId and doctorId are immutable
+      allow update: if isApprovedDoctor() &&
                     resource.data.doctorId == request.auth.uid &&
                     request.resource.data.patientId == resource.data.patientId &&
                     request.resource.data.doctorId == resource.data.doctorId;
@@ -196,9 +217,9 @@ service cloud.firestore {
         (resource.data.patientId == request.auth.uid && resource.data.isPublic == true)
       );
 
-      // Only doctors can create clinical decisions
+      // Only approved doctors can create clinical decisions
       // Doctor must be assigned to the patient
-      allow create: if isDoctor() &&
+      allow create: if isApprovedDoctor() &&
                     request.resource.data.doctorId == request.auth.uid &&
                     isDoctorAssignedToPatient(request.resource.data.patientId) &&
                     hasRequiredFields(['doctorId', 'patientId', 'type', 'title']);
@@ -240,9 +261,9 @@ service cloud.firestore {
     // ==================== Audit Logs Collection ====================
     match /auditLogs/{logId} {
       // Audit logs are append-only by the system
-      // Only the user who created the action can read their own logs
+      // Users can read their own logs; Admins can read all logs
       allow read: if isAuthenticated() &&
-                  resource.data.userId == request.auth.uid;
+                  (resource.data.userId == request.auth.uid || isAdmin());
 
       // Any authenticated user can create audit logs
       // userId in the document MUST match the authenticated user's UID
@@ -299,17 +320,17 @@ service cloud.firestore {
       // Any authenticated user can read availability (needed for booking UI)
       allow read: if isAuthenticated();
 
-      // Only the owning doctor can create
-      allow create: if isDoctor() &&
+      // Only the owning approved doctor can create
+      allow create: if isApprovedDoctor() &&
                     request.resource.data.doctorId == request.auth.uid;
 
-      // Only the owning doctor can update
-      allow update: if isDoctor() &&
+      // Only the owning approved doctor can update
+      allow update: if isApprovedDoctor() &&
                     resource.data.doctorId == request.auth.uid &&
                     request.resource.data.doctorId == resource.data.doctorId;
 
-      // Only the owning doctor can delete
-      allow delete: if isDoctor() &&
+      // Only the owning approved doctor can delete
+      allow delete: if isApprovedDoctor() &&
                     resource.data.doctorId == request.auth.uid;
     }
 
@@ -375,17 +396,17 @@ service cloud.firestore {
       // All authenticated users can browse pharmacies
       allow read: if isAuthenticated();
 
-      // Pharmacy-role users can create their own pharmacy (ownerId must match)
+      // Pharmacy-role users (approved) can create their own pharmacy (ownerId must match)
       // Admins can create any pharmacy
       allow create: if isAuthenticated() &&
                     (isAdmin() ||
-                     (isPharmacy() && request.resource.data.ownerId == request.auth.uid));
+                     (isApprovedPharmacy() && request.resource.data.ownerId == request.auth.uid));
 
-      // Pharmacy owners can update their own pharmacy
+      // Approved pharmacy owners can update their own pharmacy
       // Admins can update any pharmacy
       allow update: if isAuthenticated() &&
                     (isAdmin() ||
-                     (isPharmacy() && resource.data.ownerId == request.auth.uid));
+                     (isApprovedPharmacy() && resource.data.ownerId == request.auth.uid));
 
       // Only admins can delete pharmacies
       allow delete: if isAdmin();

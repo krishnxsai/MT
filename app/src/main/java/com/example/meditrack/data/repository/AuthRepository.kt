@@ -2,6 +2,7 @@ package com.example.meditrack.data.repository
 
 import android.content.Context
 import android.net.Uri
+import com.example.meditrack.data.model.AccountStatus
 import com.example.meditrack.data.model.Resource
 import com.example.meditrack.data.model.User
 import com.example.meditrack.data.model.UserRole
@@ -42,6 +43,11 @@ class AuthRepository(private val context: Context? = null) {
         role: UserRole
     ): Resource<User> = withContext(Dispatchers.IO) {
         try {
+            // Admin accounts cannot be self-registered — they are seeded via script
+            if (role == UserRole.ADMIN) {
+                return@withContext Resource.Error("Admin accounts cannot be created through signup. Contact system administrator.")
+            }
+
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val firebaseUser = result.user ?: return@withContext Resource.Error("User creation failed")
 
@@ -52,11 +58,19 @@ class AuthRepository(private val context: Context? = null) {
             firebaseUser.updateProfile(profileUpdates).await()
 
             // Create user document in Firestore
+            // Patients are auto-approved; Doctors/Pharmacies require admin approval
+            val accountStatus = when (role) {
+                UserRole.PATIENT -> AccountStatus.APPROVED
+                UserRole.DOCTOR, UserRole.PHARMACY -> AccountStatus.PENDING
+                UserRole.ADMIN -> AccountStatus.APPROVED // unreachable — blocked above
+            }
+
             val user = User(
                 uid = firebaseUser.uid,
                 email = email,
                 displayName = displayName,
-                role = role
+                role = role,
+                status = accountStatus
             )
 
             createUserDocument(user)
@@ -85,6 +99,11 @@ class AuthRepository(private val context: Context? = null) {
 
     suspend fun signInWithCredential(credential: AuthCredential, role: UserRole? = null): Resource<User> = withContext(Dispatchers.IO) {
         try {
+            // Admin accounts cannot be self-registered via Google sign-in
+            if (role == UserRole.ADMIN) {
+                return@withContext Resource.Error("Admin accounts cannot be created through signup. Contact system administrator.")
+            }
+
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: return@withContext Resource.Error("Sign in failed")
 
@@ -93,12 +112,20 @@ class AuthRepository(private val context: Context? = null) {
 
             if (user == null) {
                 // New user - create document
+                val selectedRole = role ?: UserRole.PATIENT
+                val accountStatus = when (selectedRole) {
+                    UserRole.PATIENT -> AccountStatus.APPROVED
+                    UserRole.DOCTOR, UserRole.PHARMACY -> AccountStatus.PENDING
+                    UserRole.ADMIN -> AccountStatus.APPROVED // unreachable — blocked above
+                }
+
                 user = User(
                     uid = firebaseUser.uid,
                     email = firebaseUser.email ?: "",
                     displayName = firebaseUser.displayName ?: "",
                     profileImageUrl = firebaseUser.photoUrl?.toString() ?: "",
-                    role = role ?: UserRole.PATIENT
+                    role = selectedRole,
+                    status = accountStatus
                 )
                 createUserDocument(user)
             }
@@ -203,6 +230,7 @@ class AuthRepository(private val context: Context? = null) {
         try {
             val snapshot = usersCollection
                 .whereEqualTo("role", UserRole.DOCTOR.name)
+                .whereEqualTo("status", AccountStatus.APPROVED.name)
                 .get()
                 .await()
 
@@ -213,6 +241,35 @@ class AuthRepository(private val context: Context? = null) {
             Resource.Success(doctors)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to get doctors", e)
+        }
+    }
+
+    /**
+     * Upload a license/verification document for Doctor or Pharmacy accounts.
+     * Stores the file in Firebase Storage and updates the user document.
+     */
+    suspend fun uploadLicenseDocument(documentUri: Uri): Resource<String> = withContext(Dispatchers.IO) {
+        try {
+            val firebaseUser = auth.currentUser ?: return@withContext Resource.Error("Not logged in")
+
+            val filename = "license_documents/${firebaseUser.uid}/${UUID.randomUUID()}.pdf"
+            val storageRef = storage.reference.child(filename)
+
+            storageRef.putFile(documentUri).await()
+            val downloadUrl = storageRef.downloadUrl.await().toString()
+
+            // Update user document with license URL
+            usersCollection.document(firebaseUser.uid)
+                .update(
+                    mapOf(
+                        "licenseUrl" to downloadUrl,
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+
+            Resource.Success(downloadUrl)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to upload license document", e)
         }
     }
 
@@ -249,9 +306,13 @@ class AuthRepository(private val context: Context? = null) {
             "displayName" to user.displayName,
             "profileImageUrl" to user.profileImageUrl,
             "role" to user.role.name,
+            "status" to user.status.name,
             "assignedDoctors" to user.assignedDoctors,
             "assignedDoctorNames" to user.assignedDoctorNames,
             "phoneNumber" to user.phoneNumber,
+            "licenseUrl" to user.licenseUrl,
+            "verifiedBy" to user.verifiedBy,
+            "rejectionReason" to user.rejectionReason,
             "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
             "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )

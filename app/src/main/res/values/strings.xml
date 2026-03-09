@@ -328,4 +328,122 @@
     <string name="completed_orders">Completed Orders</string>
     <string name="setup_pharmacy_profile">Set Up Pharmacy Profile</string>
     <string name="setup_pharmacy_subtitle">Complete your pharmacy details to start receiving orders</string>
+
+    <!-- Account Status -->
+    <string name="status_pending">Pending</string>
+    <string name="status_approved">Approved</string>
+    <string name="status_rejected">Rejected</string>
+    <string name="status_suspended">Suspended</string>
+
+    <!-- Account Pending Screen -->
+    <string name="account_pending_title">Account Under Review</string>
+    <string name="account_pending_message">Your account is being reviewed by our admin team. You will be able to access the platform once your account is approved.\n\nPlease upload your license document to speed up verification.</string>
+    <string name="account_rejected_title">Account Rejected</string>
+    <string name="account_rejected_message">Your account application has been rejected. Please contact support if you believe this is an error.</string>
+    <string name="account_suspended_title">Account Suspended</string>
+    <string name="account_suspended_message">Your account has been suspended. Please contact the administrator for more information.</string>
+    <string name="rejection_reason_label">Reason:</string>
+    <string name="upload_license">Upload License Document</string>
+    <string name="license_uploaded">✓ License document uploaded</string>
+    <string name="license_upload_success">License document uploaded successfully</string>
+    <string name="check_status">Check Status</string>
+
+    <!-- Admin Approval Actions -->
+    <string name="pending_approvals">Pending Approvals</string>
+    <string name="all_users">All Users</string>
+    <string name="approve">Approve</string>
+    <string name="reject">Reject</string>
+    <string name="suspend_account">Suspend</string>
+    <string name="reactivate">Reactivate</string>
+    <string name="reject_user_title">Reject %s</string>
+    <string name="reject_user_message">Please provide a reason for rejecting this account:</string>
+    <string name="rejection_reason_hint">Reason for rejection…</string>
+    <string name="suspend_user_title">Suspend Account</string>
+    <string name="suspend_user_message">Are you sure you want to suspend %s? They will lose access to the platform.</string>
+    <string name="no_pending_approvals">No pending approvals</string>
+    <string name="action_success">Action completed successfully</string>
+
+    <!-- Audit Logs -->
+    <string name="audit_logs">Audit Logs</string>
+    <string name="no_audit_logs">No audit logs found</string>
+    <string name="audit_action_label">Action</string>
+    <string name="audit_user_label">User</string>
+    <string name="audit_success">Success</string>
+    <string name="audit_failed">Failed</string>
+
+    <!-- Pharmacy Profile Setup -->
+    <string name="pharmacy_profile_setup">Pharmacy Profile Setup</string>
+    <string name="pharmacy_profile_setup_subtitle">Fill in your pharmacy details</string>
+    <string name="pharmacy_name">Pharmacy Name</string>
+    <string name="pharmacy_address">Address</string>
+    <string name="pharmacy_city">City</string>
+    <string name="pharmacy_state">State</string>
+    <string name="pharmacy_zip">ZIP Code</string>
+    <string name="pharmacy_phone">Phone Number</string>
+    <string name="pharmacy_email">Email</string>
+    <string name="pharmacy_operating_hours">Operating Hours</string>
+    <string name="pharmacy_operating_hours_hint">e.g. Mon–Fri: 8AM–9PM, Sat: 9AM–6PM</string>
+    <string name="pharmacy_delivery_available">Delivery Available</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="field_required">This field is required</string>
+    <string name="pharmacy_profile_saved">Pharmacy profile saved successfully</string>
+    <string name="pharmacy_profile_save_failed">Failed to save pharmacy profile</string>
+
+    <!-- Inventory Management -->
+    <string name="inventory">Inventory</string>
+    <string name="inventory_management">Inventory Management</string>
+    <string name="manage_your_stock">Manage your pharmacy stock</string>
+    <string name="search_inventory">Search inventory…</string>
+    <string name="search_inventory_hint">Search by medicine name…</string>
+    <string name="add_inventory_item">Add Inventory Item</string>
+    <string name="edit_inventory_item">Edit Inventory Item</string>
+    <string name="no_inventory_items">No inventory items yet</string>
+    <string name="medicine_name_label">Medicine Name</string>
+    <string name="generic_name">Generic Name</string>
+    <string name="category">Category</string>
+    <string name="stock_quantity">Stock Quantity</string>
+    <string name="unit_price">Unit Price</string>
+    <string name="low_stock_threshold">Low Stock Threshold</string>
+    <string name="manufacturer">Manufacturer</string>
+    <string name="batch_number">Batch Number</string>
+    <string name="item_added">Item added successfully</string>
+    <string name="item_updated">Item updated successfully</string>
+    <string name="item_deleted">Item removed</string>
+    <string name="confirm_delete_item">Are you sure you want to remove this item?</string>
+    <string name="low_stock_items">%d items are running low on stock</string>
+
+    <!-- Transaction / Revenue -->
+    <string name="transactions">Transactions</string>
+    <string name="view_all_transactions">View all pharmacy transactions</string>
+    <string name="revenue_summary">Revenue Summary</string>
+    <string name="total_revenue">Total Revenue</string>
+    <string name="today_revenue">Today</string>
+    <string name="total_txns">Transactions</string>
+    <string name="all_transactions">All Transactions</string>
+    <string name="no_transactions">No transactions yet</string>
+    <string name="purchase">Purchase</string>
+    <string name="refund">Refund</string>
+
+    <!-- Analytics -->
+    <string name="daily_revenue">Daily Revenue</string>
+    <string name="top_medicines">Top Medicines</string>
+
+    <!-- Notification Texts -->
+    <string name="new_order_notification">New Order Received</string>
+    <string name="order_cancelled_notification">Order Cancelled</string>
+    <string name="prescription_uploaded_notification">Prescription Uploaded</string>
+    <string name="low_stock_notification">Low Stock Alert</string>
+
+    <!-- License Fields -->
+    <string name="license_number">License Number</string>
+    <string name="license_document_url">License Document URL</string>
+    <string name="verification_status">Verification Status</string>
+    <string name="verification_pending">Verification: Pending</string>
+    <string name="verification_approved">Verification: Approved</string>
+    <string name="verification_rejected">Verification: Rejected</string>
+
+    <!-- Profile Edit Mode -->
+    <string name="edit_pharmacy_profile">Edit Pharmacy Profile</string>
+    <string name="update_profile">Update Profile</string>
+    <string name="pharmacy_profile_updated">Pharmacy profile updated successfully</string>
 </resources>

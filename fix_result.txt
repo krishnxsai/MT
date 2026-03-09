@@ -1,4 +1,0 @@
-File size: 13876
-Contains bookAppointmentAsDoctor: False
-Contains Appointment Management: True
-SUCCESS: Inserted at line 270

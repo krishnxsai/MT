@@ -459,6 +459,164 @@ class PharmacyRepository {
 
         awaitClose { listener.remove() }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    // Pharmacy-Scoped Transaction Queries
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Real-time flow of all transactions for a specific pharmacy.
+     */
+    fun getPharmacyTransactionsFlow(pharmacyId: String): Flow<Resource<List<OrderTransaction>>> = callbackFlow {
+        trySend(Resource.Loading)
+
+        val listener = transactionsCol
+            .whereEqualTo("pharmacyId", pharmacyId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "getPharmacyTransactionsFlow error: ${error.message}")
+                    trySend(Resource.Success(emptyList()))
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { OrderTransaction.fromMap(doc.id, it) }
+                } ?: emptyList()
+                trySend(Resource.Success(list))
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Get revenue statistics for a pharmacy.
+     * Returns map of: totalRevenue, todayRevenue, totalTransactions, refundTotal
+     */
+    suspend fun getRevenueStats(pharmacyId: String): Resource<Map<String, Double>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val snapshot = transactionsCol
+                    .whereEqualTo("pharmacyId", pharmacyId)
+                    .get().await()
+
+                val transactions = snapshot.documents.mapNotNull { doc ->
+                    doc.data?.let { OrderTransaction.fromMap(doc.id, it) }
+                }
+
+                val today = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }.time
+
+                val totalRevenue = transactions
+                    .filter { it.type == TransactionType.PURCHASE && it.status == TransactionStatus.COMPLETED }
+                    .sumOf { it.amount }
+
+                val todayRevenue = transactions
+                    .filter {
+                        it.type == TransactionType.PURCHASE &&
+                                it.status == TransactionStatus.COMPLETED &&
+                                it.createdAt != null && it.createdAt.after(today)
+                    }
+                    .sumOf { it.amount }
+
+                val refundTotal = transactions
+                    .filter { it.type == TransactionType.REFUND }
+                    .sumOf { it.amount }
+
+                Resource.Success(
+                    mapOf(
+                        "totalRevenue" to totalRevenue,
+                        "todayRevenue" to todayRevenue,
+                        "totalTransactions" to transactions.size.toDouble(),
+                        "refundTotal" to refundTotal
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "getRevenueStats error: ${e.message}")
+                Resource.Error(e.message ?: "Failed to load revenue stats")
+            }
+        }
+
+    // ══════════════════════════════════════════════════════════════
+    // Pharmacy Profile Management
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Create or update a pharmacy profile.
+     */
+    suspend fun savePharmacyProfile(pharmacy: Pharmacy): Resource<Pharmacy> =
+        withContext(Dispatchers.IO) {
+            try {
+                if (pharmacy.id.isNotEmpty()) {
+                    // Update existing
+                    pharmaciesCol.document(pharmacy.id).update(pharmacy.toMap()).await()
+                    Log.d(TAG, "Updated pharmacy profile: ${pharmacy.id}")
+                    Resource.Success(pharmacy)
+                } else {
+                    // Create new
+                    val data = pharmacy.toMap().toMutableMap()
+                    data["createdAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    val docRef = pharmaciesCol.document()
+                    docRef.set(data).await()
+                    Log.d(TAG, "Created pharmacy profile: ${docRef.id}")
+                    Resource.Success(pharmacy.copy(id = docRef.id))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "savePharmacyProfile error: ${e.message}")
+                Resource.Error(e.message ?: "Failed to save pharmacy profile")
+            }
+        }
+
+    /**
+     * Get the pharmacy owned by the current user.
+     */
+    suspend fun getMyPharmacy(): Resource<Pharmacy?> = withContext(Dispatchers.IO) {
+        try {
+            val uid = currentUserId ?: return@withContext Resource.Error("Not logged in")
+            val snapshot = pharmaciesCol
+                .whereEqualTo("ownerId", uid)
+                .limit(1)
+                .get().await()
+
+            if (snapshot.documents.isNotEmpty()) {
+                val doc = snapshot.documents.first()
+                val pharmacy = doc.data?.let { Pharmacy.fromMap(doc.id, it) }
+                Resource.Success(pharmacy)
+            } else {
+                Resource.Success(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getMyPharmacy error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to load pharmacy")
+        }
+    }
+
+    /**
+     * Real-time flow of orders for a specific pharmacy.
+     */
+    fun getPharmacyOrdersFlow(pharmacyId: String): Flow<Resource<List<RefillOrder>>> = callbackFlow {
+        trySend(Resource.Loading)
+
+        val listener = ordersCol
+            .whereEqualTo("pharmacyId", pharmacyId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "getPharmacyOrdersFlow error: ${error.message}")
+                    trySend(Resource.Success(emptyList()))
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { RefillOrder.fromMap(doc.id, it) }
+                } ?: emptyList()
+                trySend(Resource.Success(list))
+            }
+
+        awaitClose { listener.remove() }
+    }
 }
 
 /**

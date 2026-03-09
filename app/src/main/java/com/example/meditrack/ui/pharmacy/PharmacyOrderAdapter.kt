@@ -59,6 +59,13 @@ class PharmacyOrderAdapter(
                     binding.statusChip.text = context.getString(R.string.order_status_processing)
                     binding.statusChip.setChipBackgroundColorResource(R.color.primary_container)
                     binding.actionButtonsLayout.visibility = View.VISIBLE
+                    binding.acceptButton.text = "Prepare"
+                    binding.rejectButton.visibility = View.GONE
+                }
+                OrderStatus.PREPARING -> {
+                    binding.statusChip.text = "Preparing"
+                    binding.statusChip.setChipBackgroundColorResource(R.color.primary_container)
+                    binding.actionButtonsLayout.visibility = View.VISIBLE
                     binding.acceptButton.text = context.getString(R.string.mark_ready)
                     binding.rejectButton.visibility = View.GONE
                 }

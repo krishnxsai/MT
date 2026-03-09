@@ -16,6 +16,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.lifecycleScope
 import com.example.meditrack.R
 import com.example.meditrack.data.model.Resource
+import com.example.meditrack.data.model.User
 import com.example.meditrack.data.model.UserRole
 import com.example.meditrack.databinding.ActivitySignupBinding
 import com.example.meditrack.ui.admin.AdminDashboardActivity
@@ -55,8 +56,8 @@ class SignupActivity : AppCompatActivity() {
         binding.roleChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             selectedRole = when {
                 checkedIds.contains(R.id.doctorChip) -> UserRole.DOCTOR
-                checkedIds.contains(R.id.adminChip) -> UserRole.ADMIN
                 checkedIds.contains(R.id.pharmacyChip) -> UserRole.PHARMACY
+                // Admin role cannot be self-registered — created only via seed script
                 else -> UserRole.PATIENT
             }
         }
@@ -85,7 +86,7 @@ class SignupActivity : AppCompatActivity() {
                 is Resource.Loading -> showLoading(true)
                 is Resource.Success -> {
                     showLoading(false)
-                    navigateBasedOnRole(result.data.role)
+                    navigateForUser(result.data)
                 }
                 is Resource.Error -> {
                     showLoading(false)
@@ -99,7 +100,7 @@ class SignupActivity : AppCompatActivity() {
                 is Resource.Loading -> showLoading(true)
                 is Resource.Success -> {
                     showLoading(false)
-                    navigateBasedOnRole(result.data.role)
+                    navigateForUser(result.data)
                 }
                 is Resource.Error -> {
                     showLoading(false)
@@ -220,12 +221,17 @@ class SignupActivity : AppCompatActivity() {
         binding.googleSignUpButton.isEnabled = !show
     }
 
-    private fun navigateBasedOnRole(role: UserRole) {
-        val intent = when (role) {
-            UserRole.DOCTOR -> Intent(this, DoctorDashboardActivity::class.java)
-            UserRole.ADMIN -> Intent(this, AdminDashboardActivity::class.java)
-            UserRole.PHARMACY -> Intent(this, PharmacyDashboardActivity::class.java)
-            UserRole.PATIENT -> Intent(this, HomeDashboardActivity::class.java)
+    private fun navigateForUser(user: User) {
+        val intent = if (!user.isAccountActive) {
+            // Account not approved — send to pending/rejected/suspended gate
+            Intent(this, AccountPendingActivity::class.java)
+        } else {
+            when (user.role) {
+                UserRole.DOCTOR -> Intent(this, DoctorDashboardActivity::class.java)
+                UserRole.ADMIN -> Intent(this, AdminDashboardActivity::class.java)
+                UserRole.PHARMACY -> Intent(this, PharmacyDashboardActivity::class.java)
+                UserRole.PATIENT -> Intent(this, HomeDashboardActivity::class.java)
+            }
         }
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)

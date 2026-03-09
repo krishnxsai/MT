@@ -11,9 +11,21 @@ data class User(
     val displayName: String = "",
     val profileImageUrl: String = "",
     val role: UserRole = UserRole.PATIENT,
+    val status: AccountStatus = AccountStatus.APPROVED,
     val assignedDoctors: List<String> = emptyList(), // List of doctor UIDs for patients
     val assignedDoctorNames: Map<String, String> = emptyMap(), // doctorUid -> displayName
     val phoneNumber: String = "",
+
+    // ── Verification fields (Doctor / Pharmacy) ─────────────
+    /** URL of uploaded license document in Firebase Storage. */
+    val licenseUrl: String = "",
+    /** UID of the admin who verified this account. */
+    val verifiedBy: String = "",
+    /** Timestamp when the account was verified/rejected. */
+    val verifiedAt: Date? = null,
+    /** Reason provided by admin on rejection. */
+    val rejectionReason: String = "",
+
     @ServerTimestamp
     val createdAt: Date? = null,
     @ServerTimestamp
@@ -28,15 +40,28 @@ data class User(
     /** Backward-compat helper: returns first assigned doctor name or empty string. */
     val assignedDoctorName: String get() = assignedDoctorNames.values.firstOrNull() ?: ""
 
+    /** Whether this account requires admin approval before accessing the platform. */
+    val requiresApproval: Boolean
+        get() = role == UserRole.DOCTOR || role == UserRole.PHARMACY
+
+    /** Whether the user can access their role-specific dashboard. */
+    val isAccountActive: Boolean
+        get() = status == AccountStatus.APPROVED
+
     fun toMap(): Map<String, Any?> {
         return mapOf(
             "email" to email,
             "displayName" to displayName,
             "profileImageUrl" to profileImageUrl,
             "role" to role.name,
+            "status" to status.name,
             "assignedDoctors" to assignedDoctors,
             "assignedDoctorNames" to assignedDoctorNames,
             "phoneNumber" to phoneNumber,
+            "licenseUrl" to licenseUrl,
+            "verifiedBy" to verifiedBy,
+            "verifiedAt" to verifiedAt,
+            "rejectionReason" to rejectionReason,
             "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
     }
@@ -70,9 +95,18 @@ data class User(
                 } catch (e: Exception) {
                     UserRole.PATIENT
                 },
+                status = try {
+                    AccountStatus.valueOf(map["status"] as? String ?: "APPROVED")
+                } catch (_: Exception) {
+                    AccountStatus.APPROVED
+                },
                 assignedDoctors = doctors,
                 assignedDoctorNames = doctorNames,
                 phoneNumber = map["phoneNumber"] as? String ?: "",
+                licenseUrl = map["licenseUrl"] as? String ?: "",
+                verifiedBy = map["verifiedBy"] as? String ?: "",
+                verifiedAt = (map["verifiedAt"] as? com.google.firebase.Timestamp)?.toDate(),
+                rejectionReason = map["rejectionReason"] as? String ?: "",
                 createdAt = map["createdAt"] as? Date,
                 updatedAt = map["updatedAt"] as? Date
             )
@@ -85,5 +119,19 @@ enum class UserRole {
     DOCTOR,
     ADMIN,
     PHARMACY
+}
+
+/**
+ * Account approval status.
+ *
+ * PATIENT → auto-APPROVED on signup
+ * DOCTOR / PHARMACY → PENDING until admin approves
+ * ADMIN can set SUSPENDED at any time
+ */
+enum class AccountStatus {
+    PENDING,
+    APPROVED,
+    REJECTED,
+    SUSPENDED
 }
 

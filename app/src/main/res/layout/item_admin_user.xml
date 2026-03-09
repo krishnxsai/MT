@@ -8,65 +8,145 @@
     app:cardCornerRadius="12dp"
     app:cardElevation="1dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/userAvatar"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_account_circle"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/text_secondary"
-            android:contentDescription="@null" />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/userName"
-            android:layout_width="0dp"
+            <ImageView
+                android:id="@+id/userAvatar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_account_circle"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/text_secondary"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:id="@+id/userName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toStartOf="@+id/roleChip"
+                app:layout_constraintStart_toEndOf="@+id/userAvatar"
+                app:layout_constraintTop_toTopOf="@+id/userAvatar"
+                tools:text="John Doe" />
+
+            <TextView
+                android:id="@+id/userEmail"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toStartOf="@+id/roleChip"
+                app:layout_constraintStart_toEndOf="@+id/userAvatar"
+                app:layout_constraintTop_toBottomOf="@+id/userName"
+                tools:text="john@example.com" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/roleChip"
+                style="@style/Widget.MaterialComponents.Chip.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:textSize="11sp"
+                app:chipMinHeight="28dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Patient" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/statusChip"
+                style="@style/Widget.MaterialComponents.Chip.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:textSize="10sp"
+                android:visibility="gone"
+                app:chipMinHeight="24dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/roleChip"
+                tools:text="Pending"
+                tools:visibility="visible" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Action buttons row -->
+        <LinearLayout
+            android:id="@+id/actionButtonsLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@+id/roleChip"
-            app:layout_constraintStart_toEndOf="@+id/userAvatar"
-            app:layout_constraintTop_toTopOf="@+id/userAvatar"
-            tools:text="John Doe" />
+            android:layout_marginTop="8dp"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
 
-        <TextView
-            android:id="@+id/userEmail"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="2dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            app:layout_constraintEnd_toStartOf="@+id/roleChip"
-            app:layout_constraintStart_toEndOf="@+id/userAvatar"
-            app:layout_constraintTop_toBottomOf="@+id/userName"
-            tools:text="john@example.com" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/approveButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/approve"
+                android:textAllCaps="false"
+                android:textColor="@color/success"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/roleChip"
-            style="@style/Widget.MaterialComponents.Chip.Action"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:clickable="false"
-            android:textSize="11sp"
-            app:chipMinHeight="28dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Patient" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/rejectButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/reject"
+                android:textAllCaps="false"
+                android:textColor="@color/error"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/suspendButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/suspend_account"
+                android:textAllCaps="false"
+                android:textColor="@color/warning"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reactivateButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/reactivate"
+                android:textAllCaps="false"
+                android:textColor="@color/success"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
 

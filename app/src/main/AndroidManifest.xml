@@ -64,6 +64,10 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ui.auth.AccountPendingActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.main.MainActivity"
             android:exported="false" />
 
@@ -124,6 +128,20 @@
         <!-- Pharmacy Dashboard -->
         <activity
             android:name=".ui.pharmacy.PharmacyDashboardActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.pharmacy.PharmacyProfileSetupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.pharmacy.InventoryActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.pharmacy.TransactionHistoryActivity"
             android:exported="false" />
 
         <activity

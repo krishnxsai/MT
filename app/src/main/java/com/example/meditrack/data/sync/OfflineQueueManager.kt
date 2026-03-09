@@ -127,6 +127,7 @@ class OfflineQueueManager(context: Context) {
             put("actionType", action.actionType.name)
             put("collectionName", action.collectionName)
             put("documentId", action.documentId)
+            @Suppress("UNCHECKED_CAST")
             put("data", JSONObject(action.data.mapValues { (_, v) ->
                 when (v) {
                     is Map<*, *> -> JSONObject(v as Map<String, Any?>)

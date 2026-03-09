@@ -152,3 +152,7 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
+# Node.js (seed scripts)
+node_modules/
+package-lock.json
+
