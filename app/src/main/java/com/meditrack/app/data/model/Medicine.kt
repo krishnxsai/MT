@@ -126,3 +126,18 @@ enum class RepeatType {
     WEEKLY,
     AS_NEEDED
 }
+
+/**
+ * Urgency level for medicine refill alerts.
+ * Used to prioritize and style alerts in the UI.
+ */
+enum class RefillUrgency {
+    /** Stock is fine, no alert needed */
+    NONE,
+    /** Stock is low but some days remaining */
+    LOW,
+    /** 0-2 days of stock remaining */
+    URGENT,
+    /** No stock remaining */
+    OUT_OF_STOCK
+}

@@ -205,6 +205,51 @@ class OrderRepository {
         }
     }
 
+    /**
+     * Place a multi-item order (unified ordering experience).
+     * Supports pricing, delivery address, and multi-item carts.
+     *
+     * @param order The complete order with items, pharmacy info, and pricing
+     * @return Order ID on success
+     */
+    suspend fun placeOrder(order: RefillOrder): Resource<String> = withContext(Dispatchers.IO) {
+        try {
+            val userId = currentUserId ?: return@withContext Resource.Error("Not logged in")
+
+            if (order.items.isEmpty() && order.medicineId.isEmpty()) {
+                return@withContext Resource.Error("Order must have at least one item")
+            }
+
+            if (order.pharmacyId.isEmpty()) {
+                return@withContext Resource.Error("Pharmacy must be selected")
+            }
+
+            val initialStatus = OrderStatusEntry(
+                status = OrderStatus.PENDING.name,
+                changedAt = Date(),
+                note = "Order placed at ${order.pharmacyName}"
+            )
+
+            val orderWithUser = order.copy(
+                userId = userId,
+                status = OrderStatus.PENDING,
+                statusHistory = listOf(initialStatus)
+            )
+
+            val docRef = ordersCol.document()
+            val data = orderWithUser.toMap().toMutableMap()
+            data["createdAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
+
+            docRef.set(data).await()
+
+            Log.d(TAG, "Order placed successfully: ${docRef.id}")
+            Resource.Success(docRef.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "placeOrder error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to place order")
+        }
+    }
+
     // ─────────────── Order Status Management ───────────────
 
     /**

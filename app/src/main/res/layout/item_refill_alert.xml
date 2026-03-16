@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/refillAlertCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
+    app:strokeColor="@color/warning"
+    app:strokeWidth="1dp"
+    app:rippleColor="@color/ripple_primary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header with urgency indicator -->
+        <LinearLayout
+            android:id="@+id/headerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="@color/warning_light"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/ivAlertIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_warning"
+                app:tint="@color/warning" />
+
+            <TextView
+                android:id="@+id/tvAlertTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="LOW STOCK ALERT"
+                android:textColor="@color/warning"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-bold"
+                android:letterSpacing="0.08" />
+
+            <ImageButton
+                android:id="@+id/btnDismissHeader"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                android:contentDescription="Dismiss alert"
+                app:tint="@color/text_tertiary" />
+
+        </LinearLayout>
+
+        <!-- Content -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <!-- Medicine icon -->
+            <ImageView
+                android:id="@+id/ivMedicineIcon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_pill"
+                android:padding="8dp"
+                android:background="@drawable/bg_circle_tinted"
+                android:backgroundTint="@color/primary_light"
+                app:tint="@color/primary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Medicine name -->
+            <TextView
+                android:id="@+id/tvMedicineName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-bold"
+                tools:text="Paracetamol 500mg"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/ivMedicineIcon"
+                app:layout_constraintTop_toTopOf="@id/ivMedicineIcon" />
+
+            <!-- Stock status text -->
+            <TextView
+                android:id="@+id/tvStockStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                tools:text="Only 3 tablets left"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/ivMedicineIcon"
+                app:layout_constraintTop_toBottomOf="@id/tvMedicineName" />
+
+            <!-- Stock progress bar -->
+            <ProgressBar
+                android:id="@+id/progressStock"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="0dp"
+                android:layout_height="8dp"
+                android:layout_marginTop="12dp"
+                android:max="100"
+                android:progress="20"
+                android:progressDrawable="@drawable/bg_stock_progress_warning"
+                app:layout_constraintEnd_toStartOf="@id/tvStockPercent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvStockStatus" />
+
+            <!-- Stock percentage -->
+            <TextView
+                android:id="@+id/tvStockPercent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/warning"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                tools:text="20%"
+                app:layout_constraintBottom_toBottomOf="@id/progressStock"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/progressStock" />
+
+            <!-- Days remaining -->
+            <TextView
+                android:id="@+id/tvDaysRemaining"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_tertiary"
+                android:textSize="12sp"
+                tools:text="~2 days remaining"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/progressStock" />
+
+            <!-- Action buttons -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="end"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvDaysRemaining">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDismiss"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Dismiss"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOrderRefill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:text="Order Refill"
+                    android:textSize="13sp"
+                    app:backgroundTint="@color/primary"
+                    app:icon="@drawable/ic_cart"
+                    app:iconSize="16dp"
+                    app:cornerRadius="20dp" />
+
+            </LinearLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

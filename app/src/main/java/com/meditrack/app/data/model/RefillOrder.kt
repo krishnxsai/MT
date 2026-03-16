@@ -2,6 +2,8 @@ package com.meditrack.app.data.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
@@ -9,15 +11,17 @@ import java.util.Date
  * Represents a medicine refill order.
  * Stored in the top-level `orders` Firestore collection.
  *
- * Lifecycle: PENDING → CONFIRMED → SHIPPED → DELIVERED
+ * Lifecycle: PENDING → CONFIRMED → PREPARING → SHIPPED → DELIVERED
  *                    └→ CANCELLED
+ *
+ * Supports both single-item orders (legacy) and multi-item orders.
  */
 data class RefillOrder(
     @DocumentId
     val id: String = "",
     val userId: String = "",
 
-    // ── Medicine reference ───────────────────────────────────────
+    // ── Single medicine reference (legacy/backward compat) ────────
     val medicineId: String = "",
     val medicineName: String = "",
     val medicineDosage: String = "",
@@ -31,9 +35,29 @@ data class RefillOrder(
     /** Optional prescription reference for controlled medications. */
     val prescriptionId: String = "",
 
-    // ── Pharmacy info (future extension) ─────────────────────────
+    // ── Pharmacy info ────────────────────────────────────────────
     val pharmacyName: String = "",
     val pharmacyId: String = "",
+
+    // ── Multi-item support (NEW) ─────────────────────────────────
+    /** List of items in this order. Empty for legacy single-item orders. */
+    val items: List<OrderItem> = emptyList(),
+
+    // ── Pricing (NEW) ────────────────────────────────────────────
+    val subtotal: Double = 0.0,
+    val deliveryFee: Double = 0.0,
+    val discount: Double = 0.0,
+    val totalAmount: Double = 0.0,
+
+    // ── Delivery info (NEW) ──────────────────────────────────────
+    val deliveryAddress: DeliveryAddress? = null,
+    val deliveryType: DeliveryType = DeliveryType.DELIVERY,
+    val estimatedDeliveryMinutes: Int = 0,
+
+    // ── Real-time tracking (NEW) ─────────────────────────────────
+    /** Delivery person's current location */
+    val currentLocation: GeoPoint? = null,
+    val lastLocationUpdate: Date? = null,
 
     // ── Status change tracking ───────────────────────────────────
     val statusHistory: List<OrderStatusEntry> = emptyList(),
@@ -50,6 +74,14 @@ data class RefillOrder(
 ) {
     constructor() : this(id = "")
 
+    /** True if this is a multi-item order */
+    val isMultiItemOrder: Boolean
+        get() = items.isNotEmpty()
+
+    /** Get total item count (works for both single and multi-item orders) */
+    val itemCount: Int
+        get() = if (isMultiItemOrder) items.size else 1
+
     fun toMap(): Map<String, Any?> = mapOf(
         "userId" to userId,
         "medicineId" to medicineId,
@@ -62,6 +94,16 @@ data class RefillOrder(
         "prescriptionId" to prescriptionId,
         "pharmacyName" to pharmacyName,
         "pharmacyId" to pharmacyId,
+        "items" to items.map { it.toMap() },
+        "subtotal" to subtotal,
+        "deliveryFee" to deliveryFee,
+        "discount" to discount,
+        "totalAmount" to totalAmount,
+        "deliveryAddress" to deliveryAddress?.toMap(),
+        "deliveryType" to deliveryType.name,
+        "estimatedDeliveryMinutes" to estimatedDeliveryMinutes,
+        "currentLocation" to currentLocation,
+        "lastLocationUpdate" to lastLocationUpdate,
         "statusHistory" to statusHistory.map { it.toMap() },
         "cancelReason" to cancelReason,
         "estimatedDelivery" to estimatedDelivery,
@@ -75,6 +117,16 @@ data class RefillOrder(
             val historyList = (map["statusHistory"] as? List<Map<String, Any?>>)?.map {
                 OrderStatusEntry.fromMap(it)
             } ?: emptyList()
+
+            @Suppress("UNCHECKED_CAST")
+            val itemsList = (map["items"] as? List<Map<String, Any?>>)?.map {
+                OrderItem.fromMap(it)
+            } ?: emptyList()
+
+            @Suppress("UNCHECKED_CAST")
+            val deliveryAddr = (map["deliveryAddress"] as? Map<String, Any?>)?.let {
+                DeliveryAddress.fromMap(it)
+            }
 
             return RefillOrder(
                 id = id,
@@ -91,6 +143,18 @@ data class RefillOrder(
                 prescriptionId = map["prescriptionId"] as? String ?: "",
                 pharmacyName = map["pharmacyName"] as? String ?: "",
                 pharmacyId = map["pharmacyId"] as? String ?: "",
+                items = itemsList,
+                subtotal = (map["subtotal"] as? Number)?.toDouble() ?: 0.0,
+                deliveryFee = (map["deliveryFee"] as? Number)?.toDouble() ?: 0.0,
+                discount = (map["discount"] as? Number)?.toDouble() ?: 0.0,
+                totalAmount = (map["totalAmount"] as? Number)?.toDouble() ?: 0.0,
+                deliveryAddress = deliveryAddr,
+                deliveryType = try {
+                    DeliveryType.valueOf(map["deliveryType"] as? String ?: "DELIVERY")
+                } catch (_: Exception) { DeliveryType.DELIVERY },
+                estimatedDeliveryMinutes = (map["estimatedDeliveryMinutes"] as? Number)?.toInt() ?: 0,
+                currentLocation = map["currentLocation"] as? GeoPoint,
+                lastLocationUpdate = (map["lastLocationUpdate"] as? Timestamp)?.toDate(),
                 statusHistory = historyList,
                 cancelReason = map["cancelReason"] as? String ?: "",
                 estimatedDelivery = (map["estimatedDelivery"] as? Timestamp)?.toDate(),
@@ -134,5 +198,92 @@ data class OrderStatusEntry(
             note = map["note"] as? String ?: ""
         )
     }
+}
+
+/**
+ * Represents a single item in a multi-item order.
+ */
+data class OrderItem(
+    val medicineId: String = "",
+    val medicineName: String = "",
+    val medicineDosage: String = "",
+    val quantity: Int = 0,
+    val unitPrice: Double = 0.0,
+    val totalPrice: Double = 0.0,
+    @get:PropertyName("prescriptionRequired") @set:PropertyName("prescriptionRequired")
+    var prescriptionRequired: Boolean = false,
+    val prescriptionId: String? = null,
+    @get:PropertyName("prescriptionVerified") @set:PropertyName("prescriptionVerified")
+    var prescriptionVerified: Boolean = false
+) {
+    constructor() : this(medicineId = "")
+
+    fun toMap(): Map<String, Any?> = mapOf(
+        "medicineId" to medicineId,
+        "medicineName" to medicineName,
+        "medicineDosage" to medicineDosage,
+        "quantity" to quantity,
+        "unitPrice" to unitPrice,
+        "totalPrice" to totalPrice,
+        "prescriptionRequired" to prescriptionRequired,
+        "prescriptionId" to prescriptionId,
+        "prescriptionVerified" to prescriptionVerified
+    )
+
+    companion object {
+        fun fromMap(map: Map<String, Any?>): OrderItem = OrderItem(
+            medicineId = map["medicineId"] as? String ?: "",
+            medicineName = map["medicineName"] as? String ?: "",
+            medicineDosage = map["medicineDosage"] as? String ?: "",
+            quantity = (map["quantity"] as? Number)?.toInt() ?: 0,
+            unitPrice = (map["unitPrice"] as? Number)?.toDouble() ?: 0.0,
+            totalPrice = (map["totalPrice"] as? Number)?.toDouble() ?: 0.0,
+            prescriptionRequired = map["prescriptionRequired"] as? Boolean ?: false,
+            prescriptionId = map["prescriptionId"] as? String,
+            prescriptionVerified = map["prescriptionVerified"] as? Boolean ?: false
+        )
+    }
+}
+
+/**
+ * Delivery address for an order.
+ */
+data class DeliveryAddress(
+    val label: String = "",         // "Home", "Work", etc.
+    val fullAddress: String = "",
+    val landmark: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val contactPhone: String = ""
+) {
+    constructor() : this(label = "")
+
+    fun toMap(): Map<String, Any?> = mapOf(
+        "label" to label,
+        "fullAddress" to fullAddress,
+        "landmark" to landmark,
+        "latitude" to latitude,
+        "longitude" to longitude,
+        "contactPhone" to contactPhone
+    )
+
+    companion object {
+        fun fromMap(map: Map<String, Any?>): DeliveryAddress = DeliveryAddress(
+            label = map["label"] as? String ?: "",
+            fullAddress = map["fullAddress"] as? String ?: "",
+            landmark = map["landmark"] as? String ?: "",
+            latitude = (map["latitude"] as? Number)?.toDouble() ?: 0.0,
+            longitude = (map["longitude"] as? Number)?.toDouble() ?: 0.0,
+            contactPhone = map["contactPhone"] as? String ?: ""
+        )
+    }
+}
+
+/**
+ * Type of delivery for an order.
+ */
+enum class DeliveryType {
+    DELIVERY,   // Deliver to address
+    PICKUP      // Customer picks up from pharmacy
 }
 

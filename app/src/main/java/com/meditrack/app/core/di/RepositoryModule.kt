@@ -66,4 +66,8 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideRiskScoreRepository(): RiskScoreRepository = RiskScoreRepository()
+
+    @Provides
+    @Singleton
+    fun provideRefillAlertRepository(): RefillAlertRepository = RefillAlertRepository()
 }

@@ -59,12 +59,15 @@
 
     <!-- Semantic Colors - Clear Meaning -->
     <color name="error">#DC2626</color>
+    <color name="error_light">#FEF2F2</color>
     <color name="error_container">#FEF2F2</color>
     <color name="on_error_container">#991B1B</color>
     <color name="success">#059669</color>
+    <color name="success_light">#ECFDF5</color>
     <color name="success_container">#ECFDF5</color>
     <color name="on_success_container">#064E3B</color>
     <color name="warning">#D97706</color>
+    <color name="warning_light">#FFFBEB</color>
     <color name="warning_container">#FFFBEB</color>
     <color name="warning_surface">#FFFBEB</color>
     <color name="on_warning_container">#92400E</color>
@@ -72,6 +75,7 @@
     <color name="info_container">#F0F9FF</color>
     <color name="info_surface">#F0F9FF</color>
     <color name="on_info_container">#075985</color>
+    <color name="scrim">#33000000</color>
 
     <!-- Pharmacy Status Colors -->
     <color name="preparing_orange">#EA580C</color>

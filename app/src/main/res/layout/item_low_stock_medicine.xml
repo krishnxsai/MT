@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/lowStockCard"
+    android:layout_width="160dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="12dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:rippleColor="@color/ripple_primary"
+    app:strokeColor="@color/outline_light"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Urgency Badge -->
+        <TextView
+            android:id="@+id/tvUrgencyBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge_warning"
+            android:fontFamily="sans-serif-medium"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:textColor="@color/warning"
+            android:textSize="9sp"
+            android:visibility="gone"
+            tools:text="URGENT"
+            tools:visibility="visible" />
+
+        <!-- Medicine Icon -->
+        <ImageView
+            android:id="@+id/ivMedicine"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="8dp"
+            android:src="@drawable/ic_pill"
+            app:tint="@color/primary" />
+
+        <!-- Medicine Name -->
+        <TextView
+            android:id="@+id/tvMedicineName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-bold"
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            tools:text="Paracetamol" />
+
+        <!-- Dosage -->
+        <TextView
+            android:id="@+id/tvDosage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            tools:text="500mg" />
+
+        <!-- Stock Status -->
+        <TextView
+            android:id="@+id/tvStockStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/warning"
+            android:textSize="12sp"
+            tools:text="3 left" />
+
+        <!-- Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progressStock"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="4dp"
+            android:max="100"
+            android:progress="20"
+            android:progressDrawable="@drawable/bg_stock_progress_warning" />
+
+        <!-- Add Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdd"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="12dp"
+            android:text="+ Add"
+            android:textSize="12sp"
+            app:cornerRadius="18dp"
+            app:strokeColor="@color/primary" />
+
+        <!-- Added indicator (shown when in cart) -->
+        <LinearLayout
+            android:id="@+id/addedIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_rounded_success"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_check"
+                app:tint="@color/success" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Added"
+                android:textColor="@color/success"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -27,6 +27,7 @@ import com.meditrack.app.ui.medicine.MedicinesListActivity
 import com.meditrack.app.ui.medicine.MedicineViewModel
 import com.meditrack.app.ui.order.PharmacyListActivity
 import com.meditrack.app.ui.order.RefillOrdersActivity
+import com.meditrack.app.ui.order.unified.UnifiedOrderActivity
 import com.meditrack.app.ui.profile.ProfileActivity
 import com.meditrack.app.ui.profile.ProfileViewModel
 import com.meditrack.app.ui.recommendations.DoctorRecommendationsViewModel
@@ -139,14 +140,14 @@ class HomeDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, AppointmentsListActivity::class.java))
         }
 
-        // Refill Orders Card
+        // Refill Orders Card - Navigate to Unified Order screen
         binding.refillOrdersCard?.setOnClickListener {
-            startActivity(Intent(this, RefillOrdersActivity::class.java))
+            startActivity(Intent(this, UnifiedOrderActivity::class.java))
         }
 
-        // Pharmacies Card
+        // Pharmacies Card - Navigate to Unified Order screen
         binding.pharmaciesCard?.setOnClickListener {
-            startActivity(Intent(this, PharmacyListActivity::class.java))
+            startActivity(Intent(this, UnifiedOrderActivity::class.java))
         }
     }
 
@@ -457,7 +458,7 @@ class HomeDashboardActivity : AppCompatActivity() {
             binding.lowStockAlertText.text = "$count medicine${if (count > 1) "s" else ""} running low on stock"
 
             binding.lowStockAlertCard.setOnClickListener {
-                startActivity(Intent(this, RefillOrdersActivity::class.java))
+                startActivity(Intent(this, UnifiedOrderActivity::class.java))
             }
         } else {
             binding.lowStockAlertCard.visibility = View.GONE

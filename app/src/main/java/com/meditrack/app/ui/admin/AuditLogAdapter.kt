@@ -109,10 +109,14 @@ class AuditLogAdapter :
             newItem: Map<String, Any?>
         ): Boolean = oldItem["id"] == newItem["id"]
 
+        @Suppress("DiffUtilEquals")
         override fun areContentsTheSame(
             oldItem: Map<String, Any?>,
             newItem: Map<String, Any?>
-        ): Boolean = oldItem == newItem
+        ): Boolean {
+            if (oldItem.size != newItem.size) return false
+            return oldItem.all { (key, value) -> newItem[key] == value }
+        }
     }
 }
 

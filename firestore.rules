@@ -531,6 +531,50 @@ service cloud.firestore {
       // Risk scores are immutable — append-only historical record
       allow update, delete: if false;
     }
+
+    // ==================== Refill Alerts Collection ====================
+    // Stores low-stock and refill reminder alerts for patients
+    match /refillAlerts/{alertId} {
+      // Users can read their own refill alerts only
+      allow read: if isAuthenticated() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Users can create refill alerts for themselves
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own alerts (dismiss, mark as read, etc.)
+      // userId is immutable
+      allow update: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == resource.data.userId;
+
+      // Users can delete their own alerts
+      allow delete: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== Carts Collection ====================
+    // Stores shopping carts for medicine orders
+    match /carts/{cartId} {
+      // Users can read their own cart only
+      allow read: if isAuthenticated() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Users can create their own cart
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own cart
+      // userId is immutable
+      allow update: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == resource.data.userId;
+
+      // Users can delete their own cart
+      allow delete: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+    }
   }
 }
 

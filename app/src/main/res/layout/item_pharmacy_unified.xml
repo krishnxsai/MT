@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/pharmacyCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:rippleColor="@color/ripple_primary"
+    app:strokeColor="@color/outline_light"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Pharmacy Icon/Image -->
+        <ImageView
+            android:id="@+id/ivPharmacy"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_circle_tinted"
+            android:backgroundTint="@color/primary_light"
+            android:padding="12dp"
+            android:src="@drawable/ic_pharmacy"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/primary" />
+
+        <!-- Selected indicator -->
+        <ImageView
+            android:id="@+id/ivSelected"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="@drawable/bg_circle_primary"
+            android:padding="4dp"
+            android:src="@drawable/ic_check"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/ivPharmacy"
+            app:layout_constraintEnd_toEndOf="@id/ivPharmacy"
+            app:tint="@color/white"
+            tools:visibility="visible" />
+
+        <!-- Pharmacy Name -->
+        <TextView
+            android:id="@+id/tvPharmacyName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-bold"
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toStartOf="@id/ratingContainer"
+            app:layout_constraintStart_toEndOf="@id/ivPharmacy"
+            app:layout_constraintTop_toTopOf="@id/ivPharmacy"
+            tools:text="Apollo Pharmacy" />
+
+        <!-- Rating -->
+        <LinearLayout
+            android:id="@+id/ratingContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivPharmacy">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_star"
+                app:tint="@color/warning" />
+
+            <TextView
+                android:id="@+id/tvRating"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                tools:text="4.7" />
+
+        </LinearLayout>
+
+        <!-- Distance and Location -->
+        <LinearLayout
+            android:id="@+id/locationRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivPharmacy"
+            app:layout_constraintTop_toBottomOf="@id/tvPharmacyName">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_location"
+                app:tint="@color/text_hint" />
+
+            <TextView
+                android:id="@+id/tvDistance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                tools:text="0.5 km" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="4dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="@drawable/bg_circle"
+                android:backgroundTint="@color/text_hint" />
+
+            <TextView
+                android:id="@+id/tvAddress"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                tools:text="MG Road, Bangalore" />
+
+        </LinearLayout>
+
+        <!-- Status Row -->
+        <LinearLayout
+            android:id="@+id/statusRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivPharmacy"
+            app:layout_constraintTop_toBottomOf="@id/locationRow">
+
+            <!-- Open Status -->
+            <TextView
+                android:id="@+id/tvOpenStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/success"
+                android:textSize="12sp"
+                tools:text="Open" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="4dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="@drawable/bg_circle"
+                android:backgroundTint="@color/text_hint" />
+
+            <!-- Closing Time -->
+            <TextView
+                android:id="@+id/tvClosingTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="Closes 10 PM" />
+
+        </LinearLayout>
+
+        <!-- Delivery Info -->
+        <LinearLayout
+            android:id="@+id/deliveryRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="visible"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivPharmacy"
+            app:layout_constraintTop_toBottomOf="@id/statusRow">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_delivery"
+                app:tint="@color/primary" />
+
+            <TextView
+                android:id="@+id/tvDeliveryInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/primary"
+                android:textSize="12sp"
+                tools:text="Delivery available ~ 30 min" />
+
+        </LinearLayout>
+
+        <!-- Select Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSelect"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="12dp"
+            android:text="Select"
+            android:textSize="12sp"
+            app:cornerRadius="18dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/deliveryRow"
+            app:strokeColor="@color/primary" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

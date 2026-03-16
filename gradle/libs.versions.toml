@@ -13,6 +13,9 @@ material = "1.12.0"
 firebaseBom = "33.7.0"
 googleServices = "4.4.2"
 playServicesAuth = "21.3.0"
+playServicesMaps = "19.0.0"
+playServicesLocation = "21.3.0"
+mapsUtils = "3.8.2"
 activityKtx = "1.9.3"
 fragmentKtx = "1.8.5"
 lifecycleViewmodel = "2.8.7"
@@ -60,6 +63,9 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hiltCompiler" }
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
