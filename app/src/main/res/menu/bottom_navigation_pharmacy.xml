@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_pharmacy_dashboard"
+        android:icon="@drawable/ic_home"
+        android:title="@string/nav_pharmacy_dashboard" />
+    <item
+        android:id="@+id/nav_pharmacy_orders"
+        android:icon="@drawable/ic_clock"
+        android:title="@string/nav_pharmacy_orders" />
+    <item
+        android:id="@+id/nav_pharmacy_inventory"
+        android:icon="@drawable/ic_medicine"
+        android:title="@string/nav_pharmacy_inventory" />
+    <item
+        android:id="@+id/nav_pharmacy_transactions"
+        android:icon="@drawable/ic_insights"
+        android:title="@string/nav_pharmacy_transactions" />
+    <item
+        android:id="@+id/nav_pharmacy_profile"
+        android:icon="@drawable/ic_person"
+        android:title="@string/nav_pharmacy_profile" />
+</menu>

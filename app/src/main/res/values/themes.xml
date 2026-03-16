@@ -331,8 +331,8 @@
 
     <!-- Premium Chip Choice Style -->
     <style name="PremiumChipChoice" parent="Widget.Material3.Chip.Filter">
-        <item name="android:textColor">@color/premium_text_secondary</item>
-        <item name="chipBackgroundColor">@color/premium_surface_dim</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="chipBackgroundColor">@color/surface_dim</item>
         <item name="chipStrokeWidth">0dp</item>
         <item name="chipCornerRadius">12dp</item>
         <item name="chipMinHeight">40dp</item>
@@ -342,7 +342,7 @@
 
     <!-- Premium Chip Priority Style -->
     <style name="PremiumChipPriority" parent="Widget.Material3.Chip.Filter">
-        <item name="android:textColor">@color/premium_text_secondary</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="chipStrokeWidth">0dp</item>
         <item name="chipCornerRadius">12dp</item>
         <item name="android:textSize">12sp</item>
@@ -358,10 +358,10 @@
         <item name="boxCornerRadiusBottomEnd">14dp</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="boxStrokeColor">@color/premium_input_stroke</item>
-        <item name="hintTextColor">@color/premium_text_tertiary</item>
-        <item name="android:textColorHint">@color/premium_text_tertiary</item>
-        <item name="boxBackgroundColor">@color/premium_input_background</item>
+        <item name="boxStrokeColor">@color/outline</item>
+        <item name="hintTextColor">@color/text_tertiary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="boxBackgroundColor">@color/surface_variant</item>
     </style>
 
     <!-- ============================================ -->

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:fitsSystemWindows="true">
 
     <androidx.core.widget.NestedScrollView
@@ -58,7 +58,7 @@
                         android:layout_height="14dp"
                         android:layout_gravity="bottom|end"
                         android:background="@drawable/bg_circle_primary"
-                        android:backgroundTint="@color/premium_success" />
+                        android:backgroundTint="@color/success" />
 
                 </FrameLayout>
 
@@ -80,7 +80,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif"
                         android:letterSpacing="0.02"
-                        android:textColor="@color/premium_text_tertiary"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="14sp"
                         tools:text="Good Morning 👋" />
 
@@ -91,7 +91,7 @@
                         android:layout_marginTop="4dp"
                         android:fontFamily="sans-serif-medium"
                         android:letterSpacing="-0.01"
-                        android:textColor="@color/premium_text_primary"
+                        android:textColor="@color/text_primary"
                         android:textSize="22sp"
                         tools:text="Dr. John Smith" />
 
@@ -102,19 +102,19 @@
                     android:id="@+id/signOutButton"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    app:cardBackgroundColor="@color/premium_surface_dim"
+                    app:cardBackgroundColor="@color/surface_dim"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="0dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:rippleColor="@color/premium_ripple">
+                    app:rippleColor="@color/ripple_primary">
 
                     <ImageView
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_logout"
-                        app:tint="@color/premium_text_secondary" />
+                        app:tint="@color/text_secondary" />
 
                 </com.google.android.material.card.MaterialCardView>
 
@@ -156,7 +156,7 @@
                         android:alpha="0.9"
                         android:fontFamily="sans-serif-medium"
                         android:letterSpacing="0.08"
-                        android:text="DOCTOR DASHBOARD"
+                        android:text="@string/doctor_dashboard_label"
                         android:textAllCaps="true"
                         android:textColor="@color/white"
                         android:textSize="11sp"
@@ -184,7 +184,7 @@
                         android:layout_marginStart="8dp"
                         android:alpha="0.9"
                         android:fontFamily="sans-serif"
-                        android:text="Patients"
+                        android:text="@string/total_patients"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         app:layout_constraintBottom_toBottomOf="@id/patientCountText"
@@ -208,7 +208,7 @@
                             android:layout_width="8dp"
                             android:layout_height="8dp"
                             android:background="@drawable/bg_circle_primary"
-                            android:backgroundTint="@color/premium_success" />
+                            android:backgroundTint="@color/success" />
 
                         <TextView
                             android:id="@+id/activeIndicatorText"
@@ -216,8 +216,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="All systems active"
-                            android:textColor="@color/premium_primary_dark"
+                            android:text="@string/all_systems_active"
+                            android:textColor="@color/primary_dark"
                             android:textSize="13sp" />
 
                     </LinearLayout>
@@ -244,9 +244,9 @@
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
-                    app:strokeColor="@color/premium_border_light"
-                    app:cardBackgroundColor="@color/premium_surface"
-                    app:rippleColor="@color/premium_ripple">
+                    app:strokeColor="@color/outline_light"
+                    app:cardBackgroundColor="@color/surface"
+                    app:rippleColor="@color/ripple_primary">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -259,7 +259,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_chat"
-                            app:tint="@color/premium_primary"
+                            app:tint="@color/primary"
                             android:contentDescription="Messages" />
 
                         <TextView
@@ -267,8 +267,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Messages"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/messages"
+                            android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
                     </LinearLayout>
@@ -285,9 +285,9 @@
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
-                    app:strokeColor="@color/premium_border_light"
-                    app:cardBackgroundColor="@color/premium_surface"
-                    app:rippleColor="@color/premium_ripple">
+                    app:strokeColor="@color/outline_light"
+                    app:cardBackgroundColor="@color/surface"
+                    app:rippleColor="@color/ripple_primary">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -300,7 +300,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_calendar"
-                            app:tint="@color/premium_info"
+                            app:tint="@color/info"
                             android:contentDescription="Appointments" />
 
                         <TextView
@@ -308,8 +308,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Appts"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/appts_short"
+                            android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
                     </LinearLayout>
@@ -326,9 +326,9 @@
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
-                    app:strokeColor="@color/premium_border_light"
-                    app:cardBackgroundColor="@color/premium_surface"
-                    app:rippleColor="@color/premium_ripple">
+                    app:strokeColor="@color/outline_light"
+                    app:cardBackgroundColor="@color/surface"
+                    app:rippleColor="@color/ripple_primary">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -341,7 +341,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_clock"
-                            app:tint="@color/premium_warning"
+                            app:tint="@color/warning"
                             android:contentDescription="Availability" />
 
                         <TextView
@@ -349,8 +349,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Schedule"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/schedule"
+                            android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
                     </LinearLayout>
@@ -374,8 +374,8 @@
                     android:layout_weight="1"
                     android:fontFamily="sans-serif-medium"
                     android:letterSpacing="-0.01"
-                    android:text="My Patients"
-                    android:textColor="@color/premium_text_primary"
+                    android:text="@string/my_patients"
+                    android:textColor="@color/text_primary"
                     android:textSize="20sp" />
 
                 <!-- Search/Filter Button (optional) -->
@@ -383,17 +383,17 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/premium_surface_dim"
+                    app:cardBackgroundColor="@color/surface_dim"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:rippleColor="@color/premium_ripple">
+                    app:rippleColor="@color/ripple_primary">
 
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_settings"
-                        app:tint="@color/premium_text_secondary" />
+                        app:tint="@color/text_secondary" />
 
                 </com.google.android.material.card.MaterialCardView>
 
@@ -430,7 +430,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="120dp"
                         android:layout_height="120dp"
-                        app:cardBackgroundColor="@color/premium_surface_dim"
+                        app:cardBackgroundColor="@color/surface_dim"
                         app:cardCornerRadius="60dp"
                         app:cardElevation="0dp">
 
@@ -439,7 +439,7 @@
                             android:layout_height="56dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_patients"
-                            app:tint="@color/premium_text_tertiary" />
+                            app:tint="@color/text_tertiary" />
 
                     </com.google.android.material.card.MaterialCardView>
 
@@ -448,8 +448,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="No Patients Yet"
-                        android:textColor="@color/premium_text_primary"
+                        android:text="@string/no_patients_yet"
+                        android:textColor="@color/text_primary"
                         android:textSize="18sp" />
 
                     <TextView
@@ -457,8 +457,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:gravity="center"
-                        android:text="Patients assigned to you\nwill appear here"
-                        android:textColor="@color/premium_text_tertiary"
+                        android:text="@string/patients_assigned_hint"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="14sp"
                         android:lineSpacingMultiplier="1.3" />
 
@@ -475,7 +475,7 @@
         android:id="@+id/loadingContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/premium_background"
+        android:background="@color/background"
         android:visibility="gone">
 
         <ProgressBar
@@ -483,7 +483,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/premium_primary" />
+            android:indeterminateTint="@color/primary" />
 
     </FrameLayout>
 

@@ -431,6 +431,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "verificationStatus",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "rating",
           "order": "DESCENDING"
         }
@@ -527,8 +531,21 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "riskScores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "computedAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
 }
-

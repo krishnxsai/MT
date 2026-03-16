@@ -1,4 +1,4 @@
-package com.example.meditrack
+package com.meditrack.app
 
 import org.junit.Test
 

@@ -73,6 +73,98 @@
 
             </com.google.android.material.chip.ChipGroup>
 
+            <!-- ==================== Risk Score Badge Card ==================== -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/insightRiskScoreCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <FrameLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/insightRiskGauge"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:progress="0"
+                            app:indicatorColor="@color/primary"
+                            app:indicatorSize="56dp"
+                            app:trackColor="@color/surface_variant"
+                            app:trackThickness="5dp" />
+
+                        <TextView
+                            android:id="@+id/insightRiskScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            tools:text="35" />
+
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/health_risk_score"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/insightRiskBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            tools:text="Moderate Risk" />
+
+                        <TextView
+                            android:id="@+id/insightRiskSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="11sp"
+                            tools:text="2 factors detected" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_tertiary" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- ==================== Adherence Hero Card ==================== -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/adherenceCard"
@@ -137,7 +229,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Today's Progress"
+                            android:text="@string/todays_progress"
                             android:textColor="#B0FFFFFF"
                             android:textSize="13sp" />
 
@@ -168,6 +260,30 @@
                                     android:textColor="@color/white"
                                     android:textSize="12sp"
                                     tools:text="12 Taken" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="8dp"
+                                    android:layout_height="8dp"
+                                    android:background="@drawable/bg_circle_indicator"
+                                    android:backgroundTint="@color/status_missed" />
+
+                                <TextView
+                                    android:id="@+id/missedCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    tools:text="2 Missed" />
 
                             </LinearLayout>
 
@@ -248,7 +364,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:text="Health Alerts"
+                            android:text="@string/health_alerts"
                             android:textColor="@color/on_error_container"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
@@ -271,7 +387,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:text="Quick Stats"
+                android:text="@string/quick_stats"
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:fontFamily="sans-serif-bold" />
@@ -353,7 +469,7 @@
                             android:id="@+id/heartRateUnit"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="bpm avg"
+                            android:text="@string/bpm_avg"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp" />
 
@@ -430,7 +546,7 @@
                             android:id="@+id/bloodPressureUnit"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="mmHg avg"
+                            android:text="@string/mmhg_avg"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp" />
 
@@ -517,7 +633,7 @@
                             android:id="@+id/glucoseUnit"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="mg/dL avg"
+                            android:text="@string/mg_dl_avg"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp" />
 
@@ -594,7 +710,7 @@
                             android:id="@+id/weightUnit"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="kg avg"
+                            android:text="@string/kg_avg"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp" />
 
@@ -609,7 +725,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                android:text="Trends"
+                android:text="@string/trends"
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:fontFamily="sans-serif-bold" />
@@ -782,7 +898,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:gravity="center"
-                    android:text="No health data yet"
+                    android:text="@string/no_health_data_yet"
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp"
                     android:fontFamily="sans-serif-medium" />
@@ -792,7 +908,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="Start logging your vitals to see trends"
+                    android:text="@string/start_logging_vitals_hint"
                     android:textColor="@color/text_tertiary"
                     android:textSize="14sp" />
 

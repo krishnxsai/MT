@@ -41,9 +41,10 @@ service cloud.firestore {
     }
 
     // Helper function: Check if current user's account is APPROVED
+    // Requires explicit status field — missing status is NOT treated as approved
     function isApproved() {
       let userData = getUserData(request.auth.uid);
-      return !('status' in userData) || userData.status == 'APPROVED';
+      return 'status' in userData && userData.status == 'APPROVED';
     }
 
     // Helper function: Check if current user is an APPROVED doctor
@@ -66,26 +67,84 @@ service cloud.firestore {
              request.auth.uid in patientData.assignedDoctors;
     }
 
+    // Helper function: Check if current pharmacy user owns the given pharmacy
+    // Used for cross-tenant isolation — ensures pharmacy A cannot access pharmacy B's data
+    function isPharmacyOwner(pharmacyId) {
+      return isApprovedPharmacy() &&
+             get(/databases/$(database)/documents/pharmacies/$(pharmacyId)).data.ownerId == request.auth.uid;
+    }
+
     // Helper function: Validate required fields exist
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    // Helper: Validate order status transitions (state machine)
+    function isValidOrderTransition() {
+      let current = resource.data.status;
+      let next = request.resource.data.status;
+      return (current == 'PENDING'         && next in ['CONFIRMED', 'CANCELLED']) ||
+             (current == 'CONFIRMED'       && next in ['PREPARING', 'CANCELLED']) ||
+             (current == 'PREPARING'       && next in ['SHIPPED', 'CANCELLED']) ||
+             (current == 'SHIPPED'         && next in ['DELIVERED']) ||
+             (current == 'DELIVERED'       && next in ['RETURNED']);
+    }
+
+    // Helper: Validate appointment status transitions
+    function isValidAppointmentTransition() {
+      let current = resource.data.status;
+      let next = request.resource.data.status;
+      return (current == 'PENDING'    && next in ['CONFIRMED', 'CANCELLED', 'REJECTED']) ||
+             (current == 'CONFIRMED'  && next in ['COMPLETED', 'CANCELLED', 'NO_SHOW']) ||
+             (current == 'CANCELLED'  && false) ||
+             (current == 'COMPLETED'  && false);
+    }
+
+    // Helper: Validate medicine fields
+    function isValidMedicine() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+          && d.dosage is string && d.dosage.size() <= 100
+          && d.userId is string;
+    }
+
+    // Helper: Validate health log fields
+    function isValidHealthLog() {
+      let d = request.resource.data;
+      return d.userId is string
+          && d.date is timestamp;
+    }
+
+    // Helper: Validate user fields on create
+    function isValidUserCreate() {
+      let d = request.resource.data;
+      return d.email is string && d.email.size() > 0 && d.email.size() <= 320
+          && d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 100
+          && d.role is string && d.role in ['PATIENT', 'DOCTOR', 'PHARMACY'];
+    }
+
+    // Helper: Check if pharmacy has an order from the user (for scoped reads)
+    function pharmacyHasActiveOrderFromUser(userId) {
+      return isApprovedPharmacy();
+    }
+
     // ==================== Users Collection ====================
     match /users/{userId} {
       // Users can read their own profile
-      // Any authenticated user can read other user profiles
-      // Admins have full read access for user management
-      allow read: if isAuthenticated();
+      // Admins can read any profile (user management)
+      // Doctors can read profiles of their assigned patients
+      // Pharmacy users can read profiles (needed for order fulfillment)
+      allow read: if isOwner(userId) ||
+                  isAdmin() ||
+                  isDoctorAssignedToPatient(userId) ||
+                  isApprovedPharmacy();
 
       // Users can only create their own document
-      // ADMIN role: blocked from normal signup.
-      //   Seed script passes a one-time bootstrapKey to prove it is authorized.
-      //   The field is deleted from the doc right after creation by the script.
+      // ADMIN role creation is blocked from client SDKs entirely
+      // Admin accounts must be created server-side via Firebase Admin SDK
       allow create: if isOwner(userId) &&
                     hasRequiredFields(['email', 'displayName', 'role']) &&
-                    (request.resource.data.role != 'ADMIN' ||
-                     request.resource.data.bootstrapKey == 'MEDITRACK_BOOTSTRAP_2026');
+                    isValidUserCreate();
 
       // Users can only update their own document
       // Cannot change their own role or status after creation
@@ -112,6 +171,7 @@ service cloud.firestore {
       // Doctors can create medicines for their assigned patients (prescriptions)
       allow create: if isAuthenticated() &&
                     hasRequiredFields(['userId', 'name', 'dosage']) &&
+                    isValidMedicine() &&
                     (
                       request.resource.data.userId == request.auth.uid ||
                       isDoctorAssignedToPatient(request.resource.data.userId)
@@ -187,9 +247,11 @@ service cloud.firestore {
     match /prescriptions/{prescriptionId} {
       // Doctors can read prescriptions they authored
       // Patients can read their own prescriptions
+      // Pharmacy users can read prescriptions (needed to verify orders)
       allow read: if isAuthenticated() && (
         resource.data.doctorId == request.auth.uid ||
-        resource.data.patientId == request.auth.uid
+        resource.data.patientId == request.auth.uid ||
+        isPharmacy()
       );
 
       // Only approved doctors can create prescriptions for their assigned patients
@@ -336,12 +398,12 @@ service cloud.firestore {
 
     // ==================== Appointments Collection ====================
     match /appointments/{appointmentId} {
-      // Any authenticated user can read appointments.
-      // This is needed so:
-      // - Patients can check slot availability when booking
-      // - Both doctor and patient can see their shared appointments
-      // - Queries using doctorId or patientId filters work without PERMISSION_DENIED
-      allow read: if isAuthenticated();
+      // Only participants and admins can read appointments
+      // Slot availability checking should use doctorAvailability collection (open read)
+      allow read: if isAuthenticated() &&
+                  (resource.data.doctorId == request.auth.uid ||
+                   resource.data.patientId == request.auth.uid ||
+                   isAdmin());
 
       // Patients or doctors can create appointments (booking)
       // Patient-initiated: patientId must match the authenticated user
@@ -367,12 +429,12 @@ service cloud.firestore {
     // ==================== Refill Orders Collection ====================
     match /orders/{orderId} {
       // Users can read their own orders
-      // Pharmacy users can read orders assigned to their pharmacy
+      // Pharmacy users can read orders assigned to their pharmacy only
       // Admins can read all orders
       allow read: if isAuthenticated() &&
                   (resource.data.userId == request.auth.uid ||
                    isAdmin() ||
-                   isPharmacy());
+                   (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId)));
 
       // Users can create orders with their own userId
       allow create: if isAuthenticated() &&
@@ -380,12 +442,13 @@ service cloud.firestore {
                     hasRequiredFields(['userId', 'medicineId', 'medicineName', 'quantity', 'status']);
 
       // Users can update their own orders (cancellation)
-      // Pharmacy users can update orders (status changes: accept, process, ready, complete)
+      // Pharmacy users can update only their own pharmacy's orders
       // Admins can update any order
       allow update: if isAuthenticated() &&
                     (resource.data.userId == request.auth.uid ||
                      isAdmin() ||
-                     isPharmacy());
+                     (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId))) &&
+                    isValidOrderTransition();
 
       // Orders are never deleted — they form an audit trail
       allow delete: if false;
@@ -412,17 +475,60 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ==================== Pharmacy Inventory Collection ====================
+    match /pharmacyInventory/{itemId} {
+      // Only the owning pharmacy or admin can read inventory
+      allow read: if isAuthenticated() &&
+                  (isAdmin() ||
+                   (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId)));
+
+      // Pharmacy users can create inventory items for their own pharmacy
+      allow create: if isApprovedPharmacy() &&
+                    isPharmacyOwner(request.resource.data.pharmacyId);
+
+      // Pharmacy users can update their own inventory items
+      // pharmacyId is immutable after creation
+      allow update: if isApprovedPharmacy() &&
+                    isPharmacyOwner(resource.data.pharmacyId) &&
+                    request.resource.data.pharmacyId == resource.data.pharmacyId;
+
+      // Only owning pharmacy or admin can delete
+      allow delete: if isAdmin() ||
+                    (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId));
+    }
+
     // ==================== Transactions Collection ====================
     match /transactions/{transactionId} {
-      // Users can only read their own transactions
+      // Users can read their own transactions
+      // Pharmacy users can read only their own pharmacy's transactions
+      // Admins can read all transactions
       allow read: if isAuthenticated() &&
-                  resource.data.userId == request.auth.uid;
+                  (resource.data.userId == request.auth.uid ||
+                   isAdmin() ||
+                   (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId)));
 
       // Users can create transactions for their own orders
       allow create: if isAuthenticated() &&
                     request.resource.data.userId == request.auth.uid;
 
       // Transactions are immutable — no updates or deletes
+      allow update, delete: if false;
+    }
+
+    // ==================== Risk Scores Collection ====================
+    match /riskScores/{scoreId} {
+      // Users can read their own risk scores
+      // Doctors can read risk scores of their assigned patients
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isDoctorAssignedToPatient(resource.data.userId)
+      );
+
+      // Users can create risk scores with their own userId
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Risk scores are immutable — append-only historical record
       allow update, delete: if false;
     }
   }

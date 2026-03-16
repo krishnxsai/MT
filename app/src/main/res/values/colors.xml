@@ -49,6 +49,7 @@
     <color name="background">#FFFFFF</color>
     <color name="background_secondary">#F9FAFB</color>
     <color name="surface">#FFFFFF</color>
+    <color name="surface_dim">#E8EAED</color>
     <color name="surface_variant">#F3F4F6</color>
     <color name="surface_elevated">#FFFFFF</color>
     <color name="surface_tinted">#F0FDF4</color>
@@ -65,10 +66,33 @@
     <color name="on_success_container">#064E3B</color>
     <color name="warning">#D97706</color>
     <color name="warning_container">#FFFBEB</color>
+    <color name="warning_surface">#FFFBEB</color>
     <color name="on_warning_container">#92400E</color>
     <color name="info">#0284C7</color>
     <color name="info_container">#F0F9FF</color>
+    <color name="info_surface">#F0F9FF</color>
     <color name="on_info_container">#075985</color>
+
+    <!-- Pharmacy Status Colors -->
+    <color name="preparing_orange">#EA580C</color>
+    <color name="preparing_orange_container">#FFF7ED</color>
+    <color name="on_preparing_orange_container">#9A3412</color>
+    <color name="ready_purple">#7C3AED</color>
+    <color name="ready_purple_container">#F5F3FF</color>
+    <color name="on_ready_purple_container">#5B21B6</color>
+
+    <!-- Order Pipeline Status Colors -->
+    <color name="status_order_preparing">#EA580C</color>
+    <color name="status_order_preparing_container">#FFF7ED</color>
+    <color name="on_status_order_preparing_container">#9A3412</color>
+    <color name="status_order_ready">#7C3AED</color>
+    <color name="status_order_ready_container">#F5F3FF</color>
+    <color name="on_status_order_ready_container">#5B21B6</color>
+    <color name="status_order_confirmed">#0891B2</color>
+    <color name="status_order_confirmed_container">#CFFAFE</color>
+    <color name="on_status_order_confirmed_container">#164E63</color>
+    <color name="confirmed_blue_container">#CFFAFE</color>
+    <color name="on_confirmed_blue_container">#164E63</color>
 
     <!-- Medicine Category Colors - Distinct & Accessible -->
     <color name="medicine_red">#EF4444</color>
@@ -112,7 +136,6 @@
 
     <!-- Ripple & Interactive -->
     <color name="ripple_primary">#20059669</color>
-    <color name="ripple_light">#10000000</color>
 
     <!-- Chart Colors -->
     <color name="chart_heart_rate">#EF4444</color>

@@ -354,7 +354,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Upcoming Follow-up"
+                            android:text="@string/upcoming_follow_up"
                             android:textColor="@color/medicine_blue"
                             android:textSize="11sp"
                             android:fontFamily="sans-serif-medium"
@@ -465,7 +465,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="14dp"
-                                android:text="Messages"
+                                android:text="@string/messages"
                                 android:textColor="@color/text_primary"
                                 android:textSize="15sp"
                                 android:fontFamily="sans-serif-medium" />
@@ -474,7 +474,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="Chat with doctor"
+                                android:text="@string/chat_with_doctor"
                                 android:textColor="@color/text_tertiary"
                                 android:textSize="12sp"
                                 android:maxLines="2" />
@@ -545,7 +545,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="Appointments"
+                            android:text="@string/appointments"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
@@ -554,7 +554,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Book &amp; manage"
+                            android:text="@string/book_and_manage"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp"
                             android:maxLines="2" />
@@ -620,7 +620,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="Refill Orders"
+                            android:text="@string/refill_orders"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
@@ -629,7 +629,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Track &amp; reorder"
+                            android:text="@string/track_and_reorder"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp"
                             android:maxLines="2" />
@@ -682,7 +682,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="Pharmacies"
+                            android:text="@string/pharmacies"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
@@ -691,7 +691,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Browse nearby"
+                            android:text="@string/browse_nearby"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp"
                             android:maxLines="2" />
@@ -771,7 +771,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Health Risk Score"
+                                android:text="@string/health_risk_score"
                                 android:textColor="@color/text_primary"
                                 android:textSize="15sp" />
 
@@ -901,7 +901,7 @@
                         android:textColor="@android:color/white"
                         android:textSize="10sp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Warning" />
+                        android:text="@string/warning_label" />
 
                 </FrameLayout>
 

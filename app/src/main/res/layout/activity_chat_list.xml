@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:text="Messages"
+                android:text="@string/messages"
                 android:textColor="@color/text_primary"
                 android:textSize="26sp"
                 android:fontFamily="sans-serif-bold" />
@@ -96,7 +96,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:fontFamily="sans-serif-bold"
-                    android:text="No Conversations"
+                    android:text="@string/no_conversations"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp" />
 
@@ -105,7 +105,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="Start a conversation with\nyour doctor or patient"
+                    android:text="@string/start_conversation_hint"
                     android:textColor="@color/text_tertiary"
                     android:textSize="14sp"
                     android:lineSpacingMultiplier="1.3" />

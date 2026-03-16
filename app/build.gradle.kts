@@ -2,18 +2,20 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.example.meditrack"
+    namespace = "com.meditrack.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.meditrack"
+        applicationId = "com.meditrack.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +91,10 @@ dependencies {
 
     // Security - Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
+
+    // Hilt Dependency Injection
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
     // SwipeRefreshLayout
     implementation(libs.androidx.swiperefreshlayout)

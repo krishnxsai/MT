@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:text="Book Appointment"
+            android:text="@string/book_appointment"
             android:textColor="@color/text_primary"
             android:textSize="26sp"
             android:fontFamily="sans-serif-bold" />
@@ -112,7 +112,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Select a date and time below"
+                            android:text="@string/select_date_time_below"
                             android:textColor="@color/text_tertiary"
                             android:textSize="13sp" />
 
@@ -128,7 +128,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Select Date"
+                android:text="@string/select_date"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
@@ -138,7 +138,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="8dp"
-                android:text="Choose a date"
+                android:text="@string/choose_a_date"
                 android:textColor="@color/text_secondary"
                 android:textSize="15sp"
                 app:cornerRadius="14dp"
@@ -152,7 +152,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Appointment Type"
+                android:text="@string/appointment_type"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
@@ -169,7 +169,7 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Consultation"
+                    android:text="@string/consultation"
                     android:checked="true" />
 
                 <com.google.android.material.chip.Chip
@@ -177,14 +177,14 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Follow-up" />
+                    android:text="@string/follow_up" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipCheckup"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Checkup" />
+                    android:text="@string/checkup" />
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -194,7 +194,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Available Time Slots"
+                android:text="@string/available_time_slots"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
@@ -204,7 +204,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:gravity="center"
-                android:text="Select a date to see available slots"
+                android:text="@string/select_date_for_slots"
                 android:textColor="@color/text_tertiary"
                 android:textSize="14sp"
                 android:padding="24dp" />
@@ -223,7 +223,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Notes (optional)"
+                android:text="@string/notes_optional"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
@@ -242,7 +242,7 @@
                     android:id="@+id/notesInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Describe your symptoms or reason…"
+                    android:hint="@string/hint_describe_symptoms"
                     android:inputType="textMultiLine|textCapSentences"
                     android:maxLines="3"
                     android:textSize="14sp" />
@@ -264,7 +264,7 @@
         android:layout_height="56dp"
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="16dp"
-        android:text="Book Appointment"
+        android:text="@string/book_appointment"
         android:textSize="16sp"
         android:textAllCaps="false"
         android:fontFamily="sans-serif-medium"

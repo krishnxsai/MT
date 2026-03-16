@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:fitsSystemWindows="true">
 
     <!-- Custom AppBar -->
@@ -12,7 +12,7 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/premium_background"
+        android:background="@color/background"
         app:elevation="0dp">
 
         <!-- Premium Toolbar -->
@@ -27,20 +27,20 @@
                 android:id="@+id/backButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                app:cardBackgroundColor="@color/premium_surface_dim"
+                app:cardBackgroundColor="@color/surface_dim"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:rippleColor="@color/premium_ripple">
+                app:rippleColor="@color/ripple_primary">
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_back"
-                    app:tint="@color/premium_text_primary" />
+                    app:tint="@color/text_primary" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -60,8 +60,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Clinical Decision"
-                    android:textColor="@color/premium_text_primary"
+                    android:text="@string/clinical_decision"
+                    android:textColor="@color/text_primary"
                     android:textSize="18sp" />
 
                 <TextView
@@ -70,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:fontFamily="sans-serif"
-                    android:textColor="@color/premium_text_tertiary"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="12sp"
                     tools:text="Patient: John Doe" />
 
@@ -82,20 +82,20 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:visibility="invisible"
-                app:cardBackgroundColor="@color/premium_surface_dim"
+                app:cardBackgroundColor="@color/surface_dim"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:rippleColor="@color/premium_ripple">
+                app:rippleColor="@color/ripple_primary">
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_info"
-                    app:tint="@color/premium_text_secondary" />
+                    app:tint="@color/text_secondary" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -123,10 +123,10 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -145,7 +145,7 @@
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            app:cardBackgroundColor="@color/premium_primary"
+                            app:cardBackgroundColor="@color/primary"
                             app:cardCornerRadius="10dp"
                             app:cardElevation="0dp">
 
@@ -165,8 +165,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Decision Type"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/decision_type"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                     </LinearLayout>
@@ -185,42 +185,42 @@
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="💊 Prescription" />
+                            android:text="@string/decision_prescription" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipFollowUp"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="📅 Follow-up" />
+                            android:text="@string/decision_follow_up" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipVitalAlert"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="⚠️ Vital Alert" />
+                            android:text="@string/decision_vital_alert" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipRecommendation"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="💡 Recommendation" />
+                            android:text="@string/decision_recommendation" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipDiagnosis"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🔬 Diagnosis" />
+                            android:text="@string/decision_diagnosis" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipLifestyle"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🏃 Lifestyle" />
+                            android:text="@string/decision_lifestyle" />
 
                     </com.google.android.material.chip.ChipGroup>
 
@@ -233,10 +233,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -255,7 +255,7 @@
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            app:cardBackgroundColor="@color/premium_primary"
+                            app:cardBackgroundColor="@color/primary"
                             app:cardCornerRadius="10dp"
                             app:cardElevation="0dp">
 
@@ -275,8 +275,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Priority Level"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/priority_level"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                     </LinearLayout>
@@ -295,8 +295,8 @@
                             android:layout_height="44dp"
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
-                            android:text="Low"
-                            app:chipBackgroundColor="@color/premium_priority_low_bg" />
+                            android:text="@string/priority_low"
+                            app:chipBackgroundColor="@color/medicine_green_surface" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipPriorityNormal"
@@ -305,8 +305,8 @@
                             android:layout_height="44dp"
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
-                            android:text="Normal"
-                            app:chipBackgroundColor="@color/premium_priority_normal_bg" />
+                            android:text="@string/priority_normal"
+                            app:chipBackgroundColor="@color/medicine_blue_surface" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipPriorityHigh"
@@ -315,8 +315,8 @@
                             android:layout_height="44dp"
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
-                            android:text="High"
-                            app:chipBackgroundColor="@color/premium_priority_high_bg" />
+                            android:text="@string/priority_high"
+                            app:chipBackgroundColor="@color/medicine_orange_surface" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipPriorityCritical"
@@ -324,8 +324,8 @@
                             android:layout_width="0dp"
                             android:layout_height="44dp"
                             android:layout_weight="1"
-                            android:text="Critical"
-                            app:chipBackgroundColor="@color/premium_priority_critical_bg" />
+                            android:text="@string/priority_critical"
+                            app:chipBackgroundColor="@color/error_container" />
 
                     </LinearLayout>
 
@@ -338,10 +338,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -360,7 +360,7 @@
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            app:cardBackgroundColor="@color/premium_primary"
+                            app:cardBackgroundColor="@color/primary"
                             app:cardCornerRadius="10dp"
                             app:cardElevation="0dp">
 
@@ -380,8 +380,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Details"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/details"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                     </LinearLayout>
@@ -393,7 +393,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Title">
+                        android:hint="@string/hint_title">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/titleInput"
@@ -413,7 +413,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Description">
+                        android:hint="@string/hint_description">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/descriptionInput"
@@ -438,10 +438,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp"
                 tools:visibility="visible">
 
@@ -462,7 +462,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_medicine"
-                            app:tint="@color/premium_primary" />
+                            app:tint="@color/primary" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -470,8 +470,8 @@
                             android:layout_marginStart="12dp"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Medications"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/medications"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                         <TextView
@@ -482,7 +482,7 @@
                             android:fontFamily="sans-serif-medium"
                             android:paddingHorizontal="12dp"
                             android:paddingVertical="6dp"
-                            android:textColor="@color/premium_primary_dark"
+                            android:textColor="@color/primary_dark"
                             android:textSize="11sp"
                             tools:text="2 added" />
 
@@ -505,12 +505,12 @@
                         android:layout_height="52dp"
                         android:layout_marginTop="12dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="+ Add Medication"
+                        android:text="@string/add_medication"
                         android:textAllCaps="false"
-                        android:textColor="@color/premium_primary"
+                        android:textColor="@color/primary"
                         android:textSize="14sp"
                         app:cornerRadius="14dp"
-                        app:strokeColor="@color/premium_primary"
+                        app:strokeColor="@color/primary"
                         app:strokeWidth="1.5dp" />
 
                 </LinearLayout>
@@ -524,10 +524,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp"
                 tools:visibility="visible">
 
@@ -548,15 +548,15 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_calendar"
-                            app:tint="@color/premium_primary" />
+                            app:tint="@color/primary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Schedule Follow-up"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/schedule_follow_up"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                     </LinearLayout>
@@ -569,15 +569,15 @@
                         android:layout_height="52dp"
                         android:layout_marginTop="16dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="📅 Select Date"
+                        android:text="@string/select_date_emoji"
                         android:textAllCaps="false"
-                        android:textColor="@color/premium_text_secondary"
+                        android:textColor="@color/text_secondary"
                         android:textSize="14sp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_calendar"
                         app:iconGravity="start"
-                        app:iconTint="@color/premium_text_tertiary"
-                        app:strokeColor="@color/premium_border"
+                        app:iconTint="@color/text_tertiary"
+                        app:strokeColor="@color/outline"
                         app:strokeWidth="1dp" />
 
                     <!-- Selected Date Display -->
@@ -590,7 +590,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:paddingHorizontal="14dp"
                         android:paddingVertical="8dp"
-                        android:textColor="@color/premium_primary_dark"
+                        android:textColor="@color/primary_dark"
                         android:textSize="13sp"
                         android:visibility="gone"
                         tools:text="Monday, February 24, 2026"
@@ -603,7 +603,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Follow-up Instructions">
+                        android:hint="@string/hint_follow_up_instructions">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/followUpNotesInput"
@@ -628,10 +628,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -651,15 +651,15 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_warning"
-                            app:tint="@color/premium_warning" />
+                            app:tint="@color/warning" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Alert Configuration"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/alert_configuration"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                     </LinearLayout>
@@ -670,8 +670,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:fontFamily="sans-serif"
-                        android:text="Vital Type"
-                        android:textColor="@color/premium_text_secondary"
+                        android:text="@string/vital_type"
+                        android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
                     <com.google.android.material.chip.ChipGroup
@@ -685,21 +685,21 @@
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="❤️ Heart Rate" />
+                            android:text="@string/vital_heart_rate" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipVitalBP"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🩸 Blood Pressure" />
+                            android:text="@string/vital_blood_pressure" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipVitalGlucose"
                             style="@style/PremiumChipChoice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="💉 Glucose" />
+                            android:text="@string/vital_glucose" />
 
                     </com.google.android.material.chip.ChipGroup>
 
@@ -717,7 +717,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
-                            android:hint="Min Value">
+                            android:hint="@string/hint_min_value">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/minThresholdInput"
@@ -735,7 +735,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
-                            android:hint="Max Value">
+                            android:hint="@string/hint_max_value">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/maxThresholdInput"
@@ -757,10 +757,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/premium_surface"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_border_light"
+                app:strokeColor="@color/outline_light"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -780,8 +780,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Visible to Patient"
-                            android:textColor="@color/premium_text_primary"
+                            android:text="@string/visible_to_patient"
+                            android:textColor="@color/text_primary"
                             android:textSize="15sp" />
 
                         <TextView
@@ -790,8 +790,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:fontFamily="sans-serif"
-                            android:text="Patient can see this recommendation"
-                            android:textColor="@color/premium_text_tertiary"
+                            android:text="@string/patient_can_see_recommendation"
+                            android:textColor="@color/text_tertiary"
                             android:textSize="13sp" />
 
                     </LinearLayout>
@@ -801,8 +801,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        app:thumbTint="@color/premium_primary"
-                        app:trackTint="@color/premium_primary_container" />
+                        app:thumbTint="@color/primary"
+                        app:trackTint="@color/primary_container" />
 
                 </LinearLayout>
 
@@ -814,10 +814,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/premium_info_surface"
+                app:cardBackgroundColor="@color/info_surface"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/premium_info"
+                app:strokeColor="@color/info"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -837,15 +837,15 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_insights"
-                            app:tint="@color/premium_info" />
+                            app:tint="@color/info" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Patient Analysis"
-                            android:textColor="@color/premium_info"
+                            android:text="@string/patient_analysis"
+                            android:textColor="@color/info"
                             android:textSize="15sp" />
 
                     </LinearLayout>
@@ -857,8 +857,8 @@
                         android:layout_marginTop="12dp"
                         android:fontFamily="sans-serif"
                         android:lineSpacingMultiplier="1.4"
-                        android:text="Loading patient analysis..."
-                        android:textColor="@color/premium_text_secondary"
+                        android:text="@string/loading_patient_analysis"
+                        android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
 
                 </LinearLayout>
@@ -874,7 +874,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        app:cardBackgroundColor="@color/premium_surface"
+        app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="0dp"
         app:cardElevation="8dp">
 
@@ -890,10 +890,10 @@
                 android:id="@+id/saveButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:backgroundTint="@color/premium_primary"
+                android:backgroundTint="@color/primary"
                 android:fontFamily="sans-serif-medium"
                 android:letterSpacing="0.02"
-                android:text="Save Clinical Decision"
+                android:text="@string/save_clinical_decision"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="15sp"
@@ -918,7 +918,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/premium_primary" />
+            android:indeterminateTint="@color/primary" />
 
     </FrameLayout>
 

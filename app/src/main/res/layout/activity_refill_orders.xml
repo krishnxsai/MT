@@ -16,7 +16,7 @@
         android:background="@color/background"
         app:navigationIcon="@drawable/ic_back"
         app:navigationIconTint="@color/text_primary"
-        app:title="Refill Orders"
+        app:title="@string/refill_orders"
         app:titleTextColor="@color/text_primary"
         app:elevation="0dp" />
 
@@ -57,7 +57,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Low Stock Alert"
+                    android:text="@string/low_stock_alert"
                     android:textColor="@color/on_warning_container"
                     android:textSize="14sp"
                     android:fontFamily="sans-serif-medium" />
@@ -92,12 +92,12 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Active" />
+            android:text="@string/active" />
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="History" />
+            android:text="@string/history" />
 
     </com.google.android.material.tabs.TabLayout>
 

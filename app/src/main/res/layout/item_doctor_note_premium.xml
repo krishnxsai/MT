@@ -6,12 +6,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginVertical="8dp"
-    app:cardBackgroundColor="@color/premium_surface"
+    app:cardBackgroundColor="@color/surface"
     app:cardCornerRadius="18dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/premium_border_light"
+    app:strokeColor="@color/outline_light"
     app:strokeWidth="1dp"
-    app:rippleColor="@color/premium_ripple">
+    app:rippleColor="@color/ripple_primary">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -33,7 +33,7 @@
                 android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_notes"
-                app:tint="@color/premium_primary" />
+                app:tint="@color/primary" />
 
         </FrameLayout>
 
@@ -54,7 +54,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="@color/premium_primary_dark"
+                android:textColor="@color/primary_dark"
                 android:textSize="11sp"
                 tools:text="General" />
 
@@ -67,7 +67,7 @@
             android:layout_height="28dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_premium_badge"
-            android:backgroundTint="@color/premium_warning_surface"
+            android:backgroundTint="@color/warning_surface"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingHorizontal="10dp"
@@ -82,7 +82,7 @@
                 android:layout_width="6dp"
                 android:layout_height="6dp"
                 android:background="@drawable/bg_circle_primary"
-                android:backgroundTint="@color/premium_warning" />
+                android:backgroundTint="@color/warning" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -90,7 +90,7 @@
                 android:layout_marginStart="6dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Private"
-                android:textColor="@color/premium_warning"
+                android:textColor="@color/warning"
                 android:textSize="10sp" />
 
         </LinearLayout>
@@ -100,19 +100,19 @@
             android:id="@+id/deleteButton"
             android:layout_width="36dp"
             android:layout_height="36dp"
-            app:cardBackgroundColor="@color/premium_surface_dim"
+            app:cardBackgroundColor="@color/surface_dim"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:rippleColor="@color/premium_ripple">
+            app:rippleColor="@color/ripple_primary">
 
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_delete"
-                app:tint="@color/premium_text_tertiary" />
+                app:tint="@color/text_tertiary" />
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -124,7 +124,7 @@
             android:layout_marginTop="14dp"
             android:fontFamily="sans-serif"
             android:lineSpacingMultiplier="1.4"
-            android:textColor="@color/premium_text_primary"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -138,7 +138,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:fontFamily="sans-serif"
-            android:textColor="@color/premium_text_tertiary"
+            android:textColor="@color/text_tertiary"
             android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/noteText"

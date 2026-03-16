@@ -152,6 +152,16 @@
                 android:textSize="13sp"
                 android:visibility="gone" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/returnButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Return"
+                android:textColor="@color/error"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </LinearLayout>

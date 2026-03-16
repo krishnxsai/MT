@@ -50,16 +50,15 @@ captures/
 .idea/jarRepositories.xml
 
 # Keystore files
-# Uncomment the following lines if you do not want to check your keystore files in.
-#*.jks
-#*.keystore
+*.jks
+*.keystore
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 .cxx/
 
-# Google Services (Uncomment if you want to exclude - contains API keys)
-# google-services.json
+# Google Services (contains API keys)
+google-services.json
 
 # Freeline
 freeline.py
@@ -155,4 +154,17 @@ release.properties
 # Node.js (seed scripts)
 node_modules/
 package-lock.json
+
+# Firebase Admin SDK credentials — NEVER commit
+# This grants FULL ADMIN ACCESS to the entire Firebase project.
+# If accidentally committed, immediately rotate the key in Firebase Console.
+# Store securely outside the repository (e.g., CI/CD secrets, secure vaults).
+serviceAccountKey.json
+
+# Seed scripts containing real UIDs/emails — NEVER commit
+fix_roles_reseed.js
+migrate_uids.js
+seed_existing_users.js
+seed_test_data.js
+cleanup_dummy_pharmacies.js
 

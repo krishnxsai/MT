@@ -2,16 +2,16 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_checked="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/premium_chip_selected_surface" />
+            <solid android:color="@color/primary_surface" />
             <corners android:radius="12dp" />
             <stroke
                 android:width="1.5dp"
-                android:color="@color/premium_chip_selected" />
+                android:color="@color/primary" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/premium_chip_unselected" />
+            <solid android:color="@color/surface_variant" />
             <corners android:radius="12dp" />
         </shape>
     </item>

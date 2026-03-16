@@ -208,6 +208,7 @@
     <string name="trend_decreasing">↓ Decreasing</string>
     <string name="trend_stable">→ Stable</string>
     <string name="taken_count">%1$d Taken</string>
+    <string name="missed_count">%1$d Missed</string>
     <string name="pending_count">%1$d Pending</string>
     <string name="bpm">bpm</string>
     <string name="mg_dl">mg/dL</string>
@@ -347,6 +348,10 @@
     <string name="license_uploaded">✓ License document uploaded</string>
     <string name="license_upload_success">License document uploaded successfully</string>
     <string name="check_status">Check Status</string>
+    <string name="account_approved_redirecting">Account approved. Redirecting…</string>
+    <string name="account_status_still_pending">Still pending admin approval.</string>
+    <string name="account_status_rejected_feedback">Account is currently rejected.</string>
+    <string name="account_status_suspended_feedback">Account is currently suspended.</string>
 
     <!-- Admin Approval Actions -->
     <string name="pending_approvals">Pending Approvals</string>
@@ -430,6 +435,33 @@
     <string name="top_medicines">Top Medicines</string>
     <string name="no_data_yet">No data yet</string>
 
+    <!-- Dashboard Sections -->
+    <string name="action_required">Action Required</string>
+    <string name="order_pipeline">Order Pipeline</string>
+    <string name="inventory_alerts">Inventory Alerts</string>
+    <string name="business_overview">Business Overview</string>
+    <string name="quick_management">Quick Management</string>
+
+    <!-- Expanded Order Counts -->
+    <string name="confirmed_orders">Confirmed</string>
+    <string name="preparing_orders">Preparing</string>
+    <string name="ready_orders">Ready</string>
+    <string name="delivered_today">Delivered Today</string>
+    <string name="cancelled_orders">Cancelled</string>
+    <string name="orders_today">Orders Today</string>
+
+    <!-- Business Overview -->
+    <string name="total_revenue_label">Total Revenue</string>
+    <string name="refunds_label">Refunds</string>
+
+    <!-- Inventory Alerts -->
+    <string name="items_low_stock">%d items low on stock</string>
+    <string name="no_low_stock_items">All stock levels are healthy</string>
+    <string name="stock_label">Stock: %d</string>
+    <string name="threshold_label">Threshold: %d</string>
+    <string name="rx_verified">Rx ✓</string>
+    <string name="patient_label">Patient: %s</string>
+
     <!-- Notification Texts -->
     <string name="new_order_notification">New Order Received</string>
     <string name="order_cancelled_notification">Order Cancelled</string>
@@ -449,6 +481,18 @@
     <string name="update_profile">Update Profile</string>
     <string name="pharmacy_profile_updated">Pharmacy profile updated successfully</string>
 
+    <!-- Pharmacy Bottom Navigation -->
+    <string name="nav_pharmacy_dashboard">Dashboard</string>
+    <string name="nav_pharmacy_orders">Orders</string>
+    <string name="nav_pharmacy_inventory">Inventory</string>
+    <string name="nav_pharmacy_transactions">Transactions</string>
+    <string name="nav_pharmacy_profile">Profile</string>
+
+    <!-- Pharmacy Tabs -->
+    <string name="tab_orders">Orders</string>
+    <string name="tab_inventory">Inventory</string>
+    <string name="tab_analytics">Analytics</string>
+
     <!-- Geo / Upload -->
     <string name="pharmacy_latitude">Latitude</string>
     <string name="pharmacy_longitude">Longitude</string>
@@ -456,4 +500,136 @@
     <string name="logo_uploaded">✓ Logo uploaded</string>
     <string name="uploading_file">Uploading…</string>
     <string name="upload_failed">Upload failed</string>
+
+    <!-- ============================================ -->
+    <!-- Extracted hardcoded strings for i18n support -->
+    <!-- ============================================ -->
+
+    <!-- Dashboard Quick Actions -->
+    <string name="upcoming_follow_up">Upcoming Follow-up</string>
+    <string name="messages">Messages</string>
+    <string name="chat_with_doctor">Chat with doctor</string>
+    <string name="appointments">Appointments</string>
+    <string name="book_and_manage">Book &amp; manage</string>
+    <string name="track_and_reorder">Track &amp; reorder</string>
+    <string name="pharmacies">Pharmacies</string>
+    <string name="browse_nearby">Browse nearby</string>
+    <string name="health_risk_score">Health Risk Score</string>
+    <string name="warning_label">Warning</string>
+
+    <!-- Doctor Dashboard -->
+    <string name="doctor_dashboard_label">DOCTOR DASHBOARD</string>
+    <string name="all_systems_active">All systems active</string>
+    <string name="appts_short">Appts</string>
+    <string name="my_patients">My Patients</string>
+    <string name="no_patients_yet">No Patients Yet</string>
+    <string name="patients_assigned_hint">Patients assigned to you\nwill appear here</string>
+
+    <!-- Patient Detail -->
+    <string name="patient_details">Patient Details</string>
+    <string name="create_clinical_decision">📋  Create Clinical Decision</string>
+    <string name="chat_action">💬 Chat</string>
+    <string name="appt_action">📅 Appt</string>
+    <string name="tab_meds">Meds</string>
+    <string name="tab_logs">Logs</string>
+    <string name="tab_notes">Notes</string>
+    <string name="tab_trends">Trends</string>
+    <string name="current_medications">Current Medications</string>
+    <string name="no_medications_for_patient">No medications recorded\nfor this patient</string>
+    <string name="health_records">Health Records</string>
+    <string name="no_health_logs_for_patient">No health logs recorded\nfor this patient</string>
+    <string name="clinical_notes">Clinical Notes</string>
+    <string name="no_clinical_notes_hint">No clinical notes yet\nTap + to add a note</string>
+    <string name="glucose_level_trend">Glucose Level Trend</string>
+    <string name="add_note">Add Note</string>
+
+    <!-- Clinical Decision -->
+    <string name="clinical_decision">Clinical Decision</string>
+    <string name="decision_type">Decision Type</string>
+    <string name="decision_prescription">💊 Prescription</string>
+    <string name="decision_follow_up">📅 Follow-up</string>
+    <string name="decision_vital_alert">⚠️ Vital Alert</string>
+    <string name="decision_recommendation">💡 Recommendation</string>
+    <string name="decision_diagnosis">🔬 Diagnosis</string>
+    <string name="decision_lifestyle">🏃 Lifestyle</string>
+    <string name="priority_level">Priority Level</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_normal">Normal</string>
+    <string name="priority_high">High</string>
+    <string name="priority_critical">Critical</string>
+    <string name="details">Details</string>
+    <string name="hint_title">Title</string>
+    <string name="hint_description">Description</string>
+    <string name="medications">Medications</string>
+    <string name="add_medication">+ Add Medication</string>
+    <string name="schedule_follow_up">Schedule Follow-up</string>
+    <string name="select_date_emoji">📅 Select Date</string>
+    <string name="hint_follow_up_instructions">Follow-up Instructions</string>
+    <string name="alert_configuration">Alert Configuration</string>
+    <string name="vital_type">Vital Type</string>
+    <string name="vital_heart_rate">❤️ Heart Rate</string>
+    <string name="vital_blood_pressure">🩸 Blood Pressure</string>
+    <string name="vital_glucose">💉 Glucose</string>
+    <string name="hint_min_value">Min Value</string>
+    <string name="hint_max_value">Max Value</string>
+    <string name="visible_to_patient">Visible to Patient</string>
+    <string name="patient_can_see_recommendation">Patient can see this recommendation</string>
+    <string name="patient_analysis">Patient Analysis</string>
+    <string name="loading_patient_analysis">Loading patient analysis\u2026</string>
+    <string name="save_clinical_decision">Save Clinical Decision</string>
+
+    <!-- Medicines List -->
+    <string name="refills">Refills</string>
+
+    <!-- Add Health Log -->
+    <string name="select_date">Select Date</string>
+    <string name="hint_heart_rate_bpm">Heart Rate (bpm)</string>
+    <string name="hint_systolic">Systolic</string>
+    <string name="hint_diastolic">Diastolic</string>
+    <string name="select_symptoms_hint">Select any symptoms you\'re experiencing</string>
+    <string name="hint_additional_notes">Add any additional notes\u2026</string>
+
+    <!-- Health Insights -->
+    <string name="health_alerts">Health Alerts</string>
+    <string name="quick_stats">Quick Stats</string>
+    <string name="bpm_avg">bpm avg</string>
+    <string name="mmhg_avg">mmHg avg</string>
+    <string name="mg_dl_avg">mg/dL avg</string>
+    <string name="kg_avg">kg avg</string>
+    <string name="trends">Trends</string>
+    <string name="no_health_data_yet">No health data yet</string>
+    <string name="start_logging_vitals_hint">Start logging your vitals to see trends</string>
+
+    <!-- Appointment Booking -->
+    <string name="book_appointment">Book Appointment</string>
+    <string name="select_date_time_below">Select a date and time below</string>
+    <string name="choose_a_date">Choose a date</string>
+    <string name="appointment_type">Appointment Type</string>
+    <string name="consultation">Consultation</string>
+    <string name="follow_up">Follow-up</string>
+    <string name="checkup">Checkup</string>
+    <string name="available_time_slots">Available Time Slots</string>
+    <string name="select_date_for_slots">Select a date to see available slots</string>
+    <string name="notes_optional">Notes (optional)</string>
+    <string name="hint_describe_symptoms">Describe your symptoms or reason\u2026</string>
+
+    <!-- Appointments List -->
+    <string name="past">Past</string>
+    <string name="no_appointments">No Appointments</string>
+    <string name="appointments_will_appear_here">Your appointments\nwill appear here</string>
+    <string name="book">Book</string>
+
+    <!-- Chat -->
+    <string name="hint_type_message">Type a message\u2026</string>
+    <string name="send">Send</string>
+
+    <!-- Chat List -->
+    <string name="no_conversations">No Conversations</string>
+    <string name="start_conversation_hint">Start a conversation with\nyour doctor or patient</string>
+
+    <!-- Refill Orders -->
+    <string name="history">History</string>
+
+    <!-- Pharmacy List -->
+    <string name="pharmacies_added_hint">Pharmacies will appear here once added to the system</string>
 </resources>

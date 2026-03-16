@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/premium_background"
+    android:background="@color/background"
     android:fitsSystemWindows="true">
 
     <!-- Custom AppBar -->
@@ -12,7 +12,7 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/premium_background"
+        android:background="@color/background"
         app:elevation="0dp">
 
         <!-- Premium Toolbar -->
@@ -27,20 +27,20 @@
                 android:id="@+id/backButton"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                app:cardBackgroundColor="@color/premium_surface_dim"
+                app:cardBackgroundColor="@color/surface_dim"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:rippleColor="@color/premium_ripple">
+                app:rippleColor="@color/ripple_primary">
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_back"
-                    app:tint="@color/premium_text_primary" />
+                    app:tint="@color/text_primary" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -60,8 +60,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Patient Details"
-                    android:textColor="@color/premium_text_primary"
+                    android:text="@string/patient_details"
+                    android:textColor="@color/text_primary"
                     android:textSize="18sp" />
 
             </LinearLayout>
@@ -72,20 +72,20 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:visibility="invisible"
-                app:cardBackgroundColor="@color/premium_surface_dim"
+                app:cardBackgroundColor="@color/surface_dim"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:rippleColor="@color/premium_ripple">
+                app:rippleColor="@color/ripple_primary">
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_settings"
-                    app:tint="@color/premium_text_secondary" />
+                    app:tint="@color/text_secondary" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -106,10 +106,10 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
             android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/premium_surface"
+            app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="24dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/premium_border_light"
+            app:strokeColor="@color/outline_light"
             app:strokeWidth="1dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -138,7 +138,7 @@
                         android:layout_gravity="center"
                         android:scaleType="centerCrop"
                         android:src="@drawable/ic_person"
-                        app:tint="@color/premium_primary" />
+                        app:tint="@color/primary" />
 
                 </FrameLayout>
 
@@ -150,7 +150,7 @@
                     android:layout_marginTop="16dp"
                     android:fontFamily="sans-serif-medium"
                     android:letterSpacing="-0.01"
-                    android:textColor="@color/premium_text_primary"
+                    android:textColor="@color/text_primary"
                     android:textSize="22sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -164,7 +164,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:fontFamily="sans-serif"
-                    android:textColor="@color/premium_text_secondary"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -178,7 +178,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:fontFamily="sans-serif"
-                    android:textColor="@color/premium_text_tertiary"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="13sp"
                     android:visibility="gone"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -206,7 +206,7 @@
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@drawable/ic_calendar"
-                        app:tint="@color/premium_primary" />
+                        app:tint="@color/primary" />
 
                     <TextView
                         android:id="@+id/memberSinceText"
@@ -214,7 +214,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/premium_primary_dark"
+                        android:textColor="@color/primary_dark"
                         android:textSize="12sp"
                         tools:text="Patient since Jan 2025" />
 
@@ -226,10 +226,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginTop="20dp"
-                    android:backgroundTint="@color/premium_primary"
+                    android:backgroundTint="@color/primary"
                     android:fontFamily="sans-serif-medium"
                     android:letterSpacing="0.02"
-                    android:text="📋  Create Clinical Decision"
+                    android:text="@string/create_clinical_decision"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="14sp"
@@ -237,14 +237,19 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/memberBadge"
-                    app:rippleColor="@color/premium_ripple" />
+                    app:rippleColor="@color/ripple_primary" />
 
                 <!-- Communication Buttons Row -->
                 <LinearLayout
+                    android:id="@+id/communicationActionsRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/clinicalDecisionButton"
+                    app:layout_constraintBottom_toBottomOf="parent">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/chatWithPatientButton"
@@ -253,12 +258,12 @@
                         android:layout_height="44dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="6dp"
-                        android:text="💬 Chat"
+                        android:text="@string/chat_action"
                         android:textAllCaps="false"
-                        android:textColor="@color/premium_primary"
+                        android:textColor="@color/primary"
                         android:textSize="13sp"
                         app:cornerRadius="12dp"
-                        app:strokeColor="@color/premium_primary" />
+                        app:strokeColor="@color/primary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/bookAppointmentButton"
@@ -267,12 +272,12 @@
                         android:layout_height="44dp"
                         android:layout_weight="1"
                         android:layout_marginStart="6dp"
-                        android:text="📅 Appt"
+                        android:text="@string/appt_action"
                         android:textAllCaps="false"
-                        android:textColor="@color/premium_info"
+                        android:textColor="@color/info"
                         android:textSize="13sp"
                         app:cornerRadius="12dp"
-                        app:strokeColor="@color/premium_info" />
+                        app:strokeColor="@color/info" />
 
                 </LinearLayout>
 
@@ -286,7 +291,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
             android:layout_marginTop="20dp"
-            app:cardBackgroundColor="@color/premium_surface_dim"
+            app:cardBackgroundColor="@color/surface_dim"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp">
 
@@ -298,7 +303,7 @@
                 app:tabGravity="fill"
                 app:tabIndicator="@drawable/bg_premium_tab_selector"
                 app:tabIndicatorAnimationDuration="300"
-                app:tabIndicatorColor="@color/premium_primary"
+                app:tabIndicatorColor="@color/primary"
                 app:tabIndicatorFullWidth="true"
                 app:tabIndicatorGravity="stretch"
                 app:tabIndicatorHeight="0dp"
@@ -308,27 +313,27 @@
                 app:tabRippleColor="@android:color/transparent"
                 app:tabSelectedTextColor="@color/white"
                 app:tabTextAppearance="@style/PremiumTabText"
-                app:tabTextColor="@color/premium_text_secondary">
+                app:tabTextColor="@color/text_secondary">
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Meds" />
+                    android:text="@string/tab_meds" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Logs" />
+                    android:text="@string/tab_logs" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Notes" />
+                    android:text="@string/tab_notes" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trends" />
+                    android:text="@string/tab_trends" />
 
             </com.google.android.material.tabs.TabLayout>
 
@@ -368,8 +373,8 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Current Medications"
-                        android:textColor="@color/premium_text_primary"
+                        android:text="@string/current_medications"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp" />
 
                     <TextView
@@ -380,7 +385,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="6dp"
-                        android:textColor="@color/premium_primary_dark"
+                        android:textColor="@color/primary_dark"
                         android:textSize="12sp"
                         tools:text="5 meds" />
 
@@ -405,8 +410,8 @@
                     android:fontFamily="sans-serif"
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.4"
-                    android:text="No medications recorded\nfor this patient"
-                    android:textColor="@color/premium_text_tertiary"
+                    android:text="@string/no_medications_for_patient"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="15sp"
                     android:visibility="gone" />
 
@@ -440,8 +445,8 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Health Records"
-                        android:textColor="@color/premium_text_primary"
+                        android:text="@string/health_records"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp" />
 
                     <TextView
@@ -452,7 +457,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="6dp"
-                        android:textColor="@color/premium_primary_dark"
+                        android:textColor="@color/primary_dark"
                         android:textSize="12sp"
                         tools:text="10 logs" />
 
@@ -477,8 +482,8 @@
                     android:fontFamily="sans-serif"
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.4"
-                    android:text="No health logs recorded\nfor this patient"
-                    android:textColor="@color/premium_text_tertiary"
+                    android:text="@string/no_health_logs_for_patient"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="15sp"
                     android:visibility="gone" />
 
@@ -512,8 +517,8 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Clinical Notes"
-                        android:textColor="@color/premium_text_primary"
+                        android:text="@string/clinical_notes"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp" />
 
                     <TextView
@@ -524,7 +529,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="6dp"
-                        android:textColor="@color/premium_primary_dark"
+                        android:textColor="@color/primary_dark"
                         android:textSize="12sp"
                         tools:text="3 notes" />
 
@@ -553,7 +558,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="80dp"
                         android:layout_height="80dp"
-                        app:cardBackgroundColor="@color/premium_surface_dim"
+                        app:cardBackgroundColor="@color/surface_dim"
                         app:cardCornerRadius="40dp"
                         app:cardElevation="0dp">
 
@@ -562,7 +567,7 @@
                             android:layout_height="36dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_notes"
-                            app:tint="@color/premium_text_tertiary" />
+                            app:tint="@color/text_tertiary" />
 
                     </com.google.android.material.card.MaterialCardView>
 
@@ -574,8 +579,8 @@
                         android:fontFamily="sans-serif"
                         android:gravity="center"
                         android:lineSpacingMultiplier="1.4"
-                        android:text="No clinical notes yet\nTap + to add a note"
-                        android:textColor="@color/premium_text_tertiary"
+                        android:text="@string/no_clinical_notes_hint"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="15sp" />
 
                 </LinearLayout>
@@ -611,10 +616,10 @@
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
-                            app:cardBackgroundColor="@color/premium_surface"
+                            app:cardBackgroundColor="@color/surface"
                             app:cardCornerRadius="18dp"
                             app:cardElevation="0dp"
-                            app:strokeColor="@color/premium_border_light"
+                            app:strokeColor="@color/outline_light"
                             app:strokeWidth="1dp">
 
                             <LinearLayout
@@ -639,7 +644,7 @@
                                         android:layout_height="16dp"
                                         android:layout_marginStart="-24dp"
                                         android:src="@drawable/ic_heart"
-                                        app:tint="@color/premium_primary" />
+                                        app:tint="@color/primary" />
 
                                 </LinearLayout>
 
@@ -648,8 +653,8 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="12dp"
                                     android:fontFamily="sans-serif"
-                                    android:text="Heart Rate"
-                                    android:textColor="@color/premium_text_secondary"
+                                    android:text="@string/heart_rate"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="12sp" />
 
                                 <TextView
@@ -658,7 +663,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:fontFamily="sans-serif-medium"
-                                    android:textColor="@color/premium_text_primary"
+                                    android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     tools:text="72 bpm" />
 
@@ -672,10 +677,10 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
-                            app:cardBackgroundColor="@color/premium_surface"
+                            app:cardBackgroundColor="@color/surface"
                             app:cardCornerRadius="18dp"
                             app:cardElevation="0dp"
-                            app:strokeColor="@color/premium_border_light"
+                            app:strokeColor="@color/outline_light"
                             app:strokeWidth="1dp">
 
                             <LinearLayout
@@ -700,7 +705,7 @@
                                         android:layout_height="16dp"
                                         android:layout_marginStart="-24dp"
                                         android:src="@drawable/ic_health"
-                                        app:tint="@color/premium_primary" />
+                                        app:tint="@color/primary" />
 
                                 </LinearLayout>
 
@@ -709,8 +714,8 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="12dp"
                                     android:fontFamily="sans-serif"
-                                    android:text="Blood Pressure"
-                                    android:textColor="@color/premium_text_secondary"
+                                    android:text="@string/blood_pressure"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="12sp" />
 
                                 <TextView
@@ -719,7 +724,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:fontFamily="sans-serif-medium"
-                                    android:textColor="@color/premium_text_primary"
+                                    android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     tools:text="120/80" />
 
@@ -734,10 +739,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        app:cardBackgroundColor="@color/premium_surface"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="@color/premium_border_light"
+                        app:strokeColor="@color/outline_light"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -750,8 +755,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Heart Rate Trend"
-                                android:textColor="@color/premium_text_primary"
+                                android:text="@string/heart_rate_trend"
+                                android:textColor="@color/text_primary"
                                 android:textSize="15sp" />
 
                             <com.github.mikephil.charting.charts.LineChart
@@ -769,10 +774,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        app:cardBackgroundColor="@color/premium_surface"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="@color/premium_border_light"
+                        app:strokeColor="@color/outline_light"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -785,8 +790,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Blood Pressure Trend"
-                                android:textColor="@color/premium_text_primary"
+                                android:text="@string/blood_pressure_trend"
+                                android:textColor="@color/text_primary"
                                 android:textSize="15sp" />
 
                             <com.github.mikephil.charting.charts.LineChart
@@ -804,10 +809,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        app:cardBackgroundColor="@color/premium_surface"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="@color/premium_border_light"
+                        app:strokeColor="@color/outline_light"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -820,8 +825,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Glucose Level Trend"
-                                android:textColor="@color/premium_text_primary"
+                                android:text="@string/glucose_level_trend"
+                                android:textColor="@color/text_primary"
                                 android:textSize="15sp" />
 
                             <com.github.mikephil.charting.charts.LineChart
@@ -850,9 +855,9 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="24dp"
-        android:backgroundTint="@color/premium_primary"
+        android:backgroundTint="@color/primary"
         android:fontFamily="sans-serif-medium"
-        android:text="Add Note"
+        android:text="@string/add_note"
         android:textAllCaps="false"
         android:textColor="@color/white"
         android:visibility="gone"
@@ -866,7 +871,7 @@
         android:id="@+id/loadingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/premium_background"
+        android:background="@color/background"
         android:visibility="gone">
 
         <ProgressBar
@@ -874,7 +879,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/premium_primary" />
+            android:indeterminateTint="@color/primary" />
 
     </FrameLayout>
 
