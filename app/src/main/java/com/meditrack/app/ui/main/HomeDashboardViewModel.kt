@@ -35,12 +35,14 @@ class HomeDashboardViewModel @Inject constructor(
     fun computeRiskScore(logs: List<HealthLog>, medicines: List<Medicine>) {
         viewModelScope.launch {
             try {
-                val result = intakeRepository.getTodayAdherenceStats(medicines)
-                val adherence = (result as? Resource.Success)?.data ?: return@launch
+                // Use the same 7-day adherence window as RiskDashboardViewModel to ensure
+                // the compact card and full dashboard show a consistent risk score.
+                val result = intakeRepository.getAdherencePercentage(7)
+                val adherencePercentage = (result as? Resource.Success)?.data ?: return@launch
                 val insight = InsightEngine.computeFullInsight(
                     logs = logs,
                     medicines = medicines,
-                    adherencePercentage = adherence.adherencePercentage
+                    adherencePercentage = adherencePercentage
                 )
                 _riskCardState.value = RiskCardState(
                     overallScore = insight.riskScore.overallScore,
