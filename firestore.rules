@@ -85,7 +85,8 @@ service cloud.firestore {
       let next = request.resource.data.status;
       return (current == 'PENDING'         && next in ['CONFIRMED', 'CANCELLED']) ||
              (current == 'CONFIRMED'       && next in ['PREPARING', 'CANCELLED']) ||
-             (current == 'PREPARING'       && next in ['SHIPPED', 'CANCELLED']) ||
+             (current == 'PREPARING'       && next in ['READY', 'SHIPPED', 'CANCELLED']) ||
+             (current == 'READY'           && next in ['SHIPPED', 'CANCELLED']) ||
              (current == 'SHIPPED'         && next in ['DELIVERED']) ||
              (current == 'DELIVERED'       && next in ['RETURNED']);
     }
@@ -477,10 +478,9 @@ service cloud.firestore {
 
     // ==================== Pharmacy Inventory Collection ====================
     match /pharmacyInventory/{itemId} {
-      // Only the owning pharmacy or admin can read inventory
-      allow read: if isAuthenticated() &&
-                  (isAdmin() ||
-                   (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId)));
+      // Anyone authenticated can read inventory (patients need to check availability)
+      // Phase 6: Inventory matching requires patients to query pharmacy stock
+      allow read: if isAuthenticated();
 
       // Pharmacy users can create inventory items for their own pharmacy
       allow create: if isApprovedPharmacy() &&

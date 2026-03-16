@@ -16,6 +16,10 @@ data class User(
     val assignedDoctorNames: Map<String, String> = emptyMap(), // doctorUid -> displayName
     val phoneNumber: String = "",
 
+    // ── FCM Push Notifications ──────────────────────────────
+    /** Firebase Cloud Messaging token for push notifications. */
+    val fcmToken: String = "",
+
     // ── Verification fields (Doctor / Pharmacy) ─────────────
     /** URL of uploaded license document in Firebase Storage. */
     val licenseUrl: String = "",
@@ -58,6 +62,7 @@ data class User(
             "assignedDoctors" to assignedDoctors,
             "assignedDoctorNames" to assignedDoctorNames,
             "phoneNumber" to phoneNumber,
+            "fcmToken" to fcmToken,
             "licenseUrl" to licenseUrl,
             "verifiedBy" to verifiedBy,
             "verifiedAt" to verifiedAt,
@@ -103,6 +108,7 @@ data class User(
                 assignedDoctors = doctors,
                 assignedDoctorNames = doctorNames,
                 phoneNumber = map["phoneNumber"] as? String ?: "",
+                fcmToken = map["fcmToken"] as? String ?: "",
                 licenseUrl = map["licenseUrl"] as? String ?: "",
                 verifiedBy = map["verifiedBy"] as? String ?: "",
                 verifiedAt = (map["verifiedAt"] as? com.google.firebase.Timestamp)?.toDate(),

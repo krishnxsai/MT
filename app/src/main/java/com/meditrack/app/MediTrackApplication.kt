@@ -28,6 +28,7 @@ class MediTrackApplication : Application() {
         const val NOTIFICATION_CHANNEL_ALARM = "medicine_alarm_channel"
         const val NOTIFICATION_CHANNEL_GENERAL = "general_channel"
         const val NOTIFICATION_CHANNEL_SYNC = "sync_channel"
+        const val NOTIFICATION_CHANNEL_ORDERS = "meditrack_orders"
         private const val SYNC_WORK_NAME = "periodic_data_sync"
     }
 
@@ -152,6 +153,18 @@ class MediTrackApplication : Application() {
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(syncChannel)
+
+            // Order status notifications channel (high priority for patient alerts)
+            val ordersChannel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ORDERS,
+                "Order Updates",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications about your medicine order status"
+                enableVibration(true)
+                enableLights(true)
+            }
+            notificationManager.createNotificationChannel(ordersChannel)
 
             Log.d(TAG, "Notification channels created")
         }

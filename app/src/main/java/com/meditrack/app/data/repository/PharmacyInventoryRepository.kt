@@ -193,5 +193,116 @@ class PharmacyInventoryRepository {
             0
         }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    // Pharmacy Inventory Matching (Phase 6)
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Check if a pharmacy has specific medicines in stock.
+     * Returns a map of medicineName -> available quantity.
+     *
+     * @param pharmacyId The pharmacy to check
+     * @param medicineNames List of medicine names to check (case-insensitive)
+     * @return Map of medicine name -> InventoryItem if available
+     */
+    suspend fun checkMedicineAvailability(
+        pharmacyId: String,
+        medicineNames: List<String>
+    ): Resource<Map<String, InventoryItem>> = withContext(Dispatchers.IO) {
+        try {
+            val snapshot = inventoryCol
+                .whereEqualTo("pharmacyId", pharmacyId)
+                .whereEqualTo("isActive", true)
+                .whereGreaterThan("stockQuantity", 0)
+                .get().await()
+
+            val items = snapshot.documents.mapNotNull { doc ->
+                doc.data?.let { InventoryItem.fromMap(doc.id, it) }
+            }
+
+            // Match by medicine name (case-insensitive)
+            val matchedItems = mutableMapOf<String, InventoryItem>()
+            for (name in medicineNames) {
+                val item = items.find {
+                    it.medicineName.equals(name, ignoreCase = true) ||
+                    it.genericName.equals(name, ignoreCase = true)
+                }
+                if (item != null && item.stockQuantity > 0) {
+                    matchedItems[name] = item
+                }
+            }
+
+            Resource.Success(matchedItems)
+        } catch (e: Exception) {
+            Log.e(TAG, "checkMedicineAvailability error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to check inventory")
+        }
+    }
+
+    /**
+     * Get pharmacies that have ALL specified medicines in stock.
+     *
+     * @param pharmacyIds List of pharmacy IDs to check
+     * @param medicineNames List of medicine names required
+     * @return List of pharmacy IDs that have all medicines available
+     */
+    suspend fun getPharmaciesWithAllMedicines(
+        pharmacyIds: List<String>,
+        medicineNames: List<String>
+    ): Resource<List<String>> = withContext(Dispatchers.IO) {
+        try {
+            val matchingPharmacies = mutableListOf<String>()
+
+            for (pharmacyId in pharmacyIds) {
+                val result = checkMedicineAvailability(pharmacyId, medicineNames)
+                if (result is Resource.Success) {
+                    val availableCount = result.data.size
+                    if (availableCount == medicineNames.size) {
+                        matchingPharmacies.add(pharmacyId)
+                    }
+                }
+            }
+
+            Log.d(TAG, "Found ${matchingPharmacies.size}/${pharmacyIds.size} pharmacies with all ${medicineNames.size} medicines")
+            Resource.Success(matchingPharmacies)
+        } catch (e: Exception) {
+            Log.e(TAG, "getPharmaciesWithAllMedicines error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to filter pharmacies")
+        }
+    }
+
+    /**
+     * Get medicines available at a pharmacy with quantity check.
+     * Used to calculate pricing and validate orders.
+     *
+     * @param pharmacyId Pharmacy to check
+     * @param medicineNames Medicine names to get
+     * @param quantities Required quantities for each medicine
+     * @return Map of medicineName -> InventoryItem (only items with sufficient stock)
+     */
+    suspend fun getMedicinesWithSufficientStock(
+        pharmacyId: String,
+        medicineNames: List<String>,
+        quantities: Map<String, Int>
+    ): Resource<Map<String, InventoryItem>> = withContext(Dispatchers.IO) {
+        try {
+            val availability = checkMedicineAvailability(pharmacyId, medicineNames)
+            if (availability is Resource.Error) {
+                return@withContext availability
+            }
+
+            val items = (availability as Resource.Success).data
+            val sufficientItems = items.filter { (name, item) ->
+                val requiredQty = quantities[name] ?: 1
+                item.stockQuantity >= requiredQty
+            }
+
+            Resource.Success(sufficientItems)
+        } catch (e: Exception) {
+            Log.e(TAG, "getMedicinesWithSufficientStock error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to check stock")
+        }
+    }
 }
 

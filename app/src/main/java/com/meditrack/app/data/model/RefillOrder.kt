@@ -11,7 +11,7 @@ import java.util.Date
  * Represents a medicine refill order.
  * Stored in the top-level `orders` Firestore collection.
  *
- * Lifecycle: PENDING → CONFIRMED → PREPARING → SHIPPED → DELIVERED
+ * Lifecycle: PENDING → CONFIRMED → PREPARING → READY → SHIPPED → DELIVERED
  *                    └→ CANCELLED
  *
  * Supports both single-item orders (legacy) and multi-item orders.
@@ -170,12 +170,51 @@ enum class OrderStatus {
     PENDING,
     CONFIRMED,
     PREPARING,
+    READY,
     SHIPPED,
     DELIVERED,
     CANCELLED;
 
     fun displayName(): String = name.lowercase().replaceFirstChar { it.uppercase() }
+
+    fun getDisplayLabel(): String = when (this) {
+        PENDING -> "Pending"
+        CONFIRMED -> "Accepted"
+        PREPARING -> "Preparing"
+        READY -> "Ready"
+        SHIPPED -> "Out for Delivery"
+        DELIVERED -> "Delivered"
+        CANCELLED -> "Cancelled"
+    }
+
+    fun getStatusIcon(): Int = when (this) {
+        PENDING -> com.meditrack.app.R.drawable.ic_clock
+        CONFIRMED -> com.meditrack.app.R.drawable.ic_check_circle
+        PREPARING -> com.meditrack.app.R.drawable.ic_hourglass
+        READY -> com.meditrack.app.R.drawable.ic_package
+        SHIPPED -> com.meditrack.app.R.drawable.ic_delivery
+        DELIVERED -> com.meditrack.app.R.drawable.ic_home
+        CANCELLED -> com.meditrack.app.R.drawable.ic_close_circle
+    }
+
+    fun getStatusColor(): Int = when (this) {
+        PENDING -> com.meditrack.app.R.color.warning
+        CONFIRMED -> com.meditrack.app.R.color.info
+        PREPARING -> com.meditrack.app.R.color.secondary
+        READY -> com.meditrack.app.R.color.secondary
+        SHIPPED -> com.meditrack.app.R.color.secondary
+        DELIVERED -> com.meditrack.app.R.color.success
+        CANCELLED -> com.meditrack.app.R.color.error
+    }
 }
+
+// ── Display helper extensions ─────────────────────────────────────────
+
+fun RefillOrder.getDisplayStatus(): String = status.getDisplayLabel()
+
+fun RefillOrder.getStatusIcon(): Int = status.getStatusIcon()
+
+fun RefillOrder.getStatusColor(): Int = status.getStatusColor()
 
 /**
  * Single entry in the order status change trail.

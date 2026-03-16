@@ -498,5 +498,19 @@ class OrderRepository {
             Resource.Error(e.message ?: "Failed to get order")
         }
     }
+
+    fun getOrderFlow(orderId: String): Flow<RefillOrder?> = callbackFlow {
+        val listener = ordersCol.document(orderId).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val order = snapshot.data?.let { RefillOrder.fromMap(snapshot.id, it) }
+                trySend(order)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
 }
 

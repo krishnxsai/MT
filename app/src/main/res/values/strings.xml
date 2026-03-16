@@ -634,4 +634,15 @@
 
     <!-- Pharmacy List -->
     <string name="pharmacies_added_hint">Pharmacies will appear here once added to the system</string>
+
+    <!-- Order Tracking -->
+    <string name="status_icon">Order status icon</string>
+    <string name="ship_order">Ship Order</string>
+
+    <!-- Order History -->
+    <string name="my_orders">My Orders</string>
+    <string name="active_orders">Active Orders</string>
+    <string name="past_orders">Past Orders</string>
+    <string name="no_orders_yet">No Orders Yet</string>
+    <string name="order_medicines_from_nearby_pharmacies">Order medicines from nearby pharmacies</string>
 </resources>

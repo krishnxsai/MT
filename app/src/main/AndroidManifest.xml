@@ -207,6 +207,18 @@
             android:exported="false"
             android:label="Select Pharmacy" />
 
+        <!-- Order Tracking Activity -->
+        <activity
+            android:name=".ui.order.OrderTrackingActivity"
+            android:exported="false"
+            android:label="Order Tracking" />
+
+        <!-- Order History Activity -->
+        <activity
+            android:name=".ui.order.history.OrderHistoryActivity"
+            android:exported="false"
+            android:label="My Orders" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -230,6 +242,15 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Firebase Cloud Messaging Service -->
+        <service
+            android:name=".fcm.MediTrackFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- Broadcast Receivers -->
         <receiver

@@ -27,6 +27,7 @@ import com.meditrack.app.ui.medicine.MedicinesListActivity
 import com.meditrack.app.ui.medicine.MedicineViewModel
 import com.meditrack.app.ui.order.PharmacyListActivity
 import com.meditrack.app.ui.order.RefillOrdersActivity
+import com.meditrack.app.ui.order.history.OrderHistoryActivity
 import com.meditrack.app.ui.order.unified.UnifiedOrderActivity
 import com.meditrack.app.ui.profile.ProfileActivity
 import com.meditrack.app.ui.profile.ProfileViewModel
@@ -140,9 +141,9 @@ class HomeDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, AppointmentsListActivity::class.java))
         }
 
-        // Refill Orders Card - Navigate to Unified Order screen
+        // Refill Orders Card - Navigate to Order History screen
         binding.refillOrdersCard?.setOnClickListener {
-            startActivity(Intent(this, UnifiedOrderActivity::class.java))
+            startActivity(Intent(this, OrderHistoryActivity::class.java))
         }
 
         // Pharmacies Card - Navigate to Unified Order screen

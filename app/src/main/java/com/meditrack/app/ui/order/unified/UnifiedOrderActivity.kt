@@ -290,9 +290,10 @@ class UnifiedOrderActivity : AppCompatActivity() {
 
     private fun handleNavigationEvent(event: UnifiedOrderViewModel.NavigationEvent) {
         when (event) {
-            is UnifiedOrderViewModel.NavigationEvent.ToOrderConfirmation -> {
-                Toast.makeText(this, "Order placed successfully!", Toast.LENGTH_LONG).show()
-                // Navigate to order tracking
+            is UnifiedOrderViewModel.NavigationEvent.ToOrderTracking -> {
+                val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
+                intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
+                startActivity(intent)
                 finish()
             }
             is UnifiedOrderViewModel.NavigationEvent.ToPharmacyMap -> {
@@ -300,7 +301,9 @@ class UnifiedOrderActivity : AppCompatActivity() {
                 val intent = Intent(this, PharmacyMapActivity::class.java)
                 startActivityForResult(intent, REQUEST_CODE_MAP)
             }
-            is UnifiedOrderViewModel.NavigationEvent.ToOrderTracking -> {
+            is UnifiedOrderViewModel.NavigationEvent.ToOrderConfirmation -> {
+                Toast.makeText(this, "Order placed successfully!", Toast.LENGTH_LONG).show()
+                // Navigate to order tracking
                 finish()
             }
         }
