@@ -163,7 +163,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/doctor" />
 
-            <!-- Admin role removed from signup — admin is seeded via seed_admin.js -->
+            <!-- Admin role removed from signup — admin is seeded via seed_firestore.js -->
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/pharmacyChip"

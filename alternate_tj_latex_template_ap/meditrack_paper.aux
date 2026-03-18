@@ -25,83 +25,79 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {II-A}Mobile Health Platforms}{2}{subsection.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {II-B}Clinical Decision Support Systems}{2}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {II-C}Security in mHealth Applications}{2}{subsection.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {II-D}Comparison with Existing Solutions}{2}{subsection.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {III}System Architecture}{2}{section.3}\protected@file@percent }
-\newlabel{sec:architecture}{{III}{2}{System Architecture}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {III-A}Architectural Overview}{2}{subsection.3.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Feature Comparison of mHealth Platforms}}{3}{table.1}\protected@file@percent }
 \newlabel{tab:comparison}{{I}{3}{Feature Comparison of mHealth Platforms}{table.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces MediTrack system architecture showing the four-layer MVVM design with Firebase infrastructure. The Presentation Layer contains 33 Activities driven by 22 ViewModels. The Domain Layer houses use cases for complex multi-repository orchestration. The Data Layer comprises 14 repositories and the analytics pipeline. The Infrastructure Layer is built on Firebase services with 540-line server-side security rules.}}{3}{figure.1}\protected@file@percent }
-\newlabel{fig:architecture}{{1}{3}{MediTrack system architecture showing the four-layer MVVM design with Firebase infrastructure. The Presentation Layer contains 33 Activities driven by 22 ViewModels. The Domain Layer houses use cases for complex multi-repository orchestration. The Data Layer comprises 14 repositories and the analytics pipeline. The Infrastructure Layer is built on Firebase services with 540-line server-side security rules}{figure.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Technology Stack}}{3}{table.2}\protected@file@percent }
-\newlabel{tab:techstack}{{II}{3}{Technology Stack}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {II-D}Comparison with Existing Solutions}{3}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Architecture}{3}{section.3}\protected@file@percent }
+\newlabel{sec:architecture}{{III}{3}{System Architecture}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {III-A}Architectural Overview}{3}{subsection.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {III-B}Technology Stack}{3}{subsection.3.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {III-C}Data Model}{3}{subsection.3.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Entity-relationship diagram of MediTrack's core data model showing relationships between Users (Patient, Doctor), HealthLogs, Medicines, ClinicalDecisions, PrescriptionRecords, Appointments, RefillOrders, Pharmacies, InventoryItems, Conversations, and Messages across 17 Firestore collections.}}{4}{figure.2}\protected@file@percent }
-\newlabel{fig:datamodel}{{2}{4}{Entity-relationship diagram of MediTrack's core data model showing relationships between Users (Patient, Doctor), HealthLogs, Medicines, ClinicalDecisions, PrescriptionRecords, Appointments, RefillOrders, Pharmacies, InventoryItems, Conversations, and Messages across 17 Firestore collections}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces MediTrack system architecture showing the four-layer MVVM design with Firebase infrastructure. The Presentation Layer contains 33 Activities driven by 22 ViewModels. The Domain Layer houses use cases for complex multi-repository orchestration. The Data Layer comprises 14 repositories and the analytics pipeline. The Infrastructure Layer is built on Firebase services with 540-line server-side security rules.}}{4}{figure.1}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{4}{MediTrack system architecture showing the four-layer MVVM design with Firebase infrastructure. The Presentation Layer contains 33 Activities driven by 22 ViewModels. The Domain Layer houses use cases for complex multi-repository orchestration. The Data Layer comprises 14 repositories and the analytics pipeline. The Infrastructure Layer is built on Firebase services with 540-line server-side security rules}{figure.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Technology Stack}}{4}{table.2}\protected@file@percent }
+\newlabel{tab:techstack}{{II}{4}{Technology Stack}{table.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {III-D}Dependency Injection Architecture}{4}{subsection.3.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Multi-Role Workflow Design}{4}{section.4}\protected@file@percent }
 \newlabel{sec:workflows}{{IV}{4}{Multi-Role Workflow Design}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {IV-A}Role-Based Navigation}{4}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {IV-B}Patient Workflows}{4}{subsection.4.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Role-based navigation flow showing authentication, role detection, approval verification, and role-specific dashboard routing for all four user types. Doctor and Pharmacy roles require explicit admin approval.}}{4}{figure.3}\protected@file@percent }
-\newlabel{fig:navigation}{{3}{4}{Role-based navigation flow showing authentication, role detection, approval verification, and role-specific dashboard routing for all four user types. Doctor and Pharmacy roles require explicit admin approval}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {IV-C}Doctor Workflows}{5}{subsection.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {IV-D}Pharmacy Workflows}{5}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {IV-E}Administrator Workflows}{5}{subsection.4.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Risk Score Dimension Weights}}{5}{table.3}\protected@file@percent }
-\newlabel{tab:riskweights}{{III}{5}{Risk Score Dimension Weights}{table.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Blood Pressure Risk Scoring Thresholds}}{5}{table.4}\protected@file@percent }
-\newlabel{tab:bpscoring}{{IV}{5}{Blood Pressure Risk Scoring Thresholds}{table.4}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}On-Device Health Analytics Pipeline}{5}{section.5}\protected@file@percent }
-\newlabel{sec:analytics}{{V}{5}{On-Device Health Analytics Pipeline}{section.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-A}Pipeline Overview}{5}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-B}RiskScoreEngine: Composite Health Risk Scoring}{5}{subsection.5.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces On-device health analytics pipeline architecture. The {\tt  InsightEngine} facade coordinates the {\tt  RiskScoreEngine} (composite 0--100 scoring), {\tt  TrendPredictionEngine} (consecutive pattern detection with linear regression), and {\tt  VitalAlertEngine} (threshold-based vital alerts). Outputs are unified by the {\tt  UnifiedAlertPrioritizer} and fed to the {\tt  HealthInsightEngine} for personalized suggestion generation.}}{6}{figure.4}\protected@file@percent }
-\newlabel{fig:analytics}{{4}{6}{On-device health analytics pipeline architecture. The {\tt InsightEngine} facade coordinates the {\tt RiskScoreEngine} (composite 0--100 scoring), {\tt TrendPredictionEngine} (consecutive pattern detection with linear regression), and {\tt VitalAlertEngine} (threshold-based vital alerts). Outputs are unified by the {\tt UnifiedAlertPrioritizer} and fed to the {\tt HealthInsightEngine} for personalized suggestion generation}{figure.4}{}}
-\newlabel{eq:riskscore}{{1}{6}{RiskScoreEngine: Composite Health Risk Scoring}{equation.5.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-C}TrendPredictionEngine: Consecutive Pattern Detection}{6}{subsection.5.3}\protected@file@percent }
-\newlabel{eq:regression}{{2}{6}{TrendPredictionEngine: Consecutive Pattern Detection}{equation.5.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Vital Alert Engine Threshold Values}}{6}{table.5}\protected@file@percent }
-\newlabel{tab:vitalalerts}{{V}{6}{Vital Alert Engine Threshold Values}{table.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-D}VitalAlertEngine: Real-Time Threshold Alerting}{6}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-E}HealthInsightEngine: Personalized Health Suggestions}{6}{subsection.5.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces MediTrack defense-in-depth security architecture. The Application Layer enforces backup prevention, encrypted local storage, and client-side audit logging. The Transport Layer provides TLS encryption via Firebase SDK. The Server Layer implements 540-line Firestore Security Rules with RBAC, state machine validation, immutable audit trails, and cross-tenant isolation.}}{7}{figure.5}\protected@file@percent }
-\newlabel{fig:security}{{5}{7}{MediTrack defense-in-depth security architecture. The Application Layer enforces backup prevention, encrypted local storage, and client-side audit logging. The Transport Layer provides TLS encryption via Firebase SDK. The Server Layer implements 540-line Firestore Security Rules with RBAC, state machine validation, immutable audit trails, and cross-tenant isolation}{figure.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-F}UnifiedAlertPrioritizer: Cross-Engine Alert Fusion}{7}{subsection.5.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {V-G}Supporting Components}{7}{subsection.5.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Security Architecture}{7}{section.6}\protected@file@percent }
-\newlabel{sec:security}{{VI}{7}{Security Architecture}{section.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {VI-A}Defense-in-Depth Model}{7}{subsection.6.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Immutable Collection Policies}}{7}{table.6}\protected@file@percent }
-\newlabel{tab:immutability}{{VI}{7}{Immutable Collection Policies}{table.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {VI-B}Firestore Security Rules: Server-Side RBAC}{7}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VI-C}Data Immutability Guarantees}{7}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VI-D}State Machine Validation}{7}{subsection.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VI-E}Data Validation}{7}{subsection.6.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Entity-relationship diagram of MediTrack's core data model showing relationships between Users (Patient, Doctor), HealthLogs, Medicines, ClinicalDecisions, PrescriptionRecords, Appointments, RefillOrders, Pharmacies, InventoryItems, Conversations, and Messages across 17 Firestore collections.}}{5}{figure.2}\protected@file@percent }
+\newlabel{fig:datamodel}{{2}{5}{Entity-relationship diagram of MediTrack's core data model showing relationships between Users (Patient, Doctor), HealthLogs, Medicines, ClinicalDecisions, PrescriptionRecords, Appointments, RefillOrders, Pharmacies, InventoryItems, Conversations, and Messages across 17 Firestore collections}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {IV-A}Role-Based Navigation}{5}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {IV-B}Patient Workflows}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Role-based navigation flow showing authentication, role detection, approval verification, and role-specific dashboard routing for all four user types. Doctor and Pharmacy roles require explicit admin approval.}}{6}{figure.3}\protected@file@percent }
+\newlabel{fig:navigation}{{3}{6}{Role-based navigation flow showing authentication, role detection, approval verification, and role-specific dashboard routing for all four user types. Doctor and Pharmacy roles require explicit admin approval}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {IV-C}Doctor Workflows}{6}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {IV-D}Pharmacy Workflows}{6}{subsection.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces On-device health analytics pipeline architecture. The {\tt  InsightEngine} facade coordinates the {\tt  RiskScoreEngine} (composite 0--100 scoring), {\tt  TrendPredictionEngine} (consecutive pattern detection with linear regression), and {\tt  VitalAlertEngine} (threshold-based vital alerts). Outputs are unified by the {\tt  UnifiedAlertPrioritizer} and fed to the {\tt  HealthInsightEngine} for personalized suggestion generation.}}{7}{figure.4}\protected@file@percent }
+\newlabel{fig:analytics}{{4}{7}{On-device health analytics pipeline architecture. The {\tt InsightEngine} facade coordinates the {\tt RiskScoreEngine} (composite 0--100 scoring), {\tt TrendPredictionEngine} (consecutive pattern detection with linear regression), and {\tt VitalAlertEngine} (threshold-based vital alerts). Outputs are unified by the {\tt UnifiedAlertPrioritizer} and fed to the {\tt HealthInsightEngine} for personalized suggestion generation}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {IV-E}Administrator Workflows}{7}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}On-Device Health Analytics Pipeline}{7}{section.5}\protected@file@percent }
+\newlabel{sec:analytics}{{V}{7}{On-Device Health Analytics Pipeline}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-A}Pipeline Overview}{7}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-B}RiskScoreEngine: Composite Health Risk Scoring}{7}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Risk Score Dimension Weights}}{8}{table.3}\protected@file@percent }
+\newlabel{tab:riskweights}{{III}{8}{Risk Score Dimension Weights}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Blood Pressure Risk Scoring Thresholds}}{8}{table.4}\protected@file@percent }
+\newlabel{tab:bpscoring}{{IV}{8}{Blood Pressure Risk Scoring Thresholds}{table.4}{}}
+\newlabel{eq:riskscore}{{1}{8}{RiskScoreEngine: Composite Health Risk Scoring}{equation.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-C}TrendPredictionEngine: Consecutive Pattern Detection}{8}{subsection.5.3}\protected@file@percent }
+\newlabel{eq:regression}{{2}{8}{TrendPredictionEngine: Consecutive Pattern Detection}{equation.5.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-D}VitalAlertEngine: Real-Time Threshold Alerting}{8}{subsection.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Vital Alert Engine Threshold Values}}{9}{table.5}\protected@file@percent }
+\newlabel{tab:vitalalerts}{{V}{9}{Vital Alert Engine Threshold Values}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-E}HealthInsightEngine: Personalized Health Suggestions}{9}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-F}UnifiedAlertPrioritizer: Cross-Engine Alert Fusion}{9}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {V-G}Supporting Components}{9}{subsection.5.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Security Architecture}{9}{section.6}\protected@file@percent }
+\newlabel{sec:security}{{VI}{9}{Security Architecture}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VI-A}Defense-in-Depth Model}{9}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {VI-B}Firestore Security Rules: Server-Side RBAC}{9}{subsection.6.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces MediTrack defense-in-depth security architecture. The Application Layer enforces backup prevention, encrypted local storage, and client-side audit logging. The Transport Layer provides TLS encryption via Firebase SDK. The Server Layer implements 540-line Firestore Security Rules with RBAC, state machine validation, immutable audit trails, and cross-tenant isolation.}}{10}{figure.5}\protected@file@percent }
+\newlabel{fig:security}{{5}{10}{MediTrack defense-in-depth security architecture. The Application Layer enforces backup prevention, encrypted local storage, and client-side audit logging. The Transport Layer provides TLS encryption via Firebase SDK. The Server Layer implements 540-line Firestore Security Rules with RBAC, state machine validation, immutable audit trails, and cross-tenant isolation}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VI-C}Data Immutability Guarantees}{10}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Immutable Collection Policies}}{11}{table.6}\protected@file@percent }
+\newlabel{tab:immutability}{{VI}{11}{Immutable Collection Policies}{table.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Codebase Metrics}}{11}{table.7}\protected@file@percent }
+\newlabel{tab:metrics}{{VII}{11}{Codebase Metrics}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VI-D}State Machine Validation}{11}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {VI-E}Data Validation}{11}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Evaluation}{11}{section.7}\protected@file@percent }
+\newlabel{sec:evaluation}{{VII}{11}{Evaluation}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VII-A}Quantitative Codebase Metrics}{11}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {VII-B}Architecture Quality Assessment}{11}{subsection.7.2}\protected@file@percent }
 \citation{free2013,batista2020}
 \citation{whelton2018}
 \citation{ada2024}
 \citation{perkins2021}
 \citation{who2014}
 \citation{grundy2004,cannon2007}
-\@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Codebase Metrics}}{8}{table.7}\protected@file@percent }
-\newlabel{tab:metrics}{{VII}{8}{Codebase Metrics}{table.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Evaluation}{8}{section.7}\protected@file@percent }
-\newlabel{sec:evaluation}{{VII}{8}{Evaluation}{section.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {VII-A}Quantitative Codebase Metrics}{8}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VII-B}Architecture Quality Assessment}{8}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VII-C}Feature Coverage Analysis}{8}{subsection.7.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VII-D}Analytics Pipeline Evaluation}{8}{subsection.7.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}Discussion}{8}{section.8}\protected@file@percent }
-\newlabel{sec:discussion}{{VIII}{8}{Discussion}{section.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-A}Key Contributions}{8}{subsection.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-B}Limitations}{8}{subsection.8.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Feature Coverage vs.\ mHealth Requirements}}{9}{table.8}\protected@file@percent }
-\newlabel{tab:coverage}{{VIII}{9}{Feature Coverage vs.\ mHealth Requirements}{table.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-C}Future Work}{9}{subsection.8.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusion}{9}{section.9}\protected@file@percent }
-\newlabel{sec:conclusion}{{IX}{9}{Conclusion}{section.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Feature Coverage vs.\ mHealth Requirements}}{12}{table.8}\protected@file@percent }
+\newlabel{tab:coverage}{{VIII}{12}{Feature Coverage vs.\ mHealth Requirements}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VII-C}Feature Coverage Analysis}{12}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {VII-D}Analytics Pipeline Evaluation}{12}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Discussion}{12}{section.8}\protected@file@percent }
+\newlabel{sec:discussion}{{VIII}{12}{Discussion}{section.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-A}Key Contributions}{12}{subsection.8.1}\protected@file@percent }
 \bibcite{grandview2024}{1}
 \bibcite{medisafe}{2}
 \bibcite{mytherapy}{3}
@@ -110,6 +106,10 @@
 \bibcite{applehealth}{6}
 \bibcite{healthconnect}{7}
 \bibcite{middleton2016}{8}
+\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-B}Limitations}{13}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {VIII-C}Future Work}{13}{subsection.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusion}{13}{section.9}\protected@file@percent }
+\newlabel{sec:conclusion}{{IX}{13}{Conclusion}{section.9}{}}
 \bibcite{garg2005}{9}
 \bibcite{topol2019}{10}
 \bibcite{chen2021}{11}
@@ -126,8 +126,11 @@
 \bibcite{who2014}{22}
 \bibcite{grundy2004}{23}
 \bibcite{cannon2007}{24}
-\@writefile{toc}{\contentsline {section}{}{10}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{Biographies}{10}{biography.0}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{Vijaya Wujjwal Reddy}{10}{biography.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{K. Divya}{10}{biography.2}\protected@file@percent }
-\gdef \@abspage@last{10}
+\@writefile{toc}{\contentsline {section}{References}{14}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{Biographies}{14}{biography.0}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{Vijaya Wujjwal Reddy}{14}{biography.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{Baddipudi Krishna Sai}{14}{biography.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{Budamagunta Ravi Teja}{14}{biography.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{Nuthalapati Lohith}{14}{biography.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{K. Divya}{14}{biography.5}\protected@file@percent }
+\gdef \@abspage@last{15}

@@ -164,7 +164,5 @@ serviceAccountKey.json
 # Seed scripts containing real UIDs/emails — NEVER commit
 fix_roles_reseed.js
 migrate_uids.js
-seed_existing_users.js
-seed_test_data.js
 cleanup_dummy_pharmacies.js
 

@@ -396,6 +396,71 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
+            <!-- Low Stock Alert Banner (Prominent Position) -->
+            <!-- ============================================ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/lowStockAlertCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/warning_container"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:rippleColor="@color/ripple_primary">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_warning"
+                        app:tint="@color/warning"
+                        android:contentDescription="@null" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/low_stock_alert"
+                            android:textColor="@color/on_warning_container"
+                            android:textSize="14sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:id="@+id/lowStockAlertText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/warning"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/warning" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============================================ -->
             <!-- Quick Actions Section -->
             <!-- ============================================ -->
             <TextView
@@ -566,7 +631,7 @@
             </LinearLayout>
 
             <!-- ============================================ -->
-            <!-- Refill & Pharmacy Quick Action Row -->
+            <!-- Order Quick Action Row -->
             <!-- ============================================ -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -576,12 +641,74 @@
                 android:orientation="horizontal"
                 android:weightSum="2">
 
-                <!-- Refill Orders -->
+                <!-- Order Medicines -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/refillOrdersCard"
+                    android:id="@+id/orderMedicinesCard"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="@color/card_background"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:rippleColor="@color/ripple_primary">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <View
+                            android:layout_width="40dp"
+                            android:layout_height="4dp"
+                            android:layout_marginBottom="14dp"
+                            android:background="@drawable/bg_rounded_4dp"
+                            android:backgroundTint="@color/primary" />
+
+                        <FrameLayout
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:background="@drawable/bg_icon_container"
+                            android:backgroundTint="@color/primary_container">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_pill"
+                                app:tint="@color/primary" />
+
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/order_medicines"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/browse_and_order"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="12sp"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Track Orders -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/trackOrdersCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/card_background"
                     app:cardCornerRadius="16dp"
@@ -611,7 +738,7 @@
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_pill"
+                                android:src="@drawable/ic_package"
                                 app:tint="@color/medicine_orange" />
 
                         </FrameLayout>
@@ -620,7 +747,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:text="@string/refill_orders"
+                            android:text="@string/track_orders"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
@@ -629,69 +756,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="@string/track_and_reorder"
-                            android:textColor="@color/text_tertiary"
-                            android:textSize="12sp"
-                            android:maxLines="2" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Browse Pharmacies -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/pharmaciesCard"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/card_background"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp"
-                    app:rippleColor="@color/ripple_primary">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="18dp">
-
-                        <View
-                            android:layout_width="40dp"
-                            android:layout_height="4dp"
-                            android:layout_marginBottom="14dp"
-                            android:background="@drawable/bg_rounded_4dp"
-                            android:backgroundTint="@color/medicine_green" />
-
-                        <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="@drawable/bg_icon_container"
-                            android:backgroundTint="@color/medicine_green_surface">
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_pill"
-                                app:tint="@color/medicine_green" />
-
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:text="@string/pharmacies"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp"
-                            android:fontFamily="sans-serif-medium" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/browse_nearby"
+                            android:text="@string/view_active_orders"
                             android:textColor="@color/text_tertiary"
                             android:textSize="12sp"
                             android:maxLines="2" />
@@ -908,57 +973,63 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
-            <!-- Low Stock Alert Banner -->
+            <!-- Health Logs Card -->
             <!-- ============================================ -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/lowStockAlertCard"
+                android:id="@+id/healthLogsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="16dp"
-                android:visibility="gone"
-                app:cardBackgroundColor="@color/warning_container"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp"
+                app:cardElevation="2dp"
                 app:rippleColor="@color/ripple_primary">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:padding="16dp"
+                    android:padding="18dp"
                     android:gravity="center_vertical">
 
-                    <ImageView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:src="@drawable/ic_warning"
-                        app:tint="@color/warning"
-                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_icon_container"
+                        android:backgroundTint="@color/secondary_container">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_health"
+                            app:tint="@color/secondary" />
+
+                    </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginHorizontal="16dp"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/low_stock_alert"
-                            android:textColor="@color/on_warning_container"
-                            android:textSize="14sp"
+                            android:text="@string/nav_health_logs"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
                             android:fontFamily="sans-serif-medium" />
 
                         <TextView
-                            android:id="@+id/lowStockAlertText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/warning"
-                            android:textSize="12sp" />
+                            android:text="@string/track_vitals"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
 
                     </LinearLayout>
 
@@ -966,7 +1037,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/warning" />
+                        app:tint="@color/text_tertiary" />
 
                 </LinearLayout>
 

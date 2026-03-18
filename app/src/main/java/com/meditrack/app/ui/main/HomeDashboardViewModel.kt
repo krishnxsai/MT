@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import com.meditrack.app.data.analytics.InsightEngine
 import com.meditrack.app.data.analytics.RiskScoreEngine
 import com.meditrack.app.data.model.HealthLog
@@ -29,16 +30,23 @@ class HomeDashboardViewModel @Inject constructor(
     private val _riskCardState = MutableLiveData<RiskCardState?>()
     val riskCardState: LiveData<RiskCardState?> = _riskCardState
 
+    private var riskScoreJob: Job? = null
+
     private val _adherenceStats = MutableLiveData<HealthAnalytics.AdherenceStats?>()
     val adherenceStats: LiveData<HealthAnalytics.AdherenceStats?> = _adherenceStats
 
     fun computeRiskScore(logs: List<HealthLog>, medicines: List<Medicine>) {
-        viewModelScope.launch {
+        riskScoreJob?.cancel()
+        riskScoreJob = viewModelScope.launch {
             try {
                 // Use the same 7-day adherence window as RiskDashboardViewModel to ensure
                 // the compact card and full dashboard show a consistent risk score.
                 val result = intakeRepository.getAdherencePercentage(7)
-                val adherencePercentage = (result as? Resource.Success)?.data ?: return@launch
+                // Match RiskDashboardViewModel: convert -1 (no data) to 0
+                val adherencePercentage = when (result) {
+                    is Resource.Success -> if (result.data >= 0) result.data else 0f
+                    else -> 0f
+                }
                 val insight = InsightEngine.computeFullInsight(
                     logs = logs,
                     medicines = medicines,

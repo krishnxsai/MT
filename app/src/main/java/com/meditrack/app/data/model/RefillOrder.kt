@@ -84,6 +84,7 @@ data class RefillOrder(
 
     fun toMap(): Map<String, Any?> = mapOf(
         "userId" to userId,
+        "patientId" to userId,
         "medicineId" to medicineId,
         "medicineName" to medicineName,
         "medicineDosage" to medicineDosage,
@@ -100,8 +101,10 @@ data class RefillOrder(
         "discount" to discount,
         "totalAmount" to totalAmount,
         "deliveryAddress" to deliveryAddress?.toMap(),
+        "deliveryLocation" to deliveryAddress?.toLocationMap(),
         "deliveryType" to deliveryType.name,
         "estimatedDeliveryMinutes" to estimatedDeliveryMinutes,
+        "estimatedDeliveryTime" to estimatedDeliveryMinutes,
         "currentLocation" to currentLocation,
         "lastLocationUpdate" to lastLocationUpdate,
         "statusHistory" to statusHistory.map { it.toMap() },
@@ -124,13 +127,30 @@ data class RefillOrder(
             } ?: emptyList()
 
             @Suppress("UNCHECKED_CAST")
-            val deliveryAddr = (map["deliveryAddress"] as? Map<String, Any?>)?.let {
-                DeliveryAddress.fromMap(it)
+            val deliveryLocationMap = map["deliveryLocation"] as? Map<String, Any?>
+
+            @Suppress("UNCHECKED_CAST")
+            val deliveryDetailsMap = map["deliveryAddressDetails"] as? Map<String, Any?>
+
+            @Suppress("UNCHECKED_CAST")
+            val deliveryAddr = when {
+                deliveryDetailsMap != null -> DeliveryAddress.fromMap(deliveryDetailsMap)
+                map["deliveryAddress"] is Map<*, *> -> {
+                    DeliveryAddress.fromMap(map["deliveryAddress"] as Map<String, Any?>)
+                }
+                map["deliveryAddress"] is String -> {
+                    DeliveryAddress(
+                        fullAddress = map["deliveryAddress"] as String,
+                        latitude = (deliveryLocationMap?.get("lat") as? Number)?.toDouble() ?: 0.0,
+                        longitude = (deliveryLocationMap?.get("lng") as? Number)?.toDouble() ?: 0.0
+                    )
+                }
+                else -> null
             }
 
             return RefillOrder(
                 id = id,
-                userId = map["userId"] as? String ?: "",
+                userId = map["userId"] as? String ?: map["patientId"] as? String ?: "",
                 medicineId = map["medicineId"] as? String ?: "",
                 medicineName = map["medicineName"] as? String ?: "",
                 medicineDosage = map["medicineDosage"] as? String ?: "",
@@ -152,7 +172,10 @@ data class RefillOrder(
                 deliveryType = try {
                     DeliveryType.valueOf(map["deliveryType"] as? String ?: "DELIVERY")
                 } catch (_: Exception) { DeliveryType.DELIVERY },
-                estimatedDeliveryMinutes = (map["estimatedDeliveryMinutes"] as? Number)?.toInt() ?: 0,
+                estimatedDeliveryMinutes =
+                    (map["estimatedDeliveryMinutes"] as? Number)?.toInt()
+                        ?: (map["estimatedDeliveryTime"] as? Number)?.toInt()
+                        ?: 0,
                 currentLocation = map["currentLocation"] as? GeoPoint,
                 lastLocationUpdate = (map["lastLocationUpdate"] as? Timestamp)?.toDate(),
                 statusHistory = historyList,
@@ -315,6 +338,17 @@ data class DeliveryAddress(
             longitude = (map["longitude"] as? Number)?.toDouble() ?: 0.0,
             contactPhone = map["contactPhone"] as? String ?: ""
         )
+    }
+
+    fun toLocationMap(): Map<String, Double>? {
+        return if (latitude == 0.0 && longitude == 0.0) {
+            null
+        } else {
+            mapOf(
+                "lat" to latitude,
+                "lng" to longitude
+            )
+        }
     }
 }
 

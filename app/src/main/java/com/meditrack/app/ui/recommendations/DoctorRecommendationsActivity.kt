@@ -70,8 +70,8 @@ class DoctorRecommendationsActivity : AppCompatActivity() {
                     finish()
                     true
                 }
-                R.id.nav_health_logs -> {
-                    startActivity(Intent(this, com.meditrack.app.ui.healthlog.HealthLogListActivity::class.java))
+                R.id.nav_orders -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.order.history.OrderHistoryActivity::class.java))
                     overrideTransitionCompat(0, 0)
                     finish()
                     true

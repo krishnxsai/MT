@@ -253,6 +253,20 @@
     <string name="nav_home">Home</string>
     <string name="nav_medicines">Medicines</string>
     <string name="nav_health_logs">Health Logs</string>
+    <string name="nav_orders">Orders</string>
+    <string name="order_medicines">Order Medicines</string>
+    <string name="browse_and_order">Browse &amp; order</string>
+    <string name="track_orders">Track Orders</string>
+    <string name="view_active_orders">View active orders</string>
+    <string name="health_section">Health</string>
+    <string name="track_vitals">Track vitals</string>
+    <string name="delivery_address">Delivery Address</string>
+    <string name="enter_delivery_address">Enter your delivery address</string>
+    <string name="use_gps_location">Use GPS</string>
+    <string name="fetching_location">Fetching current location...</string>
+    <string name="location_permission_required">Location permission is required to use GPS address.</string>
+    <string name="unable_to_get_location">Unable to get current location. Please try again.</string>
+    <string name="unable_to_resolve_address">Location found, but address could not be resolved. You can type manually.</string>
     <string name="nav_doctor">Doctor</string>
     <string name="nav_profile">Profile</string>
 

@@ -46,6 +46,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
     private val viewModel: UnifiedOrderViewModel by viewModels()
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var currentUserLocation: Location? = null
 
     private lateinit var lowStockAdapter: LowStockMedicineAdapter
     private lateinit var pharmacyAdapter: PharmacyUnifiedAdapter
@@ -302,8 +303,10 @@ class UnifiedOrderActivity : AppCompatActivity() {
                 startActivityForResult(intent, REQUEST_CODE_MAP)
             }
             is UnifiedOrderViewModel.NavigationEvent.ToOrderConfirmation -> {
-                Toast.makeText(this, "Order placed successfully!", Toast.LENGTH_LONG).show()
-                // Navigate to order tracking
+                // Order placed successfully — navigate to tracking
+                val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
+                intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
+                startActivity(intent)
                 finish()
             }
         }
@@ -376,8 +379,14 @@ class UnifiedOrderActivity : AppCompatActivity() {
         )
 
         bottomSheet.setOnOrderConfirmListener(object : OrderConfirmationBottomSheet.OnOrderConfirmListener {
-            override fun onOrderConfirmed() {
-                viewModel.placeOrder()
+            override fun onOrderConfirmed(deliveryAddress: String) {
+                viewModel.placeOrder(
+                    deliveryAddress = com.meditrack.app.data.model.DeliveryAddress(
+                        fullAddress = deliveryAddress,
+                        latitude = currentUserLocation?.latitude ?: 0.0,
+                        longitude = currentUserLocation?.longitude ?: 0.0
+                    )
+                )
             }
 
             override fun onChangePharmacy() {
@@ -416,7 +425,10 @@ class UnifiedOrderActivity : AppCompatActivity() {
         }
 
         fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            location?.let { viewModel.updateUserLocation(it) }
+            location?.let {
+                currentUserLocation = it
+                viewModel.updateUserLocation(it)
+            }
         }
     }
 

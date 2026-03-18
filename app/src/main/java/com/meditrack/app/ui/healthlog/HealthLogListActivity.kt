@@ -37,13 +37,13 @@ class HealthLogListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         binding.bottomNavigation?.setOnItemSelectedListener(null)
-        binding.bottomNavigation?.selectedItemId = R.id.nav_health_logs
+        binding.bottomNavigation?.selectedItemId = R.id.nav_home
         setupBottomNavigation()
     }
 
     private fun setupBottomNavigation() {
         binding.bottomNavigation?.setOnItemSelectedListener(null)
-        binding.bottomNavigation?.selectedItemId = R.id.nav_health_logs
+        binding.bottomNavigation?.selectedItemId = R.id.nav_home
         binding.bottomNavigation?.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
@@ -58,7 +58,12 @@ class HealthLogListActivity : AppCompatActivity() {
                     finish()
                     true
                 }
-                R.id.nav_health_logs -> true // Already here
+                R.id.nav_orders -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.order.history.OrderHistoryActivity::class.java))
+                    overrideTransitionCompat(0, 0)
+                    finish()
+                    true
+                }
                 R.id.nav_doctor -> {
                     startActivity(Intent(this, com.meditrack.app.ui.recommendations.DoctorRecommendationsActivity::class.java))
                     overrideTransitionCompat(0, 0)

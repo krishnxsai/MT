@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.meditrack.app.R
 import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.ui.order.OrderTrackingActivity
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * Patient Order History screen.
+ * Patient Order History screen (primary tab destination).
  * Shows Active Orders (in progress) and Past Orders (delivered/cancelled).
  */
 @AndroidEntryPoint
@@ -48,9 +49,16 @@ class OrderHistoryActivity : AppCompatActivity() {
         setContentView(R.layout.activity_order_history)
 
         initViews()
-        setupToolbar()
+        setupBottomNavigation()
         setupRecyclerViews()
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        findViewById<BottomNavigationView>(R.id.bottomNavigation)?.setOnItemSelectedListener(null)
+        findViewById<BottomNavigationView>(R.id.bottomNavigation)?.selectedItemId = R.id.nav_orders
+        setupBottomNavigation()
     }
 
     private fun initViews() {
@@ -64,8 +72,49 @@ class OrderHistoryActivity : AppCompatActivity() {
         pastOrdersRecycler = findViewById(R.id.pastOrdersRecycler)
     }
 
-    private fun setupToolbar() {
-        toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+    private fun setupBottomNavigation() {
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation) ?: return
+        bottomNav.setOnItemSelectedListener(null)
+        bottomNav.selectedItemId = R.id.nav_orders
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.main.HomeDashboardActivity::class.java))
+                    applyNoAnimationTransition()
+                    finish()
+                    true
+                }
+                R.id.nav_medicines -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.medicine.MedicinesListActivity::class.java))
+                    applyNoAnimationTransition()
+                    finish()
+                    true
+                }
+                R.id.nav_orders -> true // Already here
+                R.id.nav_doctor -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.recommendations.DoctorRecommendationsActivity::class.java))
+                    applyNoAnimationTransition()
+                    finish()
+                    true
+                }
+                R.id.nav_profile -> {
+                    startActivity(Intent(this, com.meditrack.app.ui.profile.ProfileActivity::class.java))
+                    applyNoAnimationTransition()
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun applyNoAnimationTransition() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(android.app.Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -92,7 +141,6 @@ class OrderHistoryActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         lifecycleScope.launch {
-            // Observe loading state
             viewModel.isLoading.collectLatest { isLoading ->
                 loadingContainer.visibility = if (isLoading) View.VISIBLE else View.GONE
                 if (isLoading) {
@@ -103,7 +151,6 @@ class OrderHistoryActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Observe has orders
             viewModel.hasOrders.collectLatest { hasOrders ->
                 if (!viewModel.isLoading.value) {
                     scrollView.visibility = if (hasOrders) View.VISIBLE else View.GONE
@@ -113,7 +160,6 @@ class OrderHistoryActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Observe active orders
             viewModel.activeOrders.collectLatest { orders ->
                 activeOrdersAdapter.submitList(orders)
                 activeOrdersSection.visibility = if (orders.isNotEmpty()) View.VISIBLE else View.GONE
@@ -121,7 +167,6 @@ class OrderHistoryActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Observe past orders
             viewModel.pastOrders.collectLatest { orders ->
                 pastOrdersAdapter.submitList(orders)
                 pastOrdersSection.visibility = if (orders.isNotEmpty()) View.VISIBLE else View.GONE
@@ -129,7 +174,6 @@ class OrderHistoryActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Observe error messages
             viewModel.errorMessage.collectLatest { errorMsg ->
                 errorMsg?.let {
                     Toast.makeText(this@OrderHistoryActivity, it, Toast.LENGTH_SHORT).show()

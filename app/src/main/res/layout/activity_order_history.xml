@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
+    android:orientation="vertical"
     android:fitsSystemWindows="true">
+
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:background="@color/background">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
@@ -18,7 +25,6 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_back"
             app:title="@string/my_orders"
             app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge"
             app:titleTextColor="@color/text_primary" />
@@ -64,7 +70,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="No Orders Yet"
+            android:text="@string/no_orders_yet"
             android:textColor="@color/text_primary"
             android:textSize="20sp"
             android:fontFamily="sans-serif-medium" />
@@ -74,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Your order history will appear here once you place an order."
+            android:text="@string/order_medicines_from_nearby_pharmacies"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -108,7 +114,7 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Active Orders"
+                    android:text="@string/active_orders"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:fontFamily="sans-serif-medium" />
@@ -138,7 +144,7 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginTop="24dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Past Orders"
+                    android:text="@string/past_orders"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:fontFamily="sans-serif-medium" />
@@ -159,3 +165,18 @@
     </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <!-- Bottom Navigation Bar -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        app:elevation="8dp"
+        app:itemActiveIndicatorStyle="@null"
+        app:itemIconTint="@color/bottom_nav_color"
+        app:itemTextColor="@color/bottom_nav_color"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/bottom_navigation" />
+
+</LinearLayout>

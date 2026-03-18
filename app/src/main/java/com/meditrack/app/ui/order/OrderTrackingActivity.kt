@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.meditrack.app.R
+import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.databinding.ActivityOrderTrackingBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -28,6 +29,7 @@ class OrderTrackingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOrderTrackingBinding
     private val viewModel: OrderTrackingViewModel by viewModels()
+    private lateinit var orderItemsAdapter: OrderItemSummaryAdapter
     private var previousStatus: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,9 +55,11 @@ class OrderTrackingActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        // Set up order items RecyclerView (stub - can be enhanced later)
-        binding.rvOrderItems.layoutManager = LinearLayoutManager(this)
-        // Initialize with empty adapter for now
+        orderItemsAdapter = OrderItemSummaryAdapter()
+        binding.rvOrderItems.apply {
+            layoutManager = LinearLayoutManager(this@OrderTrackingActivity)
+            adapter = orderItemsAdapter
+        }
     }
 
     private fun observeViewModel() {
@@ -76,7 +80,7 @@ class OrderTrackingActivity : AppCompatActivity() {
 
                         // Update pharmacy details
                         binding.tvPharmacyName.text = order.pharmacyName.ifEmpty { "Pharmacy" }
-                        binding.tvDeliveryAddress.text = buildDeliveryAddress(order)
+                        binding.tvDeliveryAddress.text = formatDeliveryAddress(order)
 
                         // Update estimated delivery time
                         binding.tvEstimatedDelivery.text = formatEstimatedDelivery(order)
@@ -86,6 +90,22 @@ class OrderTrackingActivity : AppCompatActivity() {
 
                         // Update pricing
                         binding.tvTotalLabel.text = String.format("Total: ₹%.2f", order.totalAmount)
+
+                        // Populate order items list
+                        if (order.isMultiItemOrder) {
+                            orderItemsAdapter.submitList(order.items)
+                        } else if (order.medicineName.isNotEmpty()) {
+                            orderItemsAdapter.submitList(listOf(
+                                com.meditrack.app.data.model.OrderItem(
+                                    medicineId = order.medicineId,
+                                    medicineName = order.medicineName,
+                                    medicineDosage = order.medicineDosage,
+                                    quantity = order.quantity,
+                                    unitPrice = order.totalAmount,
+                                    totalPrice = order.totalAmount
+                                )
+                            ))
+                        }
 
                         // Show status change toast
                         val currentStatus = order.status.getDisplayLabel()
@@ -106,19 +126,26 @@ class OrderTrackingActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildDeliveryAddress(order: com.meditrack.app.data.model.RefillOrder): String {
-        return order.deliveryAddress?.let { addr ->
-            val parts = mutableListOf<String>()
-            if (addr.fullAddress.isNotEmpty()) parts.add(addr.fullAddress)
-            if (addr.landmark.isNotEmpty()) parts.add("Near ${addr.landmark}")
-            "Delivery to: ${parts.joinToString(", ")}"
-        } ?: "No delivery address"
+    private fun formatDeliveryAddress(order: RefillOrder): String {
+        val address = order.deliveryAddress ?: return "No delivery address"
+        val parts = mutableListOf<String>()
+
+        if (address.fullAddress.isNotBlank()) {
+            parts.add(address.fullAddress)
+        }
+        if (address.landmark.isNotBlank()) {
+            parts.add("Near ${address.landmark}")
+        }
+
+        return parts.joinToString(", ").ifBlank { "No delivery address" }
     }
 
     private fun formatEstimatedDelivery(order: com.meditrack.app.data.model.RefillOrder): String {
         return if (order.estimatedDelivery != null) {
             val format = java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault())
             "Estimated delivery: ${format.format(order.estimatedDelivery)}"
+        } else if (order.estimatedDeliveryMinutes > 0) {
+            "Delivery in ~${order.estimatedDeliveryMinutes} minutes"
         } else {
             "Calculating delivery time..."
         }

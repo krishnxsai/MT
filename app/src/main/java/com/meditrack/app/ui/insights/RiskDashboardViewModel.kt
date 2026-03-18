@@ -9,7 +9,6 @@ import com.meditrack.app.data.analytics.InsightEngine
 import com.meditrack.app.data.analytics.ReminderOptimizer
 import com.meditrack.app.data.analytics.RiskScoreEngine
 import com.meditrack.app.data.analytics.TrendPredictionEngine
-import com.meditrack.app.data.analytics.HealthAnalytics
 import com.meditrack.app.data.model.HealthLog
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.Resource
@@ -60,7 +59,12 @@ class RiskDashboardViewModel @Inject constructor(
     // ── Internal data ───────────────────────────────────────────
     private var healthLogs: List<HealthLog> = emptyList()
     private var medicines: List<Medicine> = emptyList()
-    private var adherencePercentage: Float = -1f
+    private var adherencePercentage: Float = 0f
+
+    // ── Loading state tracking ───────────────────────────────────
+    private var healthLogsLoaded = false
+    private var medicinesLoaded = false
+    private var adherenceLoaded = false
 
     // ── Persistence debounce ────────────────────────────────────
     private var lastPersistedCategory: RiskScoreEngine.RiskCategory? = null
@@ -74,48 +78,78 @@ class RiskDashboardViewModel @Inject constructor(
     fun loadAllData() {
         _isLoading.value = true
         _error.value = null
+        healthLogsLoaded = false
+        medicinesLoaded = false
+        adherenceLoaded = false
 
         viewModelScope.launch {
             // Load health logs
             launch {
-                healthLogRepository.getHealthLogsFlow().collectLatest { result ->
-                    when (result) {
-                        is Resource.Success -> {
-                            healthLogs = result.data
-                            recalculateAll()
+                try {
+                    healthLogRepository.getHealthLogsFlow().collectLatest { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                healthLogs = result.data
+                                healthLogsLoaded = true
+                                tryCalculate()
+                            }
+                            is Resource.Error -> {
+                                healthLogsLoaded = true
+                                _error.postValue(result.message)
+                                tryCalculate()
+                            }
+                            is Resource.Loading -> {}
                         }
-                        is Resource.Error -> {
-                            _error.postValue(result.message)
-                        }
-                        is Resource.Loading -> {}
                     }
+                } catch (e: Exception) {
+                    healthLogsLoaded = true
+                    _error.postValue(e.message)
+                    tryCalculate()
                 }
             }
 
             // Load medicines
             launch {
-                medicineRepository.getMedicinesFlow().collectLatest { result ->
-                    when (result) {
-                        is Resource.Success -> {
-                            medicines = result.data
-                            recalculateAll()
+                try {
+                    medicineRepository.getMedicinesFlow().collectLatest { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                medicines = result.data
+                                medicinesLoaded = true
+                                tryCalculate()
+                            }
+                            is Resource.Error -> {
+                                medicinesLoaded = true
+                                _error.postValue(result.message)
+                                tryCalculate()
+                            }
+                            is Resource.Loading -> {}
                         }
-                        is Resource.Error -> {
-                            _error.postValue(result.message)
-                        }
-                        is Resource.Loading -> {}
                     }
+                } catch (e: Exception) {
+                    medicinesLoaded = true
+                    _error.postValue(e.message)
+                    tryCalculate()
                 }
             }
 
             // Load adherence data
             launch {
-                val result = intakeRepository.getAdherencePercentage(7)
-                adherencePercentage = (result as? Resource.Success)?.data ?: -1f
-                recalculateAll()
+                try {
+                    val result = intakeRepository.getAdherencePercentage(7)
+                    adherencePercentage = when (result) {
+                        is Resource.Success -> if (result.data >= 0) result.data else 0f
+                        else -> 0f
+                    }
+                } catch (_: Exception) {
+                    adherencePercentage = 0f
+                } finally {
+                    adherenceLoaded = true
+                    tryCalculate()
+                }
             }
 
-            // Load reminder optimization
+            // Load reminder optimization (fire and forget)
             launch {
                 try {
                     val result = intakeRepository.getIntakeRecords(30)
@@ -129,26 +163,16 @@ class RiskDashboardViewModel @Inject constructor(
         }
     }
 
-    private fun recalculateAll() {
-        if (healthLogs.isEmpty() && medicines.isEmpty()) {
-            _isLoading.postValue(false)
-            return
-        }
+    private fun tryCalculate() {
+        // Only calculate when all data sources have responded (success or error)
+        if (!healthLogsLoaded || !medicinesLoaded || !adherenceLoaded) return
 
         viewModelScope.launch {
             try {
-                val effectiveAdherence = if (adherencePercentage >= 0) {
-                    adherencePercentage
-                } else {
-                    val stats = HealthAnalytics.calculateTodayAdherence(medicines)
-                    stats.adherencePercentage
-                }
-
-                // Use InsightEngine facade for all analytics
                 val insight = InsightEngine.computeFullInsight(
                     logs = healthLogs,
                     medicines = medicines,
-                    adherencePercentage = effectiveAdherence
+                    adherencePercentage = adherencePercentage
                 )
 
                 _riskScore.postValue(insight.riskScore)
@@ -169,7 +193,7 @@ class RiskDashboardViewModel @Inject constructor(
                             val schedulesSuggestions = ReminderOptimizer.analyzeSchedulePatterns(medicines)
                             ReminderOptimizer.OptimizationResult(
                                 suggestions = schedulesSuggestions,
-                                overallAdherenceRate = effectiveAdherence,
+                                overallAdherenceRate = adherencePercentage,
                                 bestTimeSlot = null,
                                 worstTimeSlot = null,
                                 analysis = emptyList()

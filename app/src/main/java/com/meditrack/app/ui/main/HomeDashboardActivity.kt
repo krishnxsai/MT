@@ -86,8 +86,8 @@ class HomeDashboardActivity : AppCompatActivity() {
                     finish()
                     true
                 }
-                R.id.nav_health_logs -> {
-                    startActivity(Intent(this, HealthLogListActivity::class.java))
+                R.id.nav_orders -> {
+                    startActivity(Intent(this, OrderHistoryActivity::class.java))
                     applyNoAnimationTransition()
                     finish()
                     true
@@ -141,14 +141,19 @@ class HomeDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, AppointmentsListActivity::class.java))
         }
 
-        // Refill Orders Card - Navigate to Order History screen
-        binding.refillOrdersCard?.setOnClickListener {
+        // Order Medicines Card - Navigate to Unified Order screen
+        binding.orderMedicinesCard?.setOnClickListener {
+            startActivity(Intent(this, UnifiedOrderActivity::class.java))
+        }
+
+        // Track Orders Card - Navigate to Order History screen
+        binding.trackOrdersCard?.setOnClickListener {
             startActivity(Intent(this, OrderHistoryActivity::class.java))
         }
 
-        // Pharmacies Card - Navigate to Unified Order screen
-        binding.pharmaciesCard?.setOnClickListener {
-            startActivity(Intent(this, UnifiedOrderActivity::class.java))
+        // Health Logs Card - Navigate to Health Log screen
+        binding.healthLogsCard?.setOnClickListener {
+            startActivity(Intent(this, HealthLogListActivity::class.java))
         }
     }
 
@@ -233,8 +238,10 @@ class HomeDashboardActivity : AppCompatActivity() {
 
     /**
      * Computes and displays a mini risk score on the home dashboard.
+     * Runs when any data source is available (matches RiskDashboardViewModel behavior).
      */
     private fun updateRiskScoreCard() {
+        // Compute risk with whatever data is available (consistent with Risk Dashboard)
         homeDashboardViewModel.computeRiskScore(cachedLogs, cachedMedicines)
     }
 

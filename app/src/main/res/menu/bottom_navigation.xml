@@ -9,9 +9,9 @@
         android:icon="@drawable/ic_pill"
         android:title="@string/nav_medicines" />
     <item
-        android:id="@+id/nav_health_logs"
-        android:icon="@drawable/ic_health"
-        android:title="@string/nav_health_logs" />
+        android:id="@+id/nav_orders"
+        android:icon="@drawable/ic_package"
+        android:title="@string/nav_orders" />
     <item
         android:id="@+id/nav_doctor"
         android:icon="@drawable/ic_doctor"

@@ -238,6 +238,12 @@ class OrderRepository {
 
             val docRef = ordersCol.document()
             val data = orderWithUser.toMap().toMutableMap()
+            data["orderId"] = docRef.id
+            data["patientId"] = userId
+            data["deliveryAddress"] = orderWithUser.deliveryAddress?.fullAddress ?: ""
+            data["deliveryAddressDetails"] = orderWithUser.deliveryAddress?.toMap()
+            data["deliveryLocation"] = orderWithUser.deliveryAddress?.toLocationMap()
+            data["estimatedDeliveryTime"] = orderWithUser.estimatedDeliveryMinutes
             data["createdAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
 
             docRef.set(data).await()

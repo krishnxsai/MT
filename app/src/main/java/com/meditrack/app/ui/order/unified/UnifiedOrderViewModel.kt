@@ -414,6 +414,10 @@ class UnifiedOrderViewModel @Inject constructor(
                 val fee = deliveryFee.value
                 val total = cartTotal.value
 
+                // Calculate estimated delivery time
+                val deliveryMinutes = pharmacy.estimatedDeliveryTime.filter { it.isDigit() }.toIntOrNull() ?: 30
+                val estimatedDeliveryTime = java.util.Date(System.currentTimeMillis() + deliveryMinutes * 60 * 1000L)
+
                 // Create the order
                 val order = RefillOrder(
                     userId = "", // Will be set by repository
@@ -425,7 +429,8 @@ class UnifiedOrderViewModel @Inject constructor(
                     totalAmount = total,
                     deliveryAddress = deliveryAddress,
                     deliveryType = if (deliveryAddress != null) DeliveryType.DELIVERY else DeliveryType.PICKUP,
-                    estimatedDeliveryMinutes = pharmacy.estimatedDeliveryTime.filter { it.isDigit() }.toIntOrNull() ?: 30,
+                    estimatedDeliveryMinutes = deliveryMinutes,
+                    estimatedDelivery = estimatedDeliveryTime,
                     notes = notes,
                     status = OrderStatus.PENDING
                 )

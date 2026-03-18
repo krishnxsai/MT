@@ -1,4 +1,8 @@
-\documentclass[journal,twoside,web]{ieeecolor}
+\documentclass[journal,onecolumn,web]{ieeecolor}
+% Force single-column layout explicitly for this manuscript build.
+\makeatletter
+\@twocolumnmodefalse
+\makeatother
 \usepackage{generic}
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -13,10 +17,12 @@
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{url}
-\usepackage{balance}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, fit, shapes.geometric, calc}
 \raggedbottom
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\providecommand{\refname}{References}
 \markboth{MediTrack: A Multi-Stakeholder Mobile Health Platform with On-Device Clinical Analytics}
 {MediTrack: A Multi-Stakeholder Mobile Health Platform with On-Device Clinical Analytics}
 
@@ -24,19 +30,10 @@
 \title{MediTrack: A Multi-Stakeholder Mobile Health
 Platform with On-Device Clinical Analytics and
 Role-Based Security Architecture}
-\author{Vijaya Wujjwal Reddy and K.~Divya
-\thanks{Manuscript submitted March 2026. This work was
-conducted as part of academic research in mobile health
-systems development at Narayana Engineering College,
-Nellore.}
-\thanks{Vijaya Wujjwal Reddy is a student in the
-Department of Computer Science and Engineering,
-Narayana Engineering College, Nellore, India
-(e-mail: wujjwalreddy@gmail.com).}
-\thanks{K. Divya, M.Tech (Ph.D), is an Assistant
-Professor in the Department of Computer Science and
-Engineering, Narayana Engineering College, Nellore,
-India. She served as the mentor for this work.}}
+\author{$^{1}$Vijaya Wujjwal Reddy, $^{2}$Baddipudi Krishna Sai, $^{3}$Budamagunta Ravi Teja, $^{4}$Nuthalapati Lohith, $^{1}$K.~Divya
+\thanks{$^{1}$Department of Computer Science and Engineering, Narayana Engineering College, Nellore, Andhra Pradesh, India (e-mail: wujjwalreddy@gmail.com)}
+\thanks{$^{2,3,4}$Department of Computer Science and Engineering, Narayana Engineering College, Nellore, Andhra Pradesh, India}
+\thanks{Manuscript submitted March 2026. This work was conducted as part of academic research in mobile health systems development at Narayana Engineering College, Nellore.}}
 
 \maketitle
 \thispagestyle{empty}
@@ -110,79 +107,21 @@ TLS \> Transport Layer Security
 %% ================================================================
 \section{Introduction}
 \label{sec:introduction}
-\IEEEPARstart{T}{he} proliferation of smartphones has
-created unprecedented opportunities for healthcare
-delivery through mobile applications. The global mobile
-health market, valued at \$68.1 billion in 2024, is
-projected to reach \$362.7 billion by 2032, driven by
-rising chronic disease burden, increasing smartphone
-penetration, and growing demand for patient-centric
-healthcare solutions \cite{grandview2024}. Despite this
-growth, the mHealth landscape remains fragmented:
-medication reminder applications lack clinical
-oversight, electronic health record (EHR) systems
-provide limited patient engagement, and pharmacy
-platforms operate in isolation from clinical workflows.
+\IEEEPARstart{T}{he} proliferation of smartphones has created unprecedented opportunities for healthcare delivery through mobile applications. The global mobile health market, valued at \$68.1 billion in 2024, is projected to reach \$362.7 billion by 2032, driven by rising chronic disease burden, increasing smartphone penetration, and growing demand for patient-centric healthcare solutions \cite{grandview2024}. Despite this growth, the mHealth landscape remains fragmented: medication reminder applications lack clinical oversight, electronic health record (EHR) systems provide limited patient engagement, and pharmacy platforms operate in isolation from clinical workflows.
 
-Current mHealth solutions suffer from three fundamental
-limitations. First, {\it stakeholder fragmentation}:
-most applications serve a single user role, forcing
-healthcare ecosystems to rely on multiple disconnected
-tools. A patient may use one application for medication
-reminders, another for health logging, and communicate
-with their physician through yet another platform.
-Second, {\it limited on-device intelligence}: health
-analytics typically require server-side processing or
-cloud-based machine learning services, introducing
-latency, privacy concerns, and connectivity
-dependencies. Third, {\it insufficient security
-architectures}: many mHealth applications rely solely
-on client-side validation, leaving clinical data
-vulnerable to unauthorized access and tampering.
+Current mHealth solutions suffer from three fundamental limitations. First, {\it stakeholder fragmentation}: most applications serve a single user role, forcing healthcare ecosystems to rely on multiple disconnected tools. A patient may use one application for medication reminders, another for health logging, and communicate with their physician through yet another platform. Second, {\it limited on-device intelligence}: health analytics typically require server-side processing or cloud-based machine learning services, introducing latency, privacy concerns, and connectivity dependencies. Third, {\it insufficient security architectures}: many mHealth applications rely solely on client-side validation, leaving clinical data vulnerable to unauthorized access and tampering.
 
-This paper presents MediTrack, a comprehensive mobile
-health platform designed to address these limitations
-through three principal contributions:
+This paper presents MediTrack, a comprehensive mobile health platform designed to address these limitations through three principal contributions:
 
 \begin{enumerate}
-\item {\bf Multi-stakeholder architecture:} A unified
-platform serving four distinct roles---Patient, Doctor,
-Pharmacy, and Administrator---with role-specific
-dashboards, workflows, and data access patterns,
-eliminating the need for multiple disconnected
-applications.
+\item {\bf Multi-stakeholder architecture:} A unified platform serving four distinct roles---Patient, Doctor, Pharmacy, and Administrator---with role-specific dashboards, workflows, and data access patterns, eliminating the need for multiple disconnected applications.
 
-\item {\bf On-device health analytics pipeline:} A
-modular analytics engine comprising five interconnected
-components that perform composite health risk scoring,
-trend prediction, vital threshold alerting, and
-personalized health suggestions entirely on the mobile
-device, enabling real-time clinical intelligence
-without cloud computation dependencies.
+\item {\bf On-device health analytics pipeline:} A modular analytics engine comprising five interconnected components that perform composite health risk scoring, trend prediction, vital threshold alerting, and personalized health suggestions entirely on the mobile device, enabling real-time clinical intelligence without cloud computation dependencies.
 
-\item {\bf Defense-in-depth security model:} A layered
-security architecture combining server-side Firestore
-security rules with role-based access control,
-immutable audit trails, state-machine-validated
-workflows, and cross-tenant data isolation, ensuring
-clinical data integrity and compliance with healthcare
-data protection principles.
+\item {\bf Defense-in-depth security model:} A layered security architecture combining server-side Firestore security rules with role-based access control, immutable audit trails, state-machine-validated workflows, and cross-tenant data isolation, ensuring clinical data integrity and compliance with healthcare data protection principles.
 \end{enumerate}
 
-The remainder of this paper is organized as follows.
-Section~\ref{sec:related} reviews related work in
-mHealth platforms, clinical decision support, and
-mobile security. Section~\ref{sec:architecture}
-presents the overall system architecture.
-Section~\ref{sec:workflows} details the multi-role
-workflow design. Section~\ref{sec:analytics} describes
-the on-device analytics pipeline.
-Section~\ref{sec:security} elaborates on the security
-architecture. Section~\ref{sec:evaluation} presents
-the evaluation methodology and results.
-Section~\ref{sec:discussion} discusses limitations and
-future work. Section~\ref{sec:conclusion} concludes
-the paper.
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work in mHealth platforms, clinical decision support, and mobile security. Section~\ref{sec:architecture} presents the overall system architecture. Section~\ref{sec:workflows} details the multi-role workflow design. Section~\ref{sec:analytics} describes the on-device analytics pipeline. Section~\ref{sec:security} elaborates on the security architecture. Section~\ref{sec:evaluation} presents the evaluation methodology and results. Section~\ref{sec:discussion} discusses limitations and future work. Section~\ref{sec:conclusion} concludes the paper.
 
 
 %% ================================================================
@@ -277,7 +216,7 @@ platforms, highlighting MediTrack's unique combination
 of multi-stakeholder support, on-device analytics,
 and comprehensive security architecture.
 
-\begin{table*}[!t]
+\begin{table}[!t]
 \caption{Feature Comparison of mHealth Platforms}
 \label{tab:comparison}
 \centering\small
@@ -315,7 +254,7 @@ Risk Score Computation & No & No & No
 \multicolumn{7}{l}{\footnotesize $^*$Within
 institutional deployment only.}
 \end{tabular}
-\end{table*}
+\end{table}
 
 
 %% ================================================================
@@ -333,13 +272,54 @@ Fig.~\ref{fig:architecture} illustrates the high-level
 system architecture, comprising four principal layers:
 Presentation, Domain, Data, and Infrastructure.
 
-\begin{figure*}[!t]
+\begin{figure}[!t]
 \centering
-% ---- REPLACE WITH YOUR GENERATED IMAGE ----
-% \includegraphics[width=\textwidth]{fig_architecture.png}
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{2.5cm}
-{\bf [INSERT FIGURE 1: System Architecture Diagram]}
-\vspace{2.5cm}}}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  comp/.style={draw, rounded corners=2pt, fill=white, minimum height=0.8cm,
+               align=center, font=\small, inner sep=5pt},
+  larrow/.style={-{Stealth[length=3mm]}, thick, gray!60},
+]
+% Layer backgrounds
+\fill[blue!12, rounded corners=4pt] (-8.8,5.8) rectangle (8.8,8.3);
+\fill[green!12, rounded corners=4pt] (-8.8,3.4) rectangle (8.8,5.4);
+\fill[orange!12, rounded corners=4pt] (-8.8,1.0) rectangle (8.8,3.0);
+\fill[red!10, rounded corners=4pt] (-8.8,-1.5) rectangle (8.8,0.6);
+\draw[rounded corners=4pt] (-8.8,5.8) rectangle (8.8,8.3);
+\draw[rounded corners=4pt] (-8.8,3.4) rectangle (8.8,5.4);
+\draw[rounded corners=4pt] (-8.8,1.0) rectangle (8.8,3.0);
+\draw[rounded corners=4pt] (-8.8,-1.5) rectangle (8.8,0.6);
+% Layer labels
+\node[font=\small\bfseries, anchor=west] at (-8.5, 8.0) {Presentation Layer};
+\node[font=\small\bfseries, anchor=west] at (-8.5, 5.15) {Domain Layer};
+\node[font=\small\bfseries, anchor=west] at (-8.5, 2.75) {Data Layer};
+\node[font=\small\bfseries, anchor=west] at (-8.5, 0.35) {Infrastructure Layer};
+% Presentation components
+\node[comp] at (-5.5, 6.8) {33 Activities};
+\node[comp] at (-2.0, 6.8) {22 ViewModels};
+\node[comp] at (1.5, 6.8) {ViewBinding};
+\node[comp] at (4.8, 6.8) {LiveData / StateFlow};
+\node[comp] at (7.6, 6.8) {Navigation};
+% Domain components
+\node[comp] at (-4.5, 4.3) {Use Cases};
+\node[comp] at (-0.5, 4.3) {Business Logic};
+\node[comp] at (4.5, 4.3) {Multi-Repository Orchestration};
+% Data components
+\node[comp] at (-5.8, 1.9) {14 Repositories};
+\node[comp] at (-2.0, 1.9) {Analytics Pipeline};
+\node[comp] at (2.0, 1.9) {17 Data Models};
+\node[comp] at (6.0, 1.9) {OfflineQueueManager};
+% Infrastructure components
+\node[comp] at (-6.0, -0.5) {Cloud Firestore\\\scriptsize(17 Collections)};
+\node[comp] at (-2.5, -0.5) {Firebase Auth};
+\node[comp] at (0.8, -0.5) {Firebase Storage};
+\node[comp] at (4.0, -0.5) {Cloud Messaging};
+\node[comp] at (7.2, -0.5) {Security Rules\\\scriptsize(540 Lines)};
+% Arrows between layers
+\draw[larrow] (0, 5.8) -- (0, 5.4);
+\draw[larrow] (0, 3.4) -- (0, 3.0);
+\draw[larrow] (0, 1.0) -- (0, 0.6);
+\end{tikzpicture}}%
 \caption{MediTrack system architecture showing the
 four-layer MVVM design with Firebase infrastructure.
 The Presentation Layer contains 33 Activities driven
@@ -350,7 +330,7 @@ pipeline. The Infrastructure Layer is built on
 Firebase services with 540-line server-side security
 rules.}
 \label{fig:architecture}
-\end{figure*}
+\end{figure}
 
 The Presentation Layer consists of 33 Activity classes
 utilizing ViewBinding for type-safe view references,
@@ -416,13 +396,58 @@ access patterns. Fig.~\ref{fig:datamodel} presents
 the entity-relationship diagram for the core data
 model.
 
-\begin{figure*}[!t]
+\begin{figure}[!t]
 \centering
-% ---- REPLACE WITH YOUR GENERATED IMAGE ----
-% \includegraphics[width=\textwidth]{fig_datamodel.png}
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{2.5cm}
-{\bf [INSERT FIGURE 2: Entity-Relationship Diagram]}
-\vspace{2.5cm}}}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  entity/.style={draw, fill=#1, rounded corners=2pt, minimum width=2.4cm,
+                 minimum height=0.9cm, align=center, font=\small\bfseries, inner sep=3pt},
+  entity/.default={blue!8},
+  rel/.style={-{Stealth[length=2mm]}, thick, gray!60},
+  card/.style={font=\tiny, fill=white, inner sep=1pt},
+]
+% Top: User (central)
+\node[entity=blue!18] (user) at (0, 5.5) {User};
+\node[font=\scriptsize, below=1pt of user] {\textit{Patient / Doctor / Admin / Pharmacy}};
+% Patient clinical cluster (left)
+\node[entity=green!15] (hlog) at (-7, 2.8) {HealthLog};
+\node[entity=green!15] (med) at (-3.5, 2.8) {Medicine};
+\node[entity=green!15] (intake) at (-0.5, 2.8) {MedicineIntake};
+\node[entity=green!15] (risk) at (-7, 0.5) {RiskScore};
+% Doctor clinical cluster (center)
+\node[entity=yellow!20] (presc) at (2.8, 2.8) {Prescription};
+\node[entity=yellow!20] (cdec) at (6.2, 2.8) {ClinicalDecision};
+% Communication cluster (right)
+\node[entity=purple!12] (appt) at (-3.5, 0.5) {Appointment};
+\node[entity=purple!12] (conv) at (0, 0.5) {Conversation};
+\node[entity=purple!12] (msg) at (3.5, 0.5) {Message};
+% Pharmacy cluster (bottom)
+\node[entity=orange!15] (pharm) at (-5.5, -2) {Pharmacy};
+\node[entity=orange!15] (inv) at (-2, -2) {InventoryItem};
+\node[entity=orange!15] (order) at (2, -2) {RefillOrder};
+\node[entity=orange!15] (txn) at (5.5, -2) {Transaction};
+% System
+\node[entity=gray!12] (audit) at (6.5, 0.5) {AuditLog};
+% Relationships
+\draw[rel] (user) -- (hlog) node[card, pos=0.4] {1:N};
+\draw[rel] (user) -- (med) node[card, pos=0.4] {1:N};
+\draw[rel] (med) -- (intake) node[card, midway, above] {1:N};
+\draw[rel] (user) -- (presc) node[card, pos=0.4] {1:N};
+\draw[rel] (user) -- (cdec) node[card, pos=0.3] {1:N};
+\draw[rel] (user) -- (appt) node[card, pos=0.5, left] {1:N};
+\draw[rel] (user) -- (conv) node[card, pos=0.5, right] {1:N};
+\draw[rel] (conv) -- (msg) node[card, midway, above] {1:N};
+\draw[rel] (hlog) -- (risk) node[card, midway, left] {N:1};
+\draw[rel] (user) -- (audit) node[card, pos=0.3] {1:N};
+\draw[rel] (pharm) -- (inv) node[card, midway, above] {1:N};
+\draw[rel] (user) -- (order) node[card, pos=0.5, right] {1:N};
+\draw[rel] (pharm) -- (order) node[card, pos=0.4, below] {1:N};
+\draw[rel] (order) -- (txn) node[card, midway, above] {1:1};
+% Group labels
+\node[font=\tiny\itshape, gray] at (-5, 4.2) {Patient Clinical Data};
+\node[font=\tiny\itshape, gray] at (4.5, 4.2) {Doctor Clinical Data};
+\node[font=\tiny\itshape, gray] at (-1.5, -3) {Pharmacy \& Orders};
+\end{tikzpicture}}%
 \caption{Entity-relationship diagram of MediTrack's
 core data model showing relationships between Users
 (Patient, Doctor), HealthLogs, Medicines,
@@ -431,7 +456,7 @@ RefillOrders, Pharmacies, InventoryItems,
 Conversations, and Messages across 17 Firestore
 collections.}
 \label{fig:datamodel}
-\end{figure*}
+\end{figure}
 
 Key design decisions include:
 
@@ -494,11 +519,44 @@ Fig.~\ref{fig:navigation} illustrates this flow.
 
 \begin{figure}[!t]
 \centering
-% ---- REPLACE WITH YOUR GENERATED IMAGE ----
-% \includegraphics[width=\columnwidth]{fig_navigation.png}
-\fbox{\parbox{0.9\columnwidth}{\centering\vspace{3cm}
-{\bf [INSERT FIGURE 3: Role-Based Navigation Flow]}
-\vspace{3cm}}}
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners=2pt, fill=#1, minimum width=2.2cm,
+              minimum height=0.6cm, align=center, font=\scriptsize, inner sep=3pt},
+  box/.default={white},
+  decision/.style={draw, diamond, fill=yellow!15, aspect=2, align=center,
+                   font=\scriptsize, inner sep=2pt},
+  arr/.style={-{Stealth[length=2mm]}, thick},
+  lbl/.style={font=\tiny, fill=white, inner sep=1pt},
+]
+% Top flow
+\node[box=blue!15] (login) at (0, 9) {Login / Signup};
+\node[box=blue!10] (auth) at (0, 8) {Firebase Auth};
+\node[decision] (role) at (0, 6.6) {Role?};
+% Four branches from Role
+\node[box=green!15] (home) at (-3.2, 5) {HomeDashboard\\\tiny\textit{(Patient)}};
+\node[decision, scale=0.8] (appD) at (-1.1, 5) {\tiny Approved?};
+\node[box=red!10] (admin) at (1.1, 5) {AdminDashboard};
+\node[decision, scale=0.8] (appP) at (3.2, 5) {\tiny Approved?};
+% Approved dashboards
+\node[box=purple!12] (doc) at (-1.1, 3.5) {DoctorDashboard};
+\node[box=orange!12] (phar) at (3.2, 3.5) {PharmacyDashboard};
+% Pending
+\node[box=gray!15] (pending) at (1.1, 2.2) {AccountPending};
+% Arrows - top
+\draw[arr] (login) -- (auth);
+\draw[arr] (auth) -- (role);
+% Role branches
+\draw[arr] (role) -| node[lbl, above left, pos=0.25] {PATIENT} (home);
+\draw[arr] (role) -- node[lbl, left, pos=0.6] {DOCTOR} (appD);
+\draw[arr] (role) -- node[lbl, right, pos=0.6] {ADMIN} (admin);
+\draw[arr] (role) -| node[lbl, above right, pos=0.25] {PHARMACY} (appP);
+% Approval results
+\draw[arr, green!60!black] (appD) -- node[lbl, left] {Yes} (doc);
+\draw[arr, green!60!black] (appP) -- node[lbl, right] {Yes} (phar);
+\draw[arr, red!60!black] (appD.south east) -- node[lbl, above, pos=0.5] {\tiny No} (pending.north west);
+\draw[arr, red!60!black] (appP.south west) -- node[lbl, above, pos=0.5] {\tiny No} (pending.north east);
+\end{tikzpicture}}%
 \caption{Role-based navigation flow showing
 authentication, role detection, approval verification,
 and role-specific dashboard routing for all four user
@@ -642,13 +700,46 @@ The pipeline is orchestrated by the
 specialized engines. Fig.~\ref{fig:analytics}
 illustrates the pipeline architecture.
 
-\begin{figure*}[!t]
+\begin{figure}[!t]
 \centering
-% ---- REPLACE WITH YOUR GENERATED IMAGE ----
-% \includegraphics[width=\textwidth]{fig_analytics.png}
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{2.5cm}
-{\bf [INSERT FIGURE 4: Analytics Pipeline]}
-\vspace{2.5cm}}}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  engine/.style={draw, rounded corners=3pt, fill=#1, minimum width=3cm,
+                 minimum height=1cm, align=center, font=\small\bfseries, inner sep=4pt},
+  engine/.default={blue!10},
+  io/.style={draw, rounded corners=2pt, fill=gray!10, minimum width=2.5cm,
+             minimum height=0.7cm, align=center, font=\footnotesize, inner sep=3pt},
+  arr/.style={-{Stealth[length=3mm]}, thick, gray!60},
+  desc/.style={font=\tiny\itshape, text width=2.8cm, align=center},
+]
+% Input
+\node[io] (input) at (0, 5) {HealthLog Data\\(Vitals, Symptoms, Adherence)};
+% InsightEngine facade
+\node[engine=blue!18, minimum width=14cm, minimum height=1.2cm] (facade) at (0, 3.5) {\large InsightEngine {\small(Facade)}};
+% Five engines
+\node[engine=green!15] (risk) at (-6, 1.2) {RiskScoreEngine};
+\node[desc, below=2pt of risk] {Composite 0--100\\health risk scoring};
+\node[engine=cyan!15] (trend) at (-2.5, 1.2) {TrendPrediction\\Engine};
+\node[desc, below=2pt of trend] {Consecutive pattern\\detection + regression};
+\node[engine=red!12] (vital) at (1.5, 1.2) {VitalAlertEngine};
+\node[desc, below=2pt of vital] {Threshold-based\\vital sign alerts};
+\node[engine=purple!12] (health) at (5.5, 1.2) {HealthInsight\\Engine};
+\node[desc, below=2pt of health] {Personalized health\\suggestions};
+% Output
+\node[engine=orange!18, minimum width=6cm] (unifier) at (0, -1.5) {UnifiedAlertPrioritizer};
+\node[io, minimum width=4cm] (output) at (0, -3) {Risk Dashboard / Notifications};
+% Arrows
+\draw[arr] (input) -- (facade);
+\draw[arr] (facade) -- (risk);
+\draw[arr] (facade) -- (trend);
+\draw[arr] (facade) -- (vital);
+\draw[arr] (facade) -- (health);
+\draw[arr] (risk) -- (unifier);
+\draw[arr] (trend) -- (unifier);
+\draw[arr] (vital) -- (unifier);
+\draw[arr] (health) -- (unifier);
+\draw[arr] (unifier) -- (output);
+\end{tikzpicture}}%
 \caption{On-device health analytics pipeline
 architecture. The {\tt InsightEngine} facade
 coordinates the {\tt RiskScoreEngine} (composite
@@ -660,7 +751,7 @@ by the {\tt UnifiedAlertPrioritizer} and fed to the
 {\tt HealthInsightEngine} for personalized suggestion
 generation.}
 \label{fig:analytics}
-\end{figure*}
+\end{figure}
 
 \subsection{RiskScoreEngine: Composite Health Risk
 Scoring}
@@ -897,11 +988,42 @@ layers.
 
 \begin{figure}[!t]
 \centering
-% ---- REPLACE WITH YOUR GENERATED IMAGE ----
-% \includegraphics[width=\columnwidth]{fig_security.png}
-\fbox{\parbox{0.9\columnwidth}{\centering\vspace{3cm}
-{\bf [INSERT FIGURE 5: Security Architecture]}
-\vspace{3cm}}}
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  ltitle/.style={font=\small\bfseries},
+  item/.style={font=\scriptsize, text width=6.5cm, align=left},
+]
+% Application Layer
+\fill[blue!12, rounded corners=3pt] (-4, 4) rectangle (4, 7.2);
+\draw[rounded corners=3pt] (-4, 4) rectangle (4, 7.2);
+\node[ltitle] at (0, 6.9) {Application Layer};
+\node[item, anchor=north west] at (-3.7, 6.5) {%
+$\bullet$~\texttt{allowBackup=false} (backup prevention)\\
+$\bullet$~Encrypted local storage (SharedPreferences)\\
+$\bullet$~Client-side audit logging (AuditLogRepository)\\
+$\bullet$~Input validation \& sanitization};
+% Transport Layer
+\fill[green!12, rounded corners=3pt] (-4, 1.8) rectangle (4, 3.6);
+\draw[rounded corners=3pt] (-4, 1.8) rectangle (4, 3.6);
+\node[ltitle] at (0, 3.3) {Transport Layer};
+\node[item, anchor=north west] at (-3.7, 3.0) {%
+$\bullet$~TLS 1.3 encryption via Firebase SDK\\
+$\bullet$~Certificate pinning (Google infrastructure)};
+% Server Layer
+\fill[red!10, rounded corners=3pt] (-4, -2.7) rectangle (4, 1.4);
+\draw[rounded corners=3pt] (-4, -2.7) rectangle (4, 1.4);
+\node[ltitle] at (0, 1.1) {Server Layer --- Firestore Security Rules (540 Lines)};
+\node[item, anchor=north west] at (-3.7, 0.7) {%
+$\bullet$~RBAC: 4 roles (Patient, Doctor, Admin, Pharmacy)\\
+$\bullet$~11 helper functions for role/status verification\\
+$\bullet$~State machine validation (order \& appointment)\\
+$\bullet$~Cross-tenant isolation (\texttt{isPharmacyOwner})\\
+$\bullet$~Immutable collections (5 append-only)\\
+$\bullet$~Self-privilege escalation prevention};
+% Defense in depth arrow
+\draw[{Stealth[length=2.5mm]}-{Stealth[length=2.5mm]}, thick, gray!50]
+  (4.5, 7.2) -- (4.5, -2.7) node[midway, right, font=\scriptsize\itshape, rotate=90, anchor=south] {Defense in Depth};
+\end{tikzpicture}}%
 \caption{MediTrack defense-in-depth security
 architecture. The Application Layer enforces backup
 prevention, encrypted local storage, and client-side
@@ -1070,9 +1192,9 @@ operation without network connectivity.
 Table~\ref{tab:coverage} compares MediTrack's feature
 coverage with the requirements identified in recent
 mHealth literature
-surveys \cite{free2013, batista2020}.
+\cite{free2013, batista2020}.
 
-\begin{table*}[!t]
+\begin{table}[!t]
 \caption{Feature Coverage vs.\ mHealth Requirements}
 \label{tab:coverage}
 \centering\small
@@ -1140,7 +1262,7 @@ surveys \cite{free2013, batista2020}.
 & WorkManager, 15-min interval \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 \subsection{Analytics Pipeline Evaluation}
 To evaluate the analytics pipeline's clinical
@@ -1326,10 +1448,10 @@ College, Nellore, for providing the infrastructure
 and academic support for this research. Special thanks
 to the faculty members who provided valuable feedback
 during the development and evaluation of MediTrack.
+
 %% ================================================================
 %% REFERENCES
 %% ================================================================
-\section*{References}
 
 \begin{thebibliography}{24}
 
@@ -1431,10 +1553,7 @@ pp.~1--13, 2020.
 
 \bibitem{whelton2018}
 P.~K.~Whelton {\it et al.}, ``2017
-ACC/AHA/AAPA/\allowbreak{}ABC/ACPM/\allowbreak{}AGS/%
-APhA/ASH/\allowbreak{}ASPC/NMA/PCNA
-Guideline for the Prevention, Detection, Evaluation,
-and Management of High Blood Pressure in Adults,''
+ACC/AHA/... High Blood Pressure Guidelines,''
 {\it J. Am. Coll. Cardiol.}, vol.~71, no.~19,
 pp.~e127--e248, 2018.
 
@@ -1445,9 +1564,8 @@ Suppl.~1, 2024.
 
 \bibitem{perkins2021}
 G.~D.~Perkins {\it et al.}, ``European
-Resuscitation Council Guidelines 2021: Executive
-Summary,'' {\it Resuscitation}, vol.~161,
-pp.~1--60, 2021.
+Resuscitation Council Guidelines 2021,''
+{\it Resuscitation}, vol.~161, pp.~1--60, 2021.
 
 \bibitem{who2014}
 World Health Organization, ``Integrated Management
@@ -1468,10 +1586,9 @@ pp.~11--28, 2007.
 \end{thebibliography}
 
 %% ================================================================
-%% AUTHOR BIOGRAPHIES
+%% BIOGRAPHIES
 %% ================================================================
-\balance
-\section*{Biographies}
+
 
 \begin{IEEEbiographynophoto}{Vijaya Wujjwal Reddy}
 is currently pursuing a B.Tech degree in Computer
@@ -1481,7 +1598,70 @@ include mobile application development, mobile health
 (mHealth) systems, cloud computing with Firebase,
 health analytics, and software architecture design.
 He is the primary developer of the MediTrack platform
-presented in this paper.
+presented in this paper, responsible for the overall
+system architecture, MVVM design pattern implementation,
+on-device clinical analytics pipeline comprising four
+specialized engines, role-based security framework
+with 540 lines of Firestore Security Rules, and
+end-to-end Firebase backend integration spanning 17
+Firestore collections and 14 repository classes. He
+has hands-on experience in Kotlin, Android Jetpack
+components, Hilt dependency injection, Google Maps
+SDK, Firebase Cloud Messaging, and real-time NoSQL
+database systems.
+\end{IEEEbiographynophoto}
+
+\begin{IEEEbiographynophoto}{Baddipudi Krishna Sai}
+is currently pursuing a B.Tech degree in Computer
+Science and Engineering at Narayana Engineering
+College, Nellore, India. His research interests
+include mobile application development, database
+management, cloud-based storage systems, and healthcare
+informatics. He contributed to the MediTrack platform
+in the areas of Firestore database schema design,
+entity-relationship data modeling across 17 collections,
+pharmacy inventory management module development,
+medicine catalog integration, and seed data generation
+for testing and validation. He has experience in
+NoSQL database design, Android development, data
+normalization techniques for healthcare systems,
+and automated testing methodologies.
+\end{IEEEbiographynophoto}
+
+\begin{IEEEbiographynophoto}{Budamagunta Ravi Teja}
+is currently pursuing a B.Tech degree in Computer
+Science and Engineering at Narayana Engineering
+College, Nellore, India. His research interests
+include software engineering, cloud computing,
+real-time systems, and mobile health platforms. He
+contributed to the MediTrack platform in the areas
+of order tracking workflow implementation with
+state-machine validation across six order states,
+real-time push notification system using Firebase
+Cloud Messaging with token management, and map-based
+pharmacy discovery with Google Maps API integration
+and distance-based sorting algorithms. He has
+experience in location-based services, event-driven
+architectures, Android foreground services, and
+broadcast receiver design patterns.
+\end{IEEEbiographynophoto}
+
+\begin{IEEEbiographynophoto}{Nuthalapati Lohith}
+is currently pursuing a B.Tech degree in Computer
+Science and Engineering at Narayana Engineering
+College, Nellore, India. His research interests
+include software development, user interface design,
+human-computer interaction, and health information
+technology. He contributed to the MediTrack platform
+in the areas of UI/UX design following Material Design
+3 guidelines, patient home dashboard development with
+role-specific navigation, health log management with
+vital sign tracking and trend visualization, and
+medication reminder interface implementation with
+exact alarm scheduling via Android AlarmManager. He
+has experience in Android XML layouts, responsive
+design patterns, RecyclerView adapters, and
+accessibility-focused mobile application development.
 \end{IEEEbiographynophoto}
 
 \begin{IEEEbiographynophoto}{K. Divya}
@@ -1489,10 +1669,20 @@ M.Tech (Ph.D), is an Assistant Professor in the
 Department of Computer Science and Engineering,
 Narayana Engineering College, Nellore, India. Her
 research interests include software engineering,
-mobile computing, machine learning, and healthcare
-informatics. She served as the project mentor and
-guided the architectural design and evaluation
-methodology of the MediTrack platform.
+mobile computing, machine learning, healthcare
+informatics, and secure system design. She served
+as the project mentor and guided the architectural
+design, evaluation methodology, and defense-in-depth
+security framework of the MediTrack platform. She
+provided critical insights on clinical decision
+support system design, multi-stakeholder role-based
+access control modeling, state-machine-validated
+workflows, and compliance with healthcare data
+protection standards. She has published research
+in the areas of software quality assurance,
+intelligent computing systems, and mobile application
+security frameworks.
 \end{IEEEbiographynophoto}
 
 \end{document}
+
