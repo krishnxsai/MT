@@ -11,12 +11,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 /**
  * Repository for pharmacy inventory management.
  * CRUD operations on the `pharmacyInventory` Firestore collection.
  */
-class PharmacyInventoryRepository {
+class PharmacyInventoryRepository @Inject constructor() {
 
     companion object {
         private const val TAG = "PharmacyInventoryRepo"
@@ -302,6 +303,41 @@ class PharmacyInventoryRepository {
         } catch (e: Exception) {
             Log.e(TAG, "getMedicinesWithSufficientStock error: ${e.message}")
             Resource.Error(e.message ?: "Failed to check stock")
+        }
+    }
+
+    /**
+     * Get a single inventory item by pharmacy and medicine ID.
+     * Used for fetching pricing information for cart items.
+     *
+     * @param pharmacyId Pharmacy ID
+     * @param medicineId Medicine ID to get pricing for
+     * @return InventoryItem with pricing, or null if not found
+     */
+    suspend fun getInventoryItem(
+        pharmacyId: String,
+        medicineId: String
+    ): Resource<InventoryItem?> = withContext(Dispatchers.IO) {
+        try {
+            val snapshot = inventoryCol
+                .whereEqualTo("pharmacyId", pharmacyId)
+                .whereEqualTo("medicineId", medicineId)
+                .whereEqualTo("isActive", true)
+                .limit(1)
+                .get()
+                .await()
+
+            if (snapshot.documents.isEmpty()) {
+                Log.d(TAG, "Inventory item not found: pharmacy=$pharmacyId, medicine=$medicineId")
+                return@withContext Resource.Success(null)
+            }
+
+            val item = InventoryItem.fromMap(snapshot.documents[0].id, snapshot.documents[0].data!!)
+            Log.d(TAG, "Found inventory item: ${item.medicineName}, price: ₹${item.unitPrice}")
+            Resource.Success(item)
+        } catch (e: Exception) {
+            Log.e(TAG, "getInventoryItem error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to get inventory item")
         }
     }
 }

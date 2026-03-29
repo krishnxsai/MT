@@ -118,21 +118,21 @@ export const onOrderStatusChange = functions.firestore
         fcmResponse: response,
       });
 
-      return {success: true, messageId: response};
+      return { success: true, messageId: response };
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
       console.error(`Failed to send notification: ${err.message}`);
 
       // Handle invalid token (user uninstalled app or token expired)
       if (err.code === "messaging/invalid-registration-token" ||
-          err.code === "messaging/registration-token-not-registered") {
+        err.code === "messaging/registration-token-not-registered") {
         console.log(`Clearing invalid FCM token for patient ${patientId}`);
         await db.collection("users").doc(patientId).update({
           fcmToken: admin.firestore.FieldValue.delete(),
         });
       }
 
-      return {success: false, error: err.message};
+      return { success: false, error: err.message };
     }
   });
 
@@ -216,11 +216,11 @@ export const onNewOrder = functions.firestore
 
       const response = await messaging.send(message);
       console.log(`New order notification sent: ${response}`);
-      return {success: true, messageId: response};
+      return { success: true, messageId: response };
     } catch (error: unknown) {
       const err = error as { message?: string };
       console.error(`Failed to send new order notification: ${err.message}`);
-      return {success: false, error: err.message};
+      return { success: false, error: err.message };
     }
   });
 
@@ -238,44 +238,44 @@ function getNotificationContent(
   pharmacyName: string
 ): NotificationContent | null {
   switch (status) {
-  case "CONFIRMED":
-    return {
-      title: "Order Accepted",
-      body: `Your order from ${pharmacyName} has been accepted and is being processed.`,
-    };
+    case "CONFIRMED":
+      return {
+        title: "Order Accepted",
+        body: `Your order from ${pharmacyName} has been accepted and is being processed.`,
+      };
 
-  case "PREPARING":
-    return {
-      title: "Preparing Your Medicine",
-      body: `${pharmacyName} is preparing your order. It will be ready soon.`,
-    };
+    case "PREPARING":
+      return {
+        title: "Preparing Your Medicine",
+        body: `${pharmacyName} is preparing your order. It will be ready soon.`,
+      };
 
-  case "READY":
-    return {
-      title: "Medicine Ready!",
-      body: `Your medicine is ready for pickup at ${pharmacyName}.`,
-    };
+    case "READY":
+      return {
+        title: "Medicine Ready!",
+        body: `Your medicine is ready for pickup at ${pharmacyName}.`,
+      };
 
-  case "SHIPPED":
-    return {
-      title: "Out for Delivery",
-      body: `Your order from ${pharmacyName} is on the way!`,
-    };
+    case "SHIPPED":
+      return {
+        title: "Out for Delivery",
+        body: `Your order from ${pharmacyName} is on the way!`,
+      };
 
-  case "DELIVERED":
-    return {
-      title: "Order Delivered",
-      body: `Your order from ${pharmacyName} has been delivered. Stay healthy!`,
-    };
+    case "DELIVERED":
+      return {
+        title: "Order Delivered",
+        body: `Your order from ${pharmacyName} has been delivered. Stay healthy!`,
+      };
 
-  case "CANCELLED":
-    return {
-      title: "Order Cancelled",
-      body: `Your order from ${pharmacyName} has been cancelled.`,
-    };
+    case "CANCELLED":
+      return {
+        title: "Order Cancelled",
+        body: `Your order from ${pharmacyName} has been cancelled.`,
+      };
 
-  default:
-    return null;
+    default:
+      return null;
   }
 }
 
@@ -314,3 +314,10 @@ export const cleanupNotificationLogs = functions.pubsub
     console.log(`Cleaned up ${oldLogs.size} old notification logs`);
     return null;
   });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Payment Verification (Server-side)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Export the payment verification function from the separate module
+export { verifyRazorpayPayment } from "./verifyRazorpayPayment";

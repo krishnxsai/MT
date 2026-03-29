@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.functions.ktx)
 
     // Google Sign-In with Credential Manager
     implementation(libs.play.services.auth)

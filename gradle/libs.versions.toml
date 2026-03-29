@@ -72,6 +72,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
 razorpay-checkout = { group = "com.razorpay", name = "checkout", version.ref = "razorpay" }
 firebase-config-ktx = { group = "com.google.firebase", name = "firebase-config-ktx"}
+firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx"}
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }

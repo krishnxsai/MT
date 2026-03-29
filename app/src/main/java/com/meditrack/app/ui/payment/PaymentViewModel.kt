@@ -114,7 +114,8 @@ class PaymentViewModel @Inject constructor(
                 val verifyResult = razorpayRepository.verifyPayment(
                     orderId = razorpayOrderId,
                     paymentId = razorpayPaymentId,
-                    signature = razorpaySignature
+                    signature = razorpaySignature,
+                    meditrackOrderId = meditrackOrderId
                 )
 
                 if (verifyResult !is Resource.Success || !verifyResult.data) {

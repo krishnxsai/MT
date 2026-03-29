@@ -6,6 +6,7 @@ import com.meditrack.app.data.model.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -36,12 +37,13 @@ class RazorpayRepository @Inject constructor(
         private const val TAG = "RazorpayRepository"
         private const val PAYMENTS_COLLECTION = "payments"
         private const val REMOTE_CONFIG_KEY_ID = "razorpay_key_id"
-        private const val REMOTE_CONFIG_KEY_SECRET = "razorpay_key_secret"
+        // NOTE: Razorpay secret is no longer used client-side (moved to Cloud Function)
     }
 
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
     private val remoteConfig: FirebaseRemoteConfig by lazy { FirebaseRemoteConfig.getInstance() }
+    private val functions: FirebaseFunctions by lazy { FirebaseFunctions.getInstance() }
     private val paymentsCol by lazy { firestore.collection(PAYMENTS_COLLECTION) }
 
     private val currentUserId: String?
@@ -108,50 +110,53 @@ class RazorpayRepository @Inject constructor(
     // ─────────────── Payment Verification ───────────────
 
     /**
-     * Verify a Razorpay payment using signature validation.
+     * Verify a Razorpay payment using server-side signature validation.
      *
-     * Razorpay provides three components that we verify:
+     * Delegates to Cloud Function which verifies the signature using the Razorpay secret
+     * stored in Firebase Secret Manager (not in the app).
+     *
+     * Razorpay provides three components:
      * 1. razorpay_order_id - the order we created
      * 2. razorpay_payment_id - the successful payment
      * 3. razorpay_signature - HMAC SHA256 signed with our secret key
      *
-     * Signature formula: SHA256(orderId|paymentId, keySecret)
-     * This ensures the payment data wasn't tampered with.
+     * The Cloud Function validates: HMAC-SHA256(orderId|paymentId, keySecret)
      *
      * @param orderId Razorpay order ID
      * @param paymentId Razorpay payment ID
      * @param signature Razorpay signature to verify
+     * @param meditrackOrderId MediTrack order ID for tracking
      *
      * @return true if signature is valid (payment is legitimate)
      */
     suspend fun verifyPayment(
         orderId: String,
         paymentId: String,
-        signature: String
+        signature: String,
+        meditrackOrderId: String
     ): Resource<Boolean> = withContext(Dispatchers.IO) {
         try {
-            // Get Razorpay key secret from Remote Config
-            // NOTE: In production, this should NEVER be in the app.
-            // This is ONLY for client-side verification as a guard.
-            // True verification must happen server-side with Cloud Function
-            // using the actual secret key which we DO NOT store in the app.
+            // Call server-side verification function
+            @Suppress("UNCHECKED_CAST")
+            val responseMap = functions
+                .getHttpsCallable("verifyRazorpayPayment")
+                .call(mapOf(
+                    "orderId" to orderId,
+                    "paymentId" to paymentId,
+                    "signature" to signature,
+                    "meditrackOrderId" to meditrackOrderId
+                ))
+                .await() as? Map<String, Any?>
 
-            val keySecret = remoteConfig.getString(REMOTE_CONFIG_KEY_SECRET)
-            if (keySecret.isBlank()) {
-                Log.w(TAG, "Razorpay key secret not configured in Remote Config")
-                // For cloud-based verification, we'll trust the signatures
-                // and verify server-side via Cloud Function
-                return@withContext Resource.Success(true)
-            }
+            val isValid = responseMap?.get("isValid") as? Boolean ?: false
 
-            // Verify signature locally  (EXTRA VALIDATION ONLY)
-            val message = "$orderId|$paymentId"
-            val hmacSha256 = generateHmacSha256(message, keySecret)
-
-            val isValid = hmacSha256.equals(signature, ignoreCase = true)
             Log.d(TAG, "Payment signature verification: $isValid")
 
-            Resource.Success(isValid)
+            if (isValid) {
+                Resource.Success(true)
+            } else {
+                Resource.Error("Payment signature verification failed")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "verifyPayment error: ${e.message}")
             Resource.Error(e.message ?: "Failed to verify payment")
@@ -349,22 +354,5 @@ class RazorpayRepository @Inject constructor(
         val timestamp = System.currentTimeMillis() / 1000
         val hash = meditrackOrderId.hashCode().toLong() and 0xFFFFFFFFL
         return "order_$timestamp"  // Simplified; Razorpay generates actual IDs
-    }
-
-    /**
-     * Generate HMAC SHA256 signature for payment verification.
-     * Formula: HMAC-SHA256(message, secretKey)
-     */
-    private fun generateHmacSha256(message: String, key: String): String {
-        return try {
-            val hmacKey = javax.crypto.spec.SecretKeySpec(key.toByteArray(), "HmacSHA256")
-            val mac = javax.crypto.Mac.getInstance("HmacSHA256")
-            mac.init(hmacKey)
-            val digest = mac.doFinal(message.toByteArray())
-            digest.joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "HMAC generation error: ${e.message}")
-            ""
-        }
     }
 }

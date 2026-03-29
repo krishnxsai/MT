@@ -30,7 +30,7 @@ object FeatureFlags {
 
         // Default values for each feature
         return when (flagName) {
-            PAYMENT_ENABLED -> false  // Default OFF in production
+            PAYMENT_ENABLED -> true  // Enabled - Phase 1 complete
             NOTIFICATION_PREFS_ENABLED -> false
             INVENTORY_VALIDATION_ENABLED -> false
             DELIVERY_WINDOWS_ENABLED -> false

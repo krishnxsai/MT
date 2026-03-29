@@ -24,7 +24,8 @@ class UnifiedOrderViewModel @Inject constructor(
     private val medicineRepository: MedicineRepository,
     private val pharmacyRepository: PharmacyRepository,
     private val orderRepository: OrderRepository,
-    private val refillAlertRepository: RefillAlertRepository
+    private val refillAlertRepository: RefillAlertRepository,
+    private val pharmacyInventoryRepository: PharmacyInventoryRepository
 ) : ViewModel() {
 
     // ==================== UI STATE ====================
@@ -214,15 +215,38 @@ class UnifiedOrderViewModel @Inject constructor(
     private fun observeCartChanges() {
         viewModelScope.launch {
             _cart.collect { cartItems ->
-                // Update cart items with mock pricing (in real app, fetch from pharmacy inventory)
-                val priced = cartItems.map { item ->
-                    val unitPrice = 50.0 // Mock price - should come from pharmacy inventory
-                    CartItemWithPrice(
-                        cartItem = item,
-                        unitPrice = unitPrice,
-                        totalPrice = unitPrice * item.quantity,
-                        isAvailable = true
-                    )
+                // Fetch pricing from selected pharmacy's inventory
+                val selectedPharmacy = _selectedPharmacy.value
+                val priced = if (selectedPharmacy != null) {
+                    cartItems.map { item ->
+                        // Query price from pharmacyInventory
+                        val inventoryResult = pharmacyInventoryRepository.getInventoryItem(
+                            pharmacyId = selectedPharmacy.id,
+                            medicineId = item.medicineId
+                        )
+
+                        val unitPrice = when (inventoryResult) {
+                            is Resource.Success -> inventoryResult.data?.unitPrice ?: 50.0
+                            else -> 50.0  // Fallback to default if not found
+                        }
+
+                        CartItemWithPrice(
+                            cartItem = item,
+                            unitPrice = unitPrice,
+                            totalPrice = unitPrice * item.quantity,
+                            isAvailable = inventoryResult is Resource.Success && inventoryResult.data != null
+                        )
+                    }
+                } else {
+                    // No pharmacy selected yet, use default prices
+                    cartItems.map { item ->
+                        CartItemWithPrice(
+                            cartItem = item,
+                            unitPrice = 50.0,  // Default until pharmacy selected
+                            totalPrice = 50.0 * item.quantity,
+                            isAvailable = true
+                        )
+                    }
                 }
                 _cartWithPrices.value = priced
 

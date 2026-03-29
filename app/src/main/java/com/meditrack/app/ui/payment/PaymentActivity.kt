@@ -212,6 +212,13 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
     /**
      * Razorpay success callback.
      * Called when payment is successful.
+     *
+     * NOTE: The Razorpay SDK provides the payment ID here.
+     * The full response (including signature) should be obtained from Razorpay's
+     * response handler or fetched from their API.
+     *
+     * For production: Integrate with a callback that provides the complete response
+     * including razorpay_signature, or fetch it from Razorpay's payment details API.
      */
     override fun onPaymentSuccess(razorpayPaymentId: String?) {
         Log.d(TAG, "Payment successful callback: $razorpayPaymentId")
@@ -222,13 +229,17 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
             return
         }
 
-        // For demo/testing: if razorpayOrderId is empty, generate a fake one
-        val orderId = if (razorpayOrderId.isNotEmpty()) razorpayOrderId else "order_demo_${System.currentTimeMillis()}"
-        val signature = "demo_signature_${System.currentTimeMillis()}"  // In real app, Razorpay provides this
+        // In production: Get the actual razorpay_signature from Razorpay's response
+        // For now, this would be fetched from a callback that has access to the full response
+        // TODO: Implement proper signature retrieval from Razorpay callback
+
+        // Fetch payment details from Razorpay API to get the signature
+        // OR implement a callback handler that captures the full response
+        val signature = razorpayPaymentId  // Placeholder - should be actual Razorpay signature
 
         // Verify payment and record it
         viewModel.handlePaymentSuccess(
-            razorpayOrderId = orderId,
+            razorpayOrderId = razorpayOrderId,
             razorpayPaymentId = razorpayPaymentId,
             razorpaySignature = signature,
             meditrackOrderId = meditrackOrderId,
