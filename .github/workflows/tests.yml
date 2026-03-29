@@ -1,0 +1,185 @@
+name: Cloud Functions & Firestore Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - uses: actions/checkout@v3
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "functions/package-lock.json"
+
+      # 3. Install Cloud Functions dependencies
+      - name: Install dependencies
+        working-directory: functions
+        run: npm ci
+
+      # 4. Lint TypeScript
+      - name: Lint TypeScript
+        working-directory: functions
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      # 5. Run Cloud Functions unit tests
+      - name: Run Cloud Functions tests
+        working-directory: functions
+        run: npm test -- --coverage --testPathPattern="\\.test\\.ts$"
+
+      # 6. Run Firestore emulator tests
+      - name: Start Firestore emulator
+        run: |
+          npm install -g firebase-tools
+          firebase emulators:start --only firestore &
+          sleep 5
+        working-directory: functions
+
+      - name: Run Firestore security rules tests
+        working-directory: functions
+        run: npm test -- --testPathPattern="firestore\\.rules\\.test\\.ts$"
+        env:
+          FIREBASE_EMULATOR_HOST: localhost:8080
+
+      # 7. Upload coverage to Codecov
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./functions/coverage/coverage-final.json
+          flags: cloud-functions
+          name: Cloud Functions Coverage
+          fail_ci_if_error: false
+
+      # 8. Report test results
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            functions/coverage/test-results.xml
+          check_name: Cloud Functions Test Results
+
+  android-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - uses: actions/checkout@v3
+
+      # 2. Setup Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
+      # 3. Build Android project
+      - name: Build Android project
+        run: ./gradlew build --stacktrace
+        working-directory: app
+
+      # 4. Run unit tests
+      - name: Run Android unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+        working-directory: app
+
+      # 5. Generate test report
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-test-results
+          path: app/build/reports/tests/
+
+      # 6. Upload coverage
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./app/build/reports/coverage/
+          flags: android
+
+  security-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - uses: actions/checkout@v3
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "functions/package-lock.json"
+
+      # 3. Audit dependencies for vulnerabilities
+      - name: Security audit - Cloud Functions
+        working-directory: functions
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      # 4. Lint firestore.rules
+      - name: Lint Firestore rules
+        run: |
+          npm install -g firebase-tools
+          firebase rules:lint
+        continue-on-error: true
+
+  build-apk:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # 1. Checkout code
+      - uses: actions/checkout@v3
+
+      # 2. Setup Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
+      # 3. Build release APK
+      - name: Build release APK
+        run: ./gradlew assembleRelease --stacktrace
+        working-directory: app
+
+      # 4. Upload APK artifact
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: meditrack-release-apk
+          path: app/build/outputs/apk/release/
+
+  status-check:
+    runs-on: ubuntu-latest
+    needs: [test, android-tests, security-audit]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.android-tests.result }}" != "success" ] || \
+             [ "${{ needs.security-audit.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed"
+          fi

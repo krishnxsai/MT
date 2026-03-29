@@ -25,6 +25,20 @@ data class Appointment(
     val doctorNotes: String = "",      // Doctor notes on confirm/reject
     val cancellationReason: String = "",
 
+    // ── Telemedicine support (GAP 4 FIX) ───────────────────────
+    /** True if this is a video consultation */
+    val isTelemedicine: Boolean = false,
+    /** Meeting URL for video consultations */
+    val callUrl: String = "",
+    /** Meeting ID (e.g., Zoom/Google Meet ID) */
+    val meetingId: String = "",
+    /** Cancellation fee for no-show or last-minute cancel */
+    val cancellationFee: Double = 0.0,
+    /** Hours before appointment within which cancellation fee applies */
+    val cancellationDeadlineHours: Int = 2,
+    /** Actual cancellation fee applied (0 if cancelled outside deadline) */
+    val cancellationFeeApplied: Double = 0.0,
+
     @ServerTimestamp
     val createdAt: Date? = null,
     @ServerTimestamp
@@ -45,6 +59,12 @@ data class Appointment(
         "notes" to notes,
         "doctorNotes" to doctorNotes,
         "cancellationReason" to cancellationReason,
+        "isTelemedicine" to isTelemedicine,
+        "callUrl" to callUrl,
+        "meetingId" to meetingId,
+        "cancellationFee" to cancellationFee,
+        "cancellationDeadlineHours" to cancellationDeadlineHours,
+        "cancellationFeeApplied" to cancellationFeeApplied,
         "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
     )
 
@@ -67,6 +87,12 @@ data class Appointment(
             notes = map["notes"] as? String ?: "",
             doctorNotes = map["doctorNotes"] as? String ?: "",
             cancellationReason = map["cancellationReason"] as? String ?: "",
+            isTelemedicine = map["isTelemedicine"] as? Boolean ?: false,
+            callUrl = map["callUrl"] as? String ?: "",
+            meetingId = map["meetingId"] as? String ?: "",
+            cancellationFee = (map["cancellationFee"] as? Number)?.toDouble() ?: 0.0,
+            cancellationDeadlineHours = (map["cancellationDeadlineHours"] as? Number)?.toInt() ?: 2,
+            cancellationFeeApplied = (map["cancellationFeeApplied"] as? Number)?.toDouble() ?: 0.0,
             createdAt = (map["createdAt"] as? Timestamp)?.toDate(),
             updatedAt = (map["updatedAt"] as? Timestamp)?.toDate()
         )
@@ -85,6 +111,7 @@ enum class AppointmentType {
     CONSULTATION,
     FOLLOW_UP,
     CHECKUP,
-    EMERGENCY
+    EMERGENCY,
+    TELEMEDICINE
 }
 

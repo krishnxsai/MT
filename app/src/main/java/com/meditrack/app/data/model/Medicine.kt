@@ -40,6 +40,14 @@ data class Medicine(
     /** Date of the most recent refill. */
     val lastRefillDate: Date? = null,
 
+    // ── Expiry tracking (GAP 3 FIX) ──────────────────────────────
+    /** Medication expiry date */
+    val expiryDate: Date? = null,
+    /** Expiry month/year in "MM/YYYY" format for display */
+    val expiryMonthYear: String = "",
+    /** Alert user when expiry is within this many days */
+    val expiryWarningDays: Int = 30,
+
     @ServerTimestamp
     val createdAt: Date? = null,
     @ServerTimestamp
@@ -84,6 +92,9 @@ data class Medicine(
             "lowStockThreshold" to lowStockThreshold,
             "refillReminderEnabled" to refillReminderEnabled,
             "lastRefillDate" to lastRefillDate,
+            "expiryDate" to expiryDate,
+            "expiryMonthYear" to expiryMonthYear,
+            "expiryWarningDays" to expiryWarningDays,
             "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
     }

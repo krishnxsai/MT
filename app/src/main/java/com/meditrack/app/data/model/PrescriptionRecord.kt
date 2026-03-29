@@ -56,6 +56,14 @@ data class PrescriptionRecord(
     val stoppedAt: Date? = null,
     val stopReason: String = "",
 
+    // ── Digital Signature (GAP 5 FIX) ─────────────────────────
+    /** Base64-encoded digital signature from doctor */
+    val digitalSignature: String = "",
+    /** Timestamp when prescription was signed */
+    val signedAt: Date? = null,
+    /** Doctor's signing certificate (optional) */
+    val signingCertificate: String = "",
+
     @ServerTimestamp
     val createdAt: Date? = null,
     @ServerTimestamp
@@ -86,6 +94,9 @@ data class PrescriptionRecord(
         "endDate" to endDate,
         "stoppedAt" to stoppedAt,
         "stopReason" to stopReason,
+        "digitalSignature" to digitalSignature,
+        "signedAt" to signedAt,
+        "signingCertificate" to signingCertificate,
         "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
     )
 

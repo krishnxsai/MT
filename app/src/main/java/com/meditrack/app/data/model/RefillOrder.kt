@@ -39,6 +39,10 @@ data class RefillOrder(
     val pharmacyName: String = "",
     val pharmacyId: String = "",
 
+    // ── Payment link (GAP 1 FIX) ─────────────────────────────────
+    /** Direct link to payment in payments collection */
+    val paymentId: String = "",
+
     // ── Multi-item support (NEW) ─────────────────────────────────
     /** List of items in this order. Empty for legacy single-item orders. */
     val items: List<OrderItem> = emptyList(),
@@ -103,6 +107,7 @@ data class RefillOrder(
         "prescriptionId" to prescriptionId,
         "pharmacyName" to pharmacyName,
         "pharmacyId" to pharmacyId,
+        "paymentId" to paymentId,
         "items" to items.map { it.toMap() },
         "subtotal" to subtotal,
         "deliveryFee" to deliveryFee,

@@ -39,7 +39,7 @@ class OrderItemSummaryAdapter : RecyclerView.Adapter<OrderItemSummaryAdapter.Vie
         private val tvQuantity: TextView = itemView.findViewById(R.id.tvQuantity)
         private val tvPrice: TextView = itemView.findViewById(R.id.tvPrice)
 
-        private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+        private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("en").setRegion("IN").build())
 
         fun bind(item: OrderItem) {
             tvName.text = buildString {

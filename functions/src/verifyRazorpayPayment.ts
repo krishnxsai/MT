@@ -16,14 +16,13 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 
-const db = admin.firestore();
-
 /**
  * Callable Cloud Function for payment verification.
  * Must be called from authenticated client.
  */
 export const verifyRazorpayPayment = functions.https.onCall(
   async (data, context) => {
+    const db = admin.firestore();
     // ─────────────── Validate Request ───────────────
     if (!context.auth) {
       throw new functions.https.HttpsError(

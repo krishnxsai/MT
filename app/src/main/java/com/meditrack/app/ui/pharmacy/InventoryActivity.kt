@@ -169,28 +169,27 @@ class InventoryActivity : AppCompatActivity() {
                 val name = dialogBinding.nameEditText.text?.toString()?.trim() ?: ""
                 if (name.isEmpty()) {
                     Toast.makeText(this, getString(R.string.error_empty_medicine_name), Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-
-                val item = InventoryItem(
-                    id = existingItem?.id ?: "",
-                    pharmacyId = pharmacyId,
-                    medicineName = name,
-                    genericName = dialogBinding.genericNameEditText.text?.toString()?.trim() ?: "",
-                    category = dialogBinding.categoryEditText.text?.toString()?.trim() ?: "",
-                    stockQuantity = dialogBinding.quantityEditText.text?.toString()?.toIntOrNull() ?: 0,
-                    unitPrice = dialogBinding.priceEditText.text?.toString()?.toDoubleOrNull() ?: 0.0,
-                    lowStockThreshold = dialogBinding.thresholdEditText.text?.toString()?.toIntOrNull() ?: 10,
-                    unit = dialogBinding.unitEditText.text?.toString()?.trim() ?: "tablets",
-                    manufacturer = dialogBinding.manufacturerEditText.text?.toString()?.trim() ?: "",
-                    batchNumber = dialogBinding.batchEditText.text?.toString()?.trim() ?: "",
-                    expiryDate = selectedExpiryDate
-                )
-
-                if (existingItem != null) {
-                    viewModel.updateItem(item)
                 } else {
-                    viewModel.addItem(item)
+                    val item = InventoryItem(
+                        id = existingItem?.id ?: "",
+                        pharmacyId = pharmacyId,
+                        medicineName = name,
+                        genericName = dialogBinding.genericNameEditText.text?.toString()?.trim() ?: "",
+                        category = dialogBinding.categoryEditText.text?.toString()?.trim() ?: "",
+                        stockQuantity = dialogBinding.quantityEditText.text?.toString()?.toIntOrNull() ?: 0,
+                        unitPrice = dialogBinding.priceEditText.text?.toString()?.toDoubleOrNull() ?: 0.0,
+                        lowStockThreshold = dialogBinding.thresholdEditText.text?.toString()?.toIntOrNull() ?: 10,
+                        unit = dialogBinding.unitEditText.text?.toString()?.trim() ?: "tablets",
+                        manufacturer = dialogBinding.manufacturerEditText.text?.toString()?.trim() ?: "",
+                        batchNumber = dialogBinding.batchEditText.text?.toString()?.trim() ?: "",
+                        expiryDate = selectedExpiryDate
+                    )
+
+                    if (existingItem != null) {
+                        viewModel.updateItem(item)
+                    } else {
+                        viewModel.addItem(item)
+                    }
                 }
             }
             .setNegativeButton(getString(R.string.cancel), null)

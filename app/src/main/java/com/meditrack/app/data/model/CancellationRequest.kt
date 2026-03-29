@@ -32,6 +32,8 @@ data class CancellationRequest(
     val razorpayRefundId: String = "",   // Refund ID from Razorpay
     val refundIdempotencyKey: String = "", // SHA256(orderId) for idempotency
     val refundProcessedAt: Date? = null,
+    /** Reason for refund failure (if refundStatus == FAILED) */
+    val refundFailureReason: String = "",
 
     // ── Inventory restoration ──────────────────
     val inventoryRestored: Boolean = false,
@@ -59,6 +61,7 @@ data class CancellationRequest(
         "razorpayRefundId" to razorpayRefundId,
         "refundIdempotencyKey" to refundIdempotencyKey,
         "refundProcessedAt" to refundProcessedAt,
+        "refundFailureReason" to refundFailureReason,
         "inventoryRestored" to inventoryRestored,
         "restoredAt" to restoredAt,
         "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
@@ -85,6 +88,7 @@ data class CancellationRequest(
             razorpayRefundId = map["razorpayRefundId"] as? String ?: "",
             refundIdempotencyKey = map["refundIdempotencyKey"] as? String ?: "",
             refundProcessedAt = (map["refundProcessedAt"] as? Timestamp)?.toDate(),
+            refundFailureReason = map["refundFailureReason"] as? String ?: "",
             inventoryRestored = map["inventoryRestored"] as? Boolean ?: false,
             restoredAt = (map["restoredAt"] as? Timestamp)?.toDate(),
             createdAt = (map["createdAt"] as? Timestamp)?.toDate(),

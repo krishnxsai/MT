@@ -68,6 +68,39 @@ class UnifiedOrderActivity : AppCompatActivity() {
         }
     }
 
+    private val mapActivityLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == PharmacyMapActivity.RESULT_PHARMACY_SELECTED) {
+            val pharmacyId = result.data?.getStringExtra(PharmacyMapActivity.EXTRA_SELECTED_PHARMACY_ID)
+            pharmacyId?.let { id ->
+                viewModel.selectPharmacyById(id)
+            }
+        }
+    }
+
+    private val paymentActivityLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        when (result.resultCode) {
+            RESULT_OK -> {
+                if (currentPaymentOrderId != null) {
+                    val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
+                    intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, currentPaymentOrderId)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+            RESULT_CANCELED -> {
+                Toast.makeText(this, "Payment cancelled", Toast.LENGTH_SHORT).show()
+            }
+            RESULT_FIRST_USER -> {
+                val errorMessage = result.data?.getStringExtra("error_message") ?: "Payment failed"
+                Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityUnifiedOrderBinding.inflate(layoutInflater)
@@ -307,7 +340,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
             is UnifiedOrderViewModel.NavigationEvent.ToPharmacyMap -> {
                 // Open PharmacyMapActivity
                 val intent = Intent(this, PharmacyMapActivity::class.java)
-                startActivityForResult(intent, REQUEST_CODE_MAP)
+                mapActivityLauncher.launch(intent)
             }
             is UnifiedOrderViewModel.NavigationEvent.ToOrderConfirmation -> {
                 // Order placed successfully — navigate to tracking
@@ -362,7 +395,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
                     putExtra(PaymentActivity.EXTRA_USER_NAME, userName)
                 }
 
-                startActivityForResult(intent, REQUEST_CODE_PAYMENT)
+                paymentActivityLauncher.launch(intent)
             } catch (e: Exception) {
                 Toast.makeText(this@UnifiedOrderActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -517,37 +550,5 @@ class UnifiedOrderActivity : AppCompatActivity() {
     }
 
     // ==================== ACTIVITY RESULT ====================
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE_MAP && resultCode == PharmacyMapActivity.RESULT_PHARMACY_SELECTED) {
-            val pharmacyId = data?.getStringExtra(PharmacyMapActivity.EXTRA_SELECTED_PHARMACY_ID)
-            pharmacyId?.let { id ->
-                viewModel.selectPharmacyById(id)
-            }
-        }
-
-        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_OK) {
-            // Payment successful - navigate to order tracking
-            if (currentPaymentOrderId != null) {
-                val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
-                intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, currentPaymentOrderId)
-                startActivity(intent)
-                finish()
-            }
-        }
-
-        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_CANCELED) {
-            // Payment cancelled - show error and return to previous screen
-            Toast.makeText(this, "Payment cancelled", Toast.LENGTH_SHORT).show()
-        }
-
-        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_FIRST_USER) {
-            // Payment failed - show error
-            val errorMessage = data?.getStringExtra("error_message") ?: "Payment failed"
-            Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
+    // All activity results are now handled via registerForActivityResult launchers (mapActivityLauncher, paymentActivityLauncher)
 }

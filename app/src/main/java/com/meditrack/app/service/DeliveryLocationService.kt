@@ -14,8 +14,10 @@ import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.meditrack.app.data.model.DeliveryTracking
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -46,6 +48,7 @@ class DeliveryLocationService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var lastLocationUpdate: Location? = null
     private var lastLocationUpdateTime = 0L
@@ -97,6 +100,7 @@ class DeliveryLocationService : Service() {
         super.onDestroy()
         Log.d(TAG, "DeliveryLocationService.onDestroy()")
         stopLocationUpdates()
+        serviceScope.cancel()
     }
 
     // ─────────────── Location Updates ─────────────
@@ -188,7 +192,7 @@ class DeliveryLocationService : Service() {
             val trackingId = "ongoing_$orderId"
 
             // Update Firestore asynchronously
-            GlobalScope.launch(Dispatchers.IO) {
+            serviceScope.launch {
                 try {
                     firestore.collection("deliveryTracking")
                         .document(trackingId)

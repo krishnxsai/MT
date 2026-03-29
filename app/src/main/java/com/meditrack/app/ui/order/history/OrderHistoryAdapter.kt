@@ -34,7 +34,7 @@ class OrderHistoryAdapter(
         }
 
         private val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-        private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply {
+        private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).apply {
             maximumFractionDigits = 2
         }
     }
