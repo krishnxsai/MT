@@ -1,5 +1,6 @@
 package com.meditrack.app.data.repository
 
+import android.util.Log
 import com.meditrack.app.data.model.DoctorNote
 import com.meditrack.app.data.model.HealthLog
 import com.meditrack.app.data.model.Medicine
@@ -18,6 +19,10 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class DoctorRepository {
+    companion object {
+        private const val TAG = "DoctorRepository"
+    }
+
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
 
@@ -427,6 +432,28 @@ class DoctorRepository {
             role == UserRole.DOCTOR.name
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Get the phone number for a doctor by ID.
+     * Used for calling doctor from appointment booking or doctor list.
+     */
+    suspend fun getDoctorPhone(doctorId: String): Resource<String?> = withContext(Dispatchers.IO) {
+        try {
+            val doctoDoc = usersCollection.document(doctorId).get().await()
+            val doctor = doctoDoc.toObject(User::class.java)
+                ?: return@withContext Resource.Success(null)
+
+            // Verify doctor has DOCTOR role
+            if (doctor.role != UserRole.DOCTOR) {
+                return@withContext Resource.Success(null)
+            }
+
+            Resource.Success(doctor.phoneNumber)
+        } catch (e: Exception) {
+            Log.e(TAG, "getDoctorPhone error: ${e.message}")
+            Resource.Success(null) // Return null on error for graceful fallback
         }
     }
 }

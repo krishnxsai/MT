@@ -47,7 +47,8 @@ class PharmacyOrdersFragment : Fragment() {
         val activity = requireActivity() as PharmacyDashboardActivity
         orderAdapter = PharmacyOrderAdapter(
             onAccept = { order -> activity.handleAcceptOrder(order) },
-            onReject = { order -> activity.handleRejectOrder(order) }
+            onReject = { order -> activity.handleRejectOrder(order) },
+            onCall = { order -> activity.handleCallPatient(order) }
         )
         binding.ordersRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())

@@ -21,7 +21,8 @@ import com.meditrack.app.data.model.Pharmacy
  */
 class PharmacyMapListAdapter(
     private val onPharmacyClick: (Pharmacy) -> Unit,
-    private val onSelectClick: (Pharmacy) -> Unit
+    private val onSelectClick: (Pharmacy) -> Unit,
+    private val onCallClick: (Pharmacy) -> Unit
 ) : ListAdapter<PharmacyMapListAdapter.PharmacyListItem, PharmacyMapListAdapter.ViewHolder>(DiffCallback()) {
 
     data class PharmacyListItem(
@@ -49,6 +50,7 @@ class PharmacyMapListAdapter(
         private val tvDistance: TextView = itemView.findViewById(R.id.tvDistance)
         private val tvDeliveryTime: TextView = itemView.findViewById(R.id.tvDeliveryTime)
         private val tvOpenStatus: TextView = itemView.findViewById(R.id.tvOpenStatus)
+        private val btnCall: ImageView = itemView.findViewById(R.id.btnCall)
         private val btnSelect: MaterialButton = itemView.findViewById(R.id.btnSelect)
 
         fun bind(item: PharmacyListItem) {
@@ -90,6 +92,7 @@ class PharmacyMapListAdapter(
             // Click listeners
             card.setOnClickListener { onPharmacyClick(pharmacy) }
             btnSelect.setOnClickListener { onSelectClick(pharmacy) }
+            btnCall.setOnClickListener { onCallClick(pharmacy) }
         }
     }
 

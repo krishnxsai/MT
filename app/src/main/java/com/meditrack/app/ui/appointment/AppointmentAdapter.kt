@@ -3,6 +3,7 @@ package com.meditrack.app.ui.appointment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -20,7 +21,8 @@ class AppointmentAdapter(
     private val onConfirm: ((Appointment) -> Unit)? = null,
     private val onReject: ((Appointment) -> Unit)? = null,
     private val onCancel: ((Appointment) -> Unit)? = null,
-    private val onReschedule: ((Appointment) -> Unit)? = null
+    private val onReschedule: ((Appointment) -> Unit)? = null,
+    private val onCall: ((Appointment) -> Unit)? = null
 ) : ListAdapter<Appointment, AppointmentAdapter.ViewHolder>(DIFF) {
 
     companion object {
@@ -37,6 +39,7 @@ class AppointmentAdapter(
         val statusBadge: TextView = view.findViewById(R.id.statusBadge)
         val typeText: TextView = view.findViewById(R.id.typeText)
         val notesText: TextView = view.findViewById(R.id.notesText)
+        val callButton: ImageView = view.findViewById(R.id.callButton)
         val confirmButton: MaterialButton = view.findViewById(R.id.confirmButton)
         val rejectButton: MaterialButton = view.findViewById(R.id.rejectButton)
         val cancelButton: MaterialButton = view.findViewById(R.id.cancelButton)
@@ -92,6 +95,7 @@ class AppointmentAdapter(
         holder.rejectButton.setOnClickListener { onReject?.invoke(appt) }
         holder.cancelButton.setOnClickListener { onCancel?.invoke(appt) }
         holder.rescheduleButton.setOnClickListener { onReschedule?.invoke(appt) }
+        holder.callButton.setOnClickListener { onCall?.invoke(appt) }
     }
 }
 

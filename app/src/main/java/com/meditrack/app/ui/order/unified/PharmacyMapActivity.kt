@@ -31,6 +31,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.meditrack.app.R
 import com.meditrack.app.databinding.ActivityPharmacyMapBinding
 import com.meditrack.app.data.model.Pharmacy
+import com.meditrack.app.util.CallUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -118,6 +119,9 @@ class PharmacyMapActivity : AppCompatActivity(), OnMapReadyCallback {
             onSelectClick = { pharmacy ->
                 viewModel.selectPharmacy(pharmacy)
                 focusOnPharmacy(pharmacy)
+            },
+            onCallClick = { pharmacy ->
+                CallUtils.dialPhoneNumber(this, pharmacy.phone, pharmacy.name)
             }
         )
 

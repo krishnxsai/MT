@@ -7,11 +7,13 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.firestore.FirebaseFirestore
 import com.meditrack.app.data.model.Resource
 import com.meditrack.app.data.model.User
 import com.meditrack.app.data.model.UserRole
 import com.meditrack.app.databinding.ActivityAppointmentsListBinding
 import com.meditrack.app.ui.profile.ProfileViewModel
+import com.meditrack.app.util.CallUtils
 import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -143,6 +145,22 @@ class AppointmentsListActivity : AppCompatActivity() {
                     putExtra(AppointmentBookingActivity.EXTRA_RESCHEDULE_ID, appt.id)
                 }
                 startActivity(intent)
+            },
+            onCall = { appt ->
+                // Fetch phone number of the other party and make the call
+                val userIdToCall = if (isDoctor) appt.patientId else appt.doctorId
+                val nameToCall = if (isDoctor) appt.patientName else "Dr. ${appt.doctorName}"
+
+                FirebaseFirestore.getInstance().collection("users")
+                    .document(userIdToCall)
+                    .get()
+                    .addOnSuccessListener { doc ->
+                        val phone = doc.getString("phoneNumber") ?: ""
+                        CallUtils.dialPhoneNumber(this, phone, nameToCall)
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Failed to get phone number", Toast.LENGTH_SHORT).show()
+                    }
             }
         )
 

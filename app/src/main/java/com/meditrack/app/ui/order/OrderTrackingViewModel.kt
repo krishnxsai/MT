@@ -3,8 +3,10 @@ package com.meditrack.app.ui.order
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.meditrack.app.data.model.DeliveryTracking
 import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.data.model.getDisplayStatus
+import com.meditrack.app.data.repository.DeliveryTrackingRepository
 import com.meditrack.app.data.repository.OrderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
@@ -18,11 +20,12 @@ import java.util.Locale
 
 /**
  * ViewModel for the order tracking screen.
- * Manages real-time order status updates from Firestore.
+ * Manages real-time order status updates from Firestore and live delivery GPS tracking.
  */
 @HiltViewModel
 class OrderTrackingViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val deliveryTrackingRepository: DeliveryTrackingRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -39,6 +42,16 @@ class OrderTrackingViewModel @Inject constructor(
      */
     val order: StateFlow<RefillOrder?> = orderRepository
         .getOrderFlow(orderId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // ── Real-time delivery tracking GPS data ────────────────────────────
+    /**
+     * Real-time delivery person GPS tracking location.
+     * Only populated when order status is OUT_FOR_DELIVERY (SHIPPED in our enum).
+     * Updates every 3-5 seconds from Firestore deliveryTracking collection.
+     */
+    val deliveryTracking: StateFlow<DeliveryTracking?> = deliveryTrackingRepository
+        .trackDeliveryFlow(orderId)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // ── Derived state: Display status label ────────────────────────────
@@ -85,5 +98,13 @@ class OrderTrackingViewModel @Inject constructor(
         } catch (e: Exception) {
             "Unknown"
         }
+    }
+
+    /**
+     * Get pharmacy phone number for calling.
+     * Used when user clicks "Call Pharmacy" button.
+     */
+    suspend fun getPharmacyPhoneForOrder(orderId: String): com.meditrack.app.data.model.Resource<String?> {
+        return orderRepository.getPharmacyPhoneForOrder(orderId)
     }
 }

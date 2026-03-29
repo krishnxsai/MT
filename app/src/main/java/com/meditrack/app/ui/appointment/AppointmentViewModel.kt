@@ -3,6 +3,7 @@ package com.meditrack.app.ui.appointment
 import androidx.lifecycle.*
 import com.meditrack.app.data.model.*
 import com.meditrack.app.data.repository.AppointmentRepository
+import com.meditrack.app.data.repository.DoctorRepository
 import com.meditrack.app.data.repository.TimeSlot
 import kotlinx.coroutines.flow.collectLatest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AppointmentViewModel @Inject constructor(
-    private val repository: AppointmentRepository
+    private val repository: AppointmentRepository,
+    private val doctorRepository: DoctorRepository
 ) : ViewModel() {
 
     // ── Appointments list ──
@@ -183,6 +185,14 @@ class AppointmentViewModel @Inject constructor(
             val result = repository.deleteAvailability(slotId)
             _actionResult.postValue(result)
         }
+    }
+
+    /**
+     * Get doctor phone number for calling.
+     * Used when user clicks "Call Doctor" button.
+     */
+    suspend fun getDoctorPhone(doctorId: String): Resource<String?> {
+        return doctorRepository.getDoctorPhone(doctorId)
     }
 }
 

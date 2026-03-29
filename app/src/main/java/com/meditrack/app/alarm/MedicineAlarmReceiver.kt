@@ -14,6 +14,11 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.meditrack.app.R
+import com.meditrack.app.data.model.NotificationType
+import com.meditrack.app.data.repository.NotificationPreferenceRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * BroadcastReceiver that handles medicine alarm triggers.
@@ -79,8 +84,18 @@ class MedicineAlarmReceiver : BroadcastReceiver() {
             // Start the alarm service for sound and vibration
             startAlarmService(context, alarmId, medicineName, medicineId, dosage)
 
-            // Show the alarm notification with full-screen intent
-            showAlarmNotification(context, alarmId, medicineName, medicineId, dosage, reminderTime)
+            // Check notification preferences before showing notification
+            val preferenceRepo = NotificationPreferenceRepository()
+            CoroutineScope(Dispatchers.IO).launch {
+                val isAllowed = preferenceRepo.isNotificationAllowed(NotificationType.PRESCRIPTION)
+                if (isAllowed) {
+                    // Show the alarm notification with full-screen intent
+                    showAlarmNotification(context, alarmId, medicineName, medicineId, dosage, reminderTime)
+                    Log.d(TAG, "Notification shown for $medicineName (preferences allowed)")
+                } else {
+                    Log.d(TAG, "Notification suppressed for $medicineName (quiet hours or disabled)")
+                }
+            }
 
             // If this is a repeating alarm, schedule the next occurrence
             if (isRepeating && reminderTime != null) {

@@ -517,6 +517,21 @@ class PharmacyRepository {
 
         awaitClose { listener.remove() }
     }
+
+    /**
+     * Get the phone number for a pharmacy by ID.
+     * Used for calling pharmacy from order tracking.
+     */
+    suspend fun getPharmacyPhone(pharmacyId: String): Resource<String?> = withContext(Dispatchers.IO) {
+        try {
+            val pharmacyDoc = pharmaciesCol.document(pharmacyId).get().await()
+            val phone = pharmacyDoc.getString("phone")
+            Resource.Success(phone)
+        } catch (e: Exception) {
+            Log.e(TAG, "getPharmacyPhone error: ${e.message}")
+            Resource.Success(null) // Return null on error for graceful fallback
+        }
+    }
 }
 
 /**

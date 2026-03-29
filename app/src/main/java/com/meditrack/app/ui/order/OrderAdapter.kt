@@ -72,6 +72,7 @@ class OrderAdapter(
                 OrderStatus.SHIPPED -> R.color.secondary_container to R.color.secondary
                 OrderStatus.DELIVERED -> R.color.success_container to R.color.success
                 OrderStatus.CANCELLED -> R.color.surface_variant to R.color.text_tertiary
+                OrderStatus.RETURNED -> R.color.surface_variant to R.color.text_tertiary
             }
             statusBadge.setBackgroundColor(ContextCompat.getColor(ctx, bgColor))
             statusBadge.setTextColor(ContextCompat.getColor(ctx, textColor))

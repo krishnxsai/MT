@@ -619,6 +619,10 @@
     <!-- Appointment Booking -->
     <string name="book_appointment">Book Appointment</string>
     <string name="select_date_time_below">Select a date and time below</string>
+    <string name="available_days">Available Days</string>
+    <string name="tap_day_to_select">Tap a day to select it</string>
+    <string name="no_availability_set">Doctor has not set availability yet</string>
+    <string name="loading_availability">Loading schedule…</string>
     <string name="choose_a_date">Choose a date</string>
     <string name="appointment_type">Appointment Type</string>
     <string name="consultation">Consultation</string>
@@ -653,10 +657,42 @@
     <string name="status_icon">Order status icon</string>
     <string name="ship_order">Ship Order</string>
 
+    <!-- Call Feature -->
+    <string name="call">Call</string>
+    <string name="call_patient">Call Patient</string>
+    <string name="call_doctor">Call Doctor</string>
+    <string name="call_pharmacy">Call Pharmacy</string>
+    <string name="no_phone_number_available">No phone number available</string>
+    <string name="no_phone_number_for">No phone number available for %1$s</string>
+    <string name="unable_to_make_call">Unable to make call</string>
+
     <!-- Order History -->
     <string name="my_orders">My Orders</string>
     <string name="active_orders">Active Orders</string>
     <string name="past_orders">Past Orders</string>
     <string name="no_orders_yet">No Orders Yet</string>
     <string name="order_medicines_from_nearby_pharmacies">Order medicines from nearby pharmacies</string>
+
+    <!-- Payment -->
+    <string name="payment">Payment</string>
+    <string name="processing_your_payment">Processing your payment…</string>
+    <string name="payment_successful">Payment Successful!</string>
+    <string name="your_order_confirmed">Your order has been confirmed</string>
+    <string name="payment_failed">Payment Failed</string>
+    <string name="payment_cancelled">Payment Cancelled</string>
+    <string name="error_verifying_payment">Error verifying payment</string>
+    <string name="retry">Retry</string>
+    <string name="continue_btn">Continue</string>
+    <string name="verifying_payment">Verifying payment…</string>
+    <string name="creating_order">Creating order…</string>
+    <string name="order_created">Order Created</string>
+    <string name="please_complete_payment">Please complete the payment to confirm your order</string>
+    <string name="payment_error_title">Payment Error</string>
+    <string name="try_again">Try Again</string>
+    <string name="payment_method">Payment Method</string>
+    <string name="order_amount">Order Amount</string>
+    <string name="confirm_payment">Confirm Payment</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+
 </resources>

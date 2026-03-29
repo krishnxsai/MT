@@ -8,9 +8,10 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- Location Permissions (for nearby pharmacies) -->
+    <!-- Location Permissions (for nearby pharmacies & delivery tracking) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- Alarm & Notification Permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -219,6 +220,19 @@
             android:exported="false"
             android:label="My Orders" />
 
+        <!-- Payment Activity (Razorpay) -->
+        <activity
+            android:name=".ui.payment.PaymentActivity"
+            android:exported="false"
+            android:label="Payment"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Notification Settings Activity -->
+        <activity
+            android:name=".ui.settings.NotificationSettingsActivity"
+            android:exported="false"
+            android:label="Notification Settings" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -251,6 +265,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Delivery Location Service (Real-time GPS tracking) -->
+        <service
+            android:name=".service.DeliveryLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- Broadcast Receivers -->
         <receiver

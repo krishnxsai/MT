@@ -53,11 +53,19 @@ data class RefillOrder(
     val deliveryAddress: DeliveryAddress? = null,
     val deliveryType: DeliveryType = DeliveryType.DELIVERY,
     val estimatedDeliveryMinutes: Int = 0,
+    val deliveryWindow: DeliveryWindow = DeliveryWindow.flexible(),
+    val preferredDeliveryDate: Date? = null,
 
     // ── Real-time tracking (NEW) ─────────────────────────────────
     /** Delivery person's current location */
     val currentLocation: GeoPoint? = null,
     val lastLocationUpdate: Date? = null,
+
+    /** Reference to active tracking document in deliveryTracking collection */
+    val deliveryTrackingId: String = "",
+
+    /** Denormalized pharmacy location for map display */
+    val pharmacyLocation: GeoPoint? = null,
 
     // ── Status change tracking ───────────────────────────────────
     val statusHistory: List<OrderStatusEntry> = emptyList(),
@@ -105,6 +113,8 @@ data class RefillOrder(
         "deliveryType" to deliveryType.name,
         "estimatedDeliveryMinutes" to estimatedDeliveryMinutes,
         "estimatedDeliveryTime" to estimatedDeliveryMinutes,
+        "deliveryWindow" to deliveryWindow.toMap(),
+        "preferredDeliveryDate" to preferredDeliveryDate,
         "currentLocation" to currentLocation,
         "lastLocationUpdate" to lastLocationUpdate,
         "statusHistory" to statusHistory.map { it.toMap() },
@@ -176,6 +186,10 @@ data class RefillOrder(
                     (map["estimatedDeliveryMinutes"] as? Number)?.toInt()
                         ?: (map["estimatedDeliveryTime"] as? Number)?.toInt()
                         ?: 0,
+                deliveryWindow = @Suppress("UNCHECKED_CAST") ((map["deliveryWindow"] as? Map<String, Any?>)?.let {
+                    DeliveryWindow.fromMap(it)
+                } ?: DeliveryWindow.flexible()),
+                preferredDeliveryDate = (map["preferredDeliveryDate"] as? Timestamp)?.toDate(),
                 currentLocation = map["currentLocation"] as? GeoPoint,
                 lastLocationUpdate = (map["lastLocationUpdate"] as? Timestamp)?.toDate(),
                 statusHistory = historyList,
@@ -189,51 +203,9 @@ data class RefillOrder(
     }
 }
 
-enum class OrderStatus {
-    PENDING,
-    CONFIRMED,
-    PREPARING,
-    READY,
-    SHIPPED,
-    DELIVERED,
-    CANCELLED;
-
-    fun displayName(): String = name.lowercase().replaceFirstChar { it.uppercase() }
-
-    fun getDisplayLabel(): String = when (this) {
-        PENDING -> "Pending"
-        CONFIRMED -> "Accepted"
-        PREPARING -> "Preparing"
-        READY -> "Ready"
-        SHIPPED -> "Out for Delivery"
-        DELIVERED -> "Delivered"
-        CANCELLED -> "Cancelled"
-    }
-
-    fun getStatusIcon(): Int = when (this) {
-        PENDING -> com.meditrack.app.R.drawable.ic_clock
-        CONFIRMED -> com.meditrack.app.R.drawable.ic_check_circle
-        PREPARING -> com.meditrack.app.R.drawable.ic_hourglass
-        READY -> com.meditrack.app.R.drawable.ic_package
-        SHIPPED -> com.meditrack.app.R.drawable.ic_delivery
-        DELIVERED -> com.meditrack.app.R.drawable.ic_home
-        CANCELLED -> com.meditrack.app.R.drawable.ic_close_circle
-    }
-
-    fun getStatusColor(): Int = when (this) {
-        PENDING -> com.meditrack.app.R.color.warning
-        CONFIRMED -> com.meditrack.app.R.color.info
-        PREPARING -> com.meditrack.app.R.color.secondary
-        READY -> com.meditrack.app.R.color.secondary
-        SHIPPED -> com.meditrack.app.R.color.secondary
-        DELIVERED -> com.meditrack.app.R.color.success
-        CANCELLED -> com.meditrack.app.R.color.error
-    }
-}
-
 // ── Display helper extensions ─────────────────────────────────────────
 
-fun RefillOrder.getDisplayStatus(): String = status.getDisplayLabel()
+fun RefillOrder.getDisplayStatus(): String = status.displayName()
 
 fun RefillOrder.getStatusIcon(): Int = status.getStatusIcon()
 
@@ -351,12 +323,3 @@ data class DeliveryAddress(
         }
     }
 }
-
-/**
- * Type of delivery for an order.
- */
-enum class DeliveryType {
-    DELIVERY,   // Deliver to address
-    PICKUP      // Customer picks up from pharmacy
-}
-

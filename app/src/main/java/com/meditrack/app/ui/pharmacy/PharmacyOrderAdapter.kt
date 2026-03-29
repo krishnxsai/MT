@@ -15,7 +15,8 @@ import java.util.Locale
 
 class PharmacyOrderAdapter(
     private val onAccept: (RefillOrder) -> Unit,
-    private val onReject: (RefillOrder) -> Unit
+    private val onReject: (RefillOrder) -> Unit,
+    private val onCall: (RefillOrder) -> Unit
 ) : ListAdapter<RefillOrder, PharmacyOrderAdapter.OrderViewHolder>(OrderDiffCallback()) {
 
     private var patientNames: Map<String, String> = emptyMap()
@@ -119,10 +120,17 @@ class PharmacyOrderAdapter(
                     binding.statusChip.setTextColor(context.getColor(R.color.on_error_container))
                     binding.actionButtonsLayout.visibility = View.GONE
                 }
+                OrderStatus.RETURNED -> {
+                    binding.statusChip.text = "Returned"
+                    binding.statusChip.setChipBackgroundColorResource(R.color.error_container)
+                    binding.statusChip.setTextColor(context.getColor(R.color.on_error_container))
+                    binding.actionButtonsLayout.visibility = View.GONE
+                }
             }
 
             binding.acceptButton.setOnClickListener { onAccept(order) }
             binding.rejectButton.setOnClickListener { onReject(order) }
+            binding.callPatientButton.setOnClickListener { onCall(order) }
         }
     }
 

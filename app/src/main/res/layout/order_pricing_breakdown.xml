@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Pricing Header -->
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Order Summary"
+        android:textAppearance="?attr/textAppearanceHeadline6"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Items Breakdown (RecyclerView or scrollable) -->
+    <LinearLayout
+        android:id="@+id/items_breakdown_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/dividerColor"
+        android:layout_marginVertical="12dp" />
+
+    <!-- Pricing Details -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Subtotal -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Items Subtotal"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tv_subtotal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0.00"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+        </LinearLayout>
+
+        <!-- Delivery Fee -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Delivery Fee"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tv_delivery_window"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Flexible (Any time)"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:alpha="0.7" />
+            </LinearLayout>
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tv_delivery_fee"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0.00"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+        </LinearLayout>
+
+        <!-- Change Delivery Window Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_change_delivery_window"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Change Delivery Window"
+            android:layout_marginStart="0dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <!-- GST -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="GST (18%)"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tv_gst"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0.00"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/dividerColor"
+            android:layout_marginVertical="12dp" />
+
+        <!-- Total Amount -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Amount"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textColor="?attr/colorPrimary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tv_total_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0.00"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
+
+        <!-- Estimated Delivery Time -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/tv_estimated_delivery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Estimated delivery: 30 minutes"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:alpha="0.7"
+            android:layout_marginTop="12dp"
+            android:gravity="center" />
+    </LinearLayout>
+</LinearLayout>

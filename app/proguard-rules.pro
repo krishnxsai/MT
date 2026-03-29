@@ -18,6 +18,19 @@
 # Hide the original source file name.
 -renamesourcefileattribute SourceFile
 
+# ---- Razorpay Payment Gateway ----
+# Keep Razorpay classes and methods for payment processing
+-keep class com.razorpay.** { *; }
+-dontwarn com.razorpay.**
+-keepattributes *Annotation*
+-keep class com.razorpay.AnalyticsEvent { *; }
+-keep class com.razorpay.* { *; }
+-keep interface com.razorpay.* { *; }
+
+# Keep ProGuard annotations (required by Razorpay SDK)
+-dontnote proguard.annotation.Keep
+-dontnote proguard.annotation.KeepClassMembers
+
 # ---- Firebase ----
 # Firebase and Google Play Services ship their own consumer ProGuard rules.
 # Only add specific keeps if crashes occur after minification.
@@ -25,8 +38,8 @@
 -dontwarn com.google.android.gms.**
 
 # ---- Firebase Firestore model classes ----
-# Keep any data classes used with Firestore (adjust package as needed)
--keep class com.example.meditrack.data.model.** { *; }
+# Keep MediTrack data model classes used with Firestore
+-keep class com.meditrack.app.data.model.** { *; }
 
 # ---- Glide ----
 -keep public class * implements com.bumptech.glide.module.GlideModule
@@ -47,7 +60,7 @@
 -dontwarn androidx.credentials.**
 
 # ---- Keep ViewBinding generated classes ----
--keep class com.example.meditrack.databinding.** { *; }
+-keep class com.meditrack.app.databinding.** { *; }
 
 # ---- Keep Kotlin Serialization (if used) ----
 -keepattributes *Annotation*

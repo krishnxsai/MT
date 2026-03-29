@@ -8,16 +8,21 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.meditrack.app.R
 import com.meditrack.app.data.model.AppointmentType
+import com.meditrack.app.data.model.DoctorAvailability
 import com.meditrack.app.data.model.Resource
 import com.meditrack.app.data.repository.TimeSlot
 import com.meditrack.app.databinding.ActivityAppointmentBookingBinding
+import com.meditrack.app.util.CallUtils
 import java.text.SimpleDateFormat
 import java.util.*
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class AppointmentBookingActivity : AppCompatActivity() {
@@ -40,6 +45,7 @@ class AppointmentBookingActivity : AppCompatActivity() {
     private var selectedDate: Date? = null
     private var selectedSlot: TimeSlot? = null
     private var selectedType: AppointmentType = AppointmentType.CONSULTATION
+    private var availabilityList: List<DoctorAvailability> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,7 +78,11 @@ class AppointmentBookingActivity : AppCompatActivity() {
         setupDatePicker()
         setupTypeChips()
         setupBookButton()
+        setupCallButton()
         observeViewModel()
+
+        // Load doctor's availability schedule
+        viewModel.loadDoctorAvailability(doctorId)
     }
 
     private fun setupDatePicker() {
@@ -157,7 +167,68 @@ class AppointmentBookingActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupCallButton() {
+        // Try to find call button in layout and set listener
+        try {
+            binding.callDoctorButton?.setOnClickListener {
+                callDoctor()
+            }
+        } catch (e: Exception) {
+            // Call button might not exist in layout
+        }
+    }
+
+    private fun callDoctor() {
+        lifecycleScope.launch {
+            val result = viewModel.getDoctorPhone(doctorId)
+            when (result) {
+                is Resource.Success -> {
+                    val phone = result.data.orEmpty()
+                    val doctorName = intent.getStringExtra(EXTRA_DOCTOR_NAME) ?: "Doctor"
+                    CallUtils.dialPhoneNumber(this@AppointmentBookingActivity, phone, "Dr. $doctorName")
+                }
+                is Resource.Error -> {
+                    Toast.makeText(this@AppointmentBookingActivity, "Failed to load doctor contact", Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
+    }
+
     private fun observeViewModel() {
+        // Observe doctor availability for the schedule card
+        viewModel.availability.observe(this) { result ->
+            when (result) {
+                is Resource.Loading -> {
+                    binding.availabilityProgressBar.visibility = View.VISIBLE
+                    binding.availableDaysChipGroup.visibility = View.GONE
+                    binding.noAvailabilityText.visibility = View.GONE
+                    binding.tapDayHint.visibility = View.GONE
+                }
+                is Resource.Success -> {
+                    binding.availabilityProgressBar.visibility = View.GONE
+                    availabilityList = result.data
+                    if (availabilityList.isEmpty()) {
+                        binding.noAvailabilityText.visibility = View.VISIBLE
+                        binding.availableDaysChipGroup.visibility = View.GONE
+                        binding.tapDayHint.visibility = View.GONE
+                    } else {
+                        binding.noAvailabilityText.visibility = View.GONE
+                        binding.availableDaysChipGroup.visibility = View.VISIBLE
+                        binding.tapDayHint.visibility = View.VISIBLE
+                        populateAvailabilityChips(availabilityList)
+                    }
+                }
+                is Resource.Error -> {
+                    binding.availabilityProgressBar.visibility = View.GONE
+                    binding.noAvailabilityText.text = result.message
+                    binding.noAvailabilityText.visibility = View.VISIBLE
+                    binding.availableDaysChipGroup.visibility = View.GONE
+                    binding.tapDayHint.visibility = View.GONE
+                }
+            }
+        }
+
         viewModel.availableSlots.observe(this) { result ->
             when (result) {
                 is Resource.Loading -> {
@@ -260,5 +331,92 @@ class AppointmentBookingActivity : AppCompatActivity() {
     private fun updateBookButton() {
         binding.bookButton.isEnabled = selectedDate != null && selectedSlot != null
         binding.bookButton.text = if (rescheduleId.isNotEmpty()) "Reschedule Appointment" else "Book Appointment"
+    }
+
+    /**
+     * Populates the availability chips with the doctor's weekly schedule.
+     * Each chip shows the day name and time range (e.g., "Mon 9-17").
+     */
+    private fun populateAvailabilityChips(availabilityList: List<DoctorAvailability>) {
+        binding.availableDaysChipGroup.removeAllViews()
+
+        // Sort by day of week and group by day (in case multiple slots per day)
+        val byDay = availabilityList
+            .filter { it.isActive }
+            .sortedBy { it.dayOfWeek }
+            .groupBy { it.dayOfWeek }
+
+        for ((dayOfWeek, slots) in byDay) {
+            val dayName = getDayShortName(dayOfWeek)
+            // Combine time ranges if multiple slots on same day
+            val timeRange = slots.joinToString(", ") { "${formatTime(it.startTime)}-${formatTime(it.endTime)}" }
+
+            val chip = Chip(this).apply {
+                text = "$dayName\n$timeRange"
+                isCheckable = true
+                isCheckedIconVisible = false
+                setChipBackgroundColorResource(R.color.primary_container)
+                setTextColor(ContextCompat.getColor(context, R.color.primary))
+                textAlignment = View.TEXT_ALIGNMENT_CENTER
+                setOnClickListener {
+                    selectNextOccurrenceOfDay(dayOfWeek)
+                }
+            }
+            binding.availableDaysChipGroup.addView(chip)
+        }
+    }
+
+    /**
+     * Returns short day name (Mon, Tue, etc.) for ISO day of week.
+     */
+    private fun getDayShortName(isoDayOfWeek: Int): String = when (isoDayOfWeek) {
+        1 -> "Mon"
+        2 -> "Tue"
+        3 -> "Wed"
+        4 -> "Thu"
+        5 -> "Fri"
+        6 -> "Sat"
+        7 -> "Sun"
+        else -> "?"
+    }
+
+    /**
+     * Formats time string from "HH:mm" to shorter form if needed.
+     */
+    private fun formatTime(time: String): String {
+        // Remove leading zero for readability: "09:00" -> "9:00"
+        return time.trimStart('0')
+    }
+
+    /**
+     * Finds the next occurrence of the given ISO day of week (1=Mon, 7=Sun)
+     * and auto-selects it in the date picker.
+     */
+    private fun selectNextOccurrenceOfDay(isoDayOfWeek: Int) {
+        val cal = Calendar.getInstance()
+        // Convert ISO (1=Mon, 7=Sun) to Calendar (1=Sun, 2=Mon, ... 7=Sat)
+        val calendarDow = if (isoDayOfWeek == 7) Calendar.SUNDAY else isoDayOfWeek + 1
+
+        // Find next occurrence (including today if it matches)
+        val todayDow = cal.get(Calendar.DAY_OF_WEEK)
+        var daysToAdd = calendarDow - todayDow
+        if (daysToAdd < 0) {
+            daysToAdd += 7
+        }
+        cal.add(Calendar.DAY_OF_MONTH, daysToAdd)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+
+        // Update selected date and UI
+        selectedDate = cal.time
+        val fmt = SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault())
+        binding.selectDateButton.text = fmt.format(cal.time)
+        selectedSlot = null
+        updateBookButton()
+
+        // Load available slots for the selected date
+        viewModel.loadAvailableSlots(doctorId, cal.time)
     }
 }

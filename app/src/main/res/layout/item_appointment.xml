@@ -18,7 +18,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Top row: name + status -->
+        <!-- Top row: name + call + status -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -36,6 +36,18 @@
                 android:maxLines="1"
                 android:ellipsize="end"
                 tools:text="Dr. Sarah Johnson" />
+
+            <!-- Call Button -->
+            <ImageView
+                android:id="@+id/callButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_phone"
+                app:tint="@color/success"
+                android:contentDescription="@string/call" />
 
             <TextView
                 android:id="@+id/statusBadge"

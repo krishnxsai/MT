@@ -132,6 +132,7 @@ class OrderHistoryAdapter(
                 OrderStatus.SHIPPED -> R.color.secondary_container to R.color.secondary
                 OrderStatus.DELIVERED -> R.color.success_container to R.color.success
                 OrderStatus.CANCELLED -> R.color.surface_variant to R.color.text_tertiary
+                OrderStatus.RETURNED -> R.color.surface_variant to R.color.text_tertiary
             }
         }
     }

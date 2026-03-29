@@ -31,6 +31,7 @@ import com.meditrack.app.ui.chat.ChatActivity
 import com.meditrack.app.ui.chat.ChatListViewModel
 import com.meditrack.app.ui.healthlog.HealthLogAdapter
 import com.meditrack.app.ui.medicine.MedicineAdapter
+import com.meditrack.app.util.CallUtils
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -65,6 +66,7 @@ class PatientDetailActivity : AppCompatActivity() {
 
     private var patientId: String = ""
     private var patientName: String = ""
+    private var patientPhone: String = ""
     private var currentHealthLogs: List<HealthLog> = emptyList()
     private var currentPrescriptions: List<PrescriptionRecord> = emptyList()
 
@@ -158,6 +160,11 @@ class PatientDetailActivity : AppCompatActivity() {
                 putExtra(ClinicalDecisionActivity.EXTRA_PATIENT_NAME, patientName)
             }
             startActivity(intent)
+        }
+
+        // Call Patient button
+        binding.callPatientButton.setOnClickListener {
+            CallUtils.dialPhoneNumber(this, patientPhone, patientName)
         }
 
         // Chat with Patient button
@@ -341,6 +348,9 @@ class PatientDetailActivity : AppCompatActivity() {
     private fun updatePatientHeader(patient: User) {
         binding.patientName.text = patient.displayName.ifEmpty { "Unknown" }
         binding.patientEmail.text = patient.email
+
+        // Store phone for call button
+        patientPhone = patient.phoneNumber
 
         if (patient.phoneNumber.isNotEmpty()) {
             binding.patientPhone.visibility = View.VISIBLE

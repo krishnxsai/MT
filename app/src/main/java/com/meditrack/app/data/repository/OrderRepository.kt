@@ -1,10 +1,15 @@
 package com.meditrack.app.data.repository
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.Log
 import com.meditrack.app.data.model.*
+import com.meditrack.app.service.DeliveryLocationService
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Date
+import javax.inject.Inject
 
 /**
  * Repository for medicine refill orders.
@@ -23,7 +29,9 @@ import java.util.Date
  *  • Decrementing stock when medicine is taken
  *  • Low-stock detection
  */
-class OrderRepository {
+class OrderRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     companion object {
         private const val TAG = "OrderRepository"
@@ -34,6 +42,9 @@ class OrderRepository {
 
     private val ordersCol by lazy { firestore.collection("orders") }
     private val medicinesCol by lazy { firestore.collection("medicines") }
+    private val inventoryCol by lazy { firestore.collection("pharmacyInventory") }
+    private val cancellationRequestsCol by lazy { firestore.collection("cancellationRequests") }
+    private val transactionsCol by lazy { firestore.collection("transactions") }
 
     private val currentUserId: String?
         get() = auth.currentUser?.uid
@@ -224,6 +235,29 @@ class OrderRepository {
                 return@withContext Resource.Error("Pharmacy must be selected")
             }
 
+            // ── PHASE 3: VALIDATE INVENTORY ──────────────────────────────────
+            // Check stock availability for all items before confirming order
+            val inventoryValidation = validateInventory(order)
+            if (inventoryValidation !is Resource.Success) {
+                val errorMsg = if (inventoryValidation is Resource.Error) inventoryValidation.message else "Inventory check failed"
+                Log.w(TAG, "Inventory validation failed: $errorMsg")
+                return@withContext inventoryValidation as Resource.Error
+            }
+
+            // Fetch pharmacy details to get location for map display
+            var pharmacyLocationGeoPoint: com.google.firebase.firestore.GeoPoint? = null
+            try {
+                val pharmacyDoc = firestore.collection("pharmacies")
+                    .document(order.pharmacyId).get().await()
+                val lat = pharmacyDoc.getDouble("latitude")
+                val lng = pharmacyDoc.getDouble("longitude")
+                if (lat != null && lng != null) {
+                    pharmacyLocationGeoPoint = com.google.firebase.firestore.GeoPoint(lat, lng)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to fetch pharmacy location: ${e.message}")
+            }
+
             val initialStatus = OrderStatusEntry(
                 status = OrderStatus.PENDING.name,
                 changedAt = Date(),
@@ -233,7 +267,8 @@ class OrderRepository {
             val orderWithUser = order.copy(
                 userId = userId,
                 status = OrderStatus.PENDING,
-                statusHistory = listOf(initialStatus)
+                statusHistory = listOf(initialStatus),
+                pharmacyLocation = pharmacyLocationGeoPoint
             )
 
             val docRef = ordersCol.document()
@@ -243,10 +278,15 @@ class OrderRepository {
             data["deliveryAddress"] = orderWithUser.deliveryAddress?.fullAddress ?: ""
             data["deliveryAddressDetails"] = orderWithUser.deliveryAddress?.toMap()
             data["deliveryLocation"] = orderWithUser.deliveryAddress?.toLocationMap()
+            data["pharmacyLocation"] = pharmacyLocationGeoPoint
             data["estimatedDeliveryTime"] = orderWithUser.estimatedDeliveryMinutes
             data["createdAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
 
             docRef.set(data).await()
+
+            // ── PHASE 3: REDUCE INVENTORY ───────────────────────────────────
+            // Reduce pharmacy inventory after order is confirmed
+            reduceInventory(order)
 
             Log.d(TAG, "Order placed successfully: ${docRef.id}")
             Resource.Success(docRef.id)
@@ -256,11 +296,86 @@ class OrderRepository {
         }
     }
 
+    // ─────────────── PHASE 3: Inventory Validation ───────────────
+
+    /**
+     * Validate that pharmacy has sufficient inventory for all order items.
+     * Must pass before allowing order placement.
+     *
+     * @param order Order with items to validate
+     * @return Success if all items in stock, Error otherwise
+     */
+    private suspend fun validateInventory(order: RefillOrder): Resource<Unit> {
+        try {
+            // If single-item order (legacy), validate that single item
+            if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
+                val docId = "${order.pharmacyId}_${order.medicineId}"
+                val invDoc = inventoryCol.document(docId).get().await()
+                val inventory = invDoc.getLong("quantity")?.toInt() ?: 0
+
+                if (inventory < order.quantity) {
+                    return Resource.Error("${order.medicineName} unavailable (in stock: $inventory, requested: ${order.quantity})")
+                }
+                return Resource.Success(Unit)
+            }
+
+            // Multi-item order: validate each item
+            for (item in order.items) {
+                val docId = "${order.pharmacyId}_${item.medicineId}"
+                val invDoc = inventoryCol.document(docId).get().await()
+                val inventory = invDoc.getLong("quantity")?.toInt() ?: 0
+
+                if (inventory < item.quantity) {
+                    return Resource.Error("${item.medicineName} unavailable (in stock: $inventory, requested: ${item.quantity})")
+                }
+            }
+
+            Log.d(TAG, "Inventory validation passed for order")
+            return Resource.Success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "validateInventory error: ${e.message}")
+            return Resource.Error(e.message ?: "Failed to validate inventory")
+        }
+    }
+
+    /**
+     * Reduce pharmacy inventory after order confirmation.
+     * Called after order is created in Firestore.
+     *
+     * @param order Order with items to reduce
+     */
+    private suspend fun reduceInventory(order: RefillOrder) {
+        try {
+            // If single-item order
+            if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
+                val docId = "${order.pharmacyId}_${order.medicineId}"
+                inventoryCol.document(docId).update(
+                    "quantity", com.google.firebase.firestore.FieldValue.increment(-order.quantity.toLong())
+                ).await()
+                Log.d(TAG, "Inventory reduced: -${order.quantity} units of ${order.medicineName}")
+                return
+            }
+
+            // Multi-item order
+            for (item in order.items) {
+                val docId = "${order.pharmacyId}_${item.medicineId}"
+                inventoryCol.document(docId).update(
+                    "quantity", com.google.firebase.firestore.FieldValue.increment(-item.quantity.toLong())
+                ).await()
+                Log.d(TAG, "Inventory reduced: -${item.quantity} units of ${item.medicineName}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "reduceInventory error: ${e.message}")
+            // Don't propagate error - order is already created
+        }
+    }
+
     // ─────────────── Order Status Management ───────────────
 
     /**
      * Update the status of an order.
      * Appends to the status history for audit trail.
+     * Starts delivery tracking service when transitioning to SHIPPED.
      */
     suspend fun updateOrderStatus(
         orderId: String,
@@ -286,6 +401,11 @@ class OrderRepository {
                 "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
             )
 
+            // If shipped, start delivery tracking service
+            if (newStatus == OrderStatus.SHIPPED) {
+                startDeliveryLocationTracking(orderId, order)
+            }
+
             // If delivered, record delivery time and update medicine stock
             if (newStatus == OrderStatus.DELIVERED) {
                 updates["deliveredAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
@@ -302,6 +422,52 @@ class OrderRepository {
         } catch (e: Exception) {
             Log.e(TAG, "updateOrderStatus error: ${e.message}")
             Resource.Error(e.message ?: "Failed to update order")
+        }
+    }
+
+    /**
+     * Start delivery location tracking service when order transitions to SHIPPED.
+     * The delivery person's location will be tracked in real-time and written to Firestore.
+     */
+    private suspend fun startDeliveryLocationTracking(orderId: String, order: RefillOrder) {
+        try {
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            if (currentUser == null) {
+                Log.w(TAG, "Cannot start delivery tracking: user not authenticated")
+                return
+            }
+
+            val deliveryPersonId = currentUser.uid
+            val deliveryPersonName = currentUser.displayName ?: "Delivery Person"
+
+            // Get pharmacy details for additional info (optional)
+            var deliveryPersonPhone = ""
+            try {
+                val userDoc = FirebaseFirestore.getInstance().collection("users")
+                    .document(deliveryPersonId).get().await()
+                deliveryPersonPhone = userDoc.getString("phoneNumber") ?: ""
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not fetch delivery person phone: ${e.message}")
+            }
+
+            // Start the delivery location service
+            val serviceIntent = Intent(context, DeliveryLocationService::class.java).apply {
+                putExtra("orderId", orderId)
+                putExtra("deliveryPersonId", deliveryPersonId)
+                putExtra("deliveryPersonName", deliveryPersonName)
+                putExtra("deliveryPersonPhone", deliveryPersonPhone)
+            }
+
+            // Start the service using foreground service for Android 12+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+
+            Log.d(TAG, "Delivery location tracking started for order: $orderId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting delivery location tracking: ${e.message}")
         }
     }
 
@@ -516,6 +682,400 @@ class OrderRepository {
                 trySend(order)
             }
         }
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Get the pharmacy phone number for an order.
+     * Used for calling pharmacy from order tracking.
+     */
+    suspend fun getPharmacyPhoneForOrder(orderId: String): Resource<String?> = withContext(Dispatchers.IO) {
+        try {
+            // Fetch the order to get pharmacyId
+            val orderDoc = ordersCol.document(orderId).get().await()
+            val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
+                ?: return@withContext Resource.Success(null)
+
+            if (order.pharmacyId.isBlank()) {
+                return@withContext Resource.Success(null)
+            }
+
+            // Fetch pharmacy details to get phone
+            val pharmacyDoc = firestore.collection("pharmacies").document(order.pharmacyId).get().await()
+            val phone = pharmacyDoc.getString("phone")
+            Resource.Success(phone)
+        } catch (e: Exception) {
+            Log.e(TAG, "getPharmacyPhoneForOrder error: ${e.message}")
+            Resource.Success(null) // Return null on error for graceful fallback
+        }
+    }
+
+    // ─────────────── Payment Integration ───────────────
+
+    /**
+     * Record payment confirmation for an order.
+     * Updates order status from PENDING to CONFIRMED.
+     * This is called after successful Razorpay payment.
+     *
+     * @param orderId Order ID
+     * @param razorpayPaymentId Razorpay payment ID
+     * @param paymentMethod Payment method used (UPI, CARD, etc.)
+     */
+    suspend fun confirmPayment(
+        orderId: String,
+        razorpayPaymentId: String,
+        paymentMethod: String = "UPI"
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val orderDoc = ordersCol.document(orderId).get().await()
+            val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
+                ?: return@withContext Resource.Error("Order not found")
+
+            if (order.status != OrderStatus.PENDING) {
+                Log.w(TAG, "Order ${order.status} already processed, cannot confirm payment")
+                return@withContext Resource.Error("Order is already ${order.status.displayName()}")
+            }
+
+            // Update order to CONFIRMED status
+            updateOrderStatus(
+                orderId,
+                OrderStatus.CONFIRMED,
+                "Payment confirmed via $paymentMethod (ID: $razorpayPaymentId)"
+            )
+
+            Log.d(TAG, "Order $orderId confirmed after payment")
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "confirmPayment error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to confirm payment")
+        }
+    }
+
+    /**
+     * Cancel order and handle payment refund.
+     * Does NOT process actual Razorpay refund (that's done by RazorpayRepository).
+     * This just updates order status and records the refund request.
+     *
+     * @param orderId Order ID to cancel
+     * @param reason Cancellation reason
+     * @param razorpayPaymentId Razorpay payment ID (if payment was made)
+     */
+    suspend fun cancelOrderWithRefund(
+        orderId: String,
+        reason: String = "",
+        razorpayPaymentId: String? = null
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val orderDoc = ordersCol.document(orderId).get().await()
+            val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
+                ?: return@withContext Resource.Error("Order not found")
+
+            // Can only cancel PENDING or CONFIRMED orders
+            if (order.status !in listOf(OrderStatus.PENDING, OrderStatus.CONFIRMED)) {
+                return@withContext Resource.Error("Cannot cancel ${order.status.displayName()} order")
+            }
+
+            // Rollback inventory if applicable (inventory validation coming in Phase 3)
+            if (order.medicineId.isNotEmpty() && order.quantity > 0) {
+                try {
+                    rollbackInventory(order.pharmacyId, order.medicineId, order.quantity)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to rollback inventory: ${e.message}")
+                    // Continue with cancellation even if rollback fails
+                }
+            }
+
+            // Update order status to CANCELLED
+            updateOrderStatus(orderId, OrderStatus.CANCELLED, reason.ifEmpty { "Cancelled by user" })
+
+            Log.d(TAG, "Order $orderId cancelled for refund: $reason")
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "cancelOrderWithRefund error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to cancel order")
+        }
+    }
+
+    /**
+     * Rollback pharmacy inventory when order is cancelled.
+     * Inverse operation of inventory reduction that happens on order confirmation.
+     * This is a helper for Phase 4 cancellation.
+     *
+     * @param pharmacyId Pharmacy ID
+     * @param medicineId Medicine ID
+     * @param quantity Quantity to add back
+     */
+    private suspend fun rollbackInventory(
+        pharmacyId: String,
+        medicineId: String,
+        quantity: Int
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val docId = "${pharmacyId}_${medicineId}"
+            inventoryCol.document(docId).update(
+                "quantity", com.google.firebase.firestore.FieldValue.increment(quantity.toLong())
+            ).await()
+
+            Log.d(TAG, "Inventory rollback: +$quantity of medicine $medicineId at pharmacy $pharmacyId")
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "rollbackInventory error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to rollback inventory")
+        }
+    }
+
+    // ─────────────── PHASE 4: Order Cancellation & Refunds ───────────────
+
+    /**
+     * Request order cancellation.
+     * For PENDING/CONFIRMED orders: auto-approved and immediately cancelled
+     * For SHIPPED+ orders: creates approval request for pharmacy
+     *
+     * @param orderId Order ID to cancel
+     * @param reason Cancellation reason
+     * @return Cancellation request ID
+     */
+    suspend fun requestCancellation(orderId: String, reason: String): Resource<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val userId = currentUserId ?: return@withContext Resource.Error("Not logged in")
+                val orderDoc = ordersCol.document(orderId).get().await()
+                val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
+                    ?: return@withContext Resource.Error("Order not found")
+
+                // Can only cancel PENDING, CONFIRMED, or PREPARING orders
+                if (order.status !in listOf(
+                    OrderStatus.PENDING,
+                    OrderStatus.CONFIRMED,
+                    OrderStatus.PREPARING
+                )) {
+                    return@withContext Resource.Error("Cannot cancel ${order.status.displayName()} order")
+                }
+
+                // Create cancellation request
+                val cancellationRequest = CancellationRequest(
+                    userId = userId,
+                    orderId = orderId,
+                    orderStatus = order.status.name,
+                    reason = reason,
+                    requestStatus = if (order.status in listOf(
+                        OrderStatus.PENDING,
+                        OrderStatus.CONFIRMED
+                    )) CancellationStatus.APPROVED else CancellationStatus.PENDING,
+                    refundAmount = order.totalAmount,
+                    razorpayPaymentId = ""  // Will fetch from transaction if exists
+                )
+
+                val docRef = cancellationRequestsCol.document()
+                cancellationRequestsCol.document(docRef.id).set(cancellationRequest.toMap()).await()
+
+                Log.d(TAG, "Cancellation request created: ${docRef.id}")
+
+                // Auto-approve for PENDING/CONFIRMED orders
+                if (cancellationRequest.requestStatus == CancellationStatus.APPROVED) {
+                    processCancellation(orderId, docRef.id, userId)
+                }
+
+                Resource.Success(docRef.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "requestCancellation error: ${e.message}")
+                Resource.Error(e.message ?: "Failed to request cancellation")
+            }
+        }
+
+    /**
+     * Process order cancellation.
+     * Handles inventory rollback and refund initiation.
+     *
+     * @param orderId Order ID
+     * @param cancellationRequestId Cancellation request ID
+     * @param approvedBy User ID who approved (default: system)
+     */
+    suspend fun processCancellation(
+        orderId: String,
+        cancellationRequestId: String,
+        approvedBy: String = "system"
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val orderDoc = ordersCol.document(orderId).get().await()
+            val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
+                ?: return@withContext Resource.Error("Order not found")
+
+            // ── 1. Restore inventory ──────────────────────────────────
+            if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
+                rollbackInventory(order.pharmacyId, order.medicineId, order.quantity)
+            } else {
+                for (item in order.items) {
+                    rollbackInventory(order.pharmacyId, item.medicineId, item.quantity)
+                }
+            }
+
+            // ── 2. Update cancellation request ────────────────────────
+            cancellationRequestsCol.document(cancellationRequestId).update(mapOf(
+                "requestStatus" to CancellationStatus.COMPLETED.name,
+                "approvedBy" to approvedBy,
+                "approvedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "inventoryRestored" to true,
+                "restoredAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            )).await()
+
+            // ── 3. Update order status ────────────────────────────────
+            updateOrderStatus(
+                orderId,
+                OrderStatus.CANCELLED,
+                "Order cancelled (request: $cancellationRequestId)"
+            )
+
+            // ── 4. Initiate refund if payment was made ────────────────
+            initiateRefund(orderId, order, cancellationRequestId)
+
+            Log.d(TAG, "Order $orderId cancelled and inventory restored")
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "processCancellation error: ${e.message}")
+            Resource.Error(e.message ?: "Failed to process cancellation")
+        }
+    }
+
+    /**
+     * Initiate refund for cancelled order with payment.
+     * Checks idempotency to prevent duplicate refunds.
+     *
+     * @param orderId Order ID
+     * @param order Order object
+     * @param cancellationRequestId Cancellation request ID
+     */
+    private suspend fun initiateRefund(
+        orderId: String,
+        order: RefillOrder,
+        cancellationRequestId: String
+    ) {
+        try {
+            // Only refund if amount > 0 and order was CONFIRMED+
+            if (order.totalAmount <= 0.0 || order.status == OrderStatus.PENDING) {
+                Log.d(TAG, "No refund needed for order $orderId (amount: ${order.totalAmount}, status: ${order.status})")
+                return
+            }
+
+            // Get payment ID from transactions
+            val transactionSnapshot = transactionsCol
+                .whereEqualTo("orderId", orderId)
+                .whereEqualTo("type", "PURCHASE")
+                .limit(1)
+                .get()
+                .await()
+
+            val razorpayPaymentId = transactionSnapshot.documents.firstOrNull()
+                ?.getString("razorpayPaymentId") ?: ""
+
+            if (razorpayPaymentId.isEmpty()) {
+                Log.w(TAG, "No payment ID found for order $orderId")
+                return
+            }
+
+            // Generate idempotency key to prevent duplicate refunds
+            val idempotencyKey = generateIdempotencyKey(orderId)
+
+            // Check if refund already exists for this order
+            val existingRefund = transactionsCol
+                .whereEqualTo("orderId", orderId)
+                .whereEqualTo("type", "REFUND")
+                .limit(1)
+                .get()
+                .await()
+
+            if (existingRefund.documents.isNotEmpty()) {
+                Log.d(TAG, "Refund already exists for order $orderId")
+                return
+            }
+
+            // Create refund transaction record (marks refund as pending)
+            val refundTransaction = OrderTransaction(
+                userId = order.userId,
+                orderId = orderId,
+                type = TransactionType.REFUND,
+                amount = order.totalAmount,
+                currency = "INR",
+                status = TransactionStatus.PENDING,
+                pharmacyId = order.pharmacyId,
+                pharmacyName = order.pharmacyName,
+                razorpayPaymentId = razorpayPaymentId,
+                notes = "Refund for cancelled order (request: $cancellationRequestId)"
+            )
+
+            transactionsCol.document().set(refundTransaction.toMap()).await()
+
+            Log.d(TAG, "Refund transaction created for order $orderId (idempotency key: $idempotencyKey)")
+        } catch (e: Exception) {
+            Log.e(TAG, "initiateRefund error: ${e.message}")
+            // Don't throw - refund initiation failure shouldn't block cancellation
+        }
+    }
+
+    /**
+     * Generate idempotency key for refund deduplication.
+     * SHA256 hash of orderId to create unique key.
+     *
+     * @param orderId Order ID
+     * @return Idempotency key
+     */
+    private fun generateIdempotencyKey(orderId: String): String {
+        return try {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val hashBytes = digest.digest(orderId.toByteArray())
+            hashBytes.joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to generate SHA256 key, using orderId: ${e.message}")
+            orderId
+        }
+    }
+
+    /**
+     * Get cancellation request details.
+     */
+    suspend fun getCancellationRequest(requestId: String): Resource<CancellationRequest> =
+        withContext(Dispatchers.IO) {
+            try {
+                val doc = cancellationRequestsCol.document(requestId).get().await()
+                val request = doc.data?.let { CancellationRequest.fromMap(doc.id, it) }
+                    ?: return@withContext Resource.Error("Cancellation request not found")
+                Resource.Success(request)
+            } catch (e: Exception) {
+                Log.e(TAG, "getCancellationRequest error: ${e.message}")
+                Resource.Error(e.message ?: "Failed to get cancellation request")
+            }
+        }
+
+    /**
+     * Get all cancellation requests for current user.
+     */
+    fun getCancellationRequestsFlow(): Flow<Resource<List<CancellationRequest>>> = callbackFlow {
+        val userId = currentUserId
+        if (userId == null) {
+            trySend(Resource.Error("Not logged in"))
+            close()
+            return@callbackFlow
+        }
+
+        trySend(Resource.Loading)
+
+        val listener = cancellationRequestsCol
+            .whereEqualTo("userId", userId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "getCancellationRequestsFlow error: ${error.message}")
+                    trySend(Resource.Success(emptyList()))
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { CancellationRequest.fromMap(doc.id, it) }
+                } ?: emptyList()
+                trySend(Resource.Success(list))
+            }
+
         awaitClose { listener.remove() }
     }
 }

@@ -363,5 +363,132 @@ class AuthRepository(private val context: Context? = null) {
             Resource.Error(e.message ?: "Failed to fetch user names")
         }
     }
+
+    // ─────────────── Account Deletion (Phase 5) ───────────────
+
+    /**
+     * Request account deletion with 30-day grace period.
+     * User can cancel deletion request within the grace period.
+     *
+     * @param reason User-provided reason for deletion
+     * @return DeletionRequest ID
+     */
+    suspend fun requestAccountDeletion(reason: String = ""): Resource<String> = withContext(Dispatchers.IO) {
+        try {
+            val userId = auth.currentUser?.uid ?: return@withContext Resource.Error("Not logged in")
+
+            // Calculate deletion date (30 days from now)
+            val gracePeriodMs = 30L * 24 * 60 * 60 * 1000  // 30 days
+            val scheduledDeleteTime = System.currentTimeMillis() + gracePeriodMs
+
+            // Create deletion request document
+            val deletionRequestData = mapOf(
+                "userId" to userId,
+                "requestedAt" to System.currentTimeMillis(),
+                "scheduledDeleteDate" to scheduledDeleteTime,
+                "status" to "PENDING",
+                "reason" to reason,
+                "markedForDeletion" to true,
+                "deletionScheduledAt" to scheduledDeleteTime,
+                "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            )
+
+            val requestRef = firestore.collection("deletionRequests").document(userId)
+            requestRef.set(deletionRequestData).await()
+
+            // Mark user account for deletion
+            usersCollection.document(userId).update(mapOf(
+                "markedForDeletion" to true,
+                "deletionScheduledAt" to scheduledDeleteTime,
+                "deletionReason" to reason
+            )).await()
+
+            // Log deletion request
+            firestore.collection("auditLogs").document().set(mapOf(
+                "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "action" to "ACCOUNT_DELETION_REQUESTED",
+                "userId" to userId,
+                "reason" to reason,
+                "gracePeriodExpires" to scheduledDeleteTime
+            )).await()
+
+            Resource.Success(userId)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to request account deletion")
+        }
+    }
+
+    /**
+     * Cancel account deletion request within grace period.
+     * Returns error if grace period has expired.
+     *
+     * @return Success if cancellation completed
+     */
+    suspend fun cancelAccountDeletion(): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val userId = auth.currentUser?.uid ?: return@withContext Resource.Error("Not logged in")
+
+            val deletionRequest = firestore.collection("deletionRequests")
+                .document(userId).get().await()
+
+            if (!deletionRequest.exists()) {
+                return@withContext Resource.Error("No deletion request found")
+            }
+
+            val scheduledDeleteDate = deletionRequest.getLong("scheduledDeleteDate") ?: 0L
+            val now = System.currentTimeMillis()
+
+            if (now >= scheduledDeleteDate) {
+                return@withContext Resource.Error("Grace period has expired. Account deletion cannot be cancelled.")
+            }
+
+            // Update deletion request status
+            firestore.collection("deletionRequests").document(userId).update(mapOf(
+                "status" to "CANCELLED",
+                "cancelledAt" to System.currentTimeMillis()
+            )).await()
+
+            // Remove deletion marker from user document
+            usersCollection.document(userId).update(mapOf(
+                "markedForDeletion" to false,
+                "deletionScheduledAt" to com.google.firebase.firestore.FieldValue.delete(),
+                "deletionReason" to com.google.firebase.firestore.FieldValue.delete()
+            )).await()
+
+            // Log cancellation
+            firestore.collection("auditLogs").document().set(mapOf(
+                "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "action" to "ACCOUNT_DELETION_CANCELLED",
+                "userId" to userId
+            )).await()
+
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to cancel account deletion")
+        }
+    }
+
+    /**
+     * Get deletion request status for current user.
+     */
+    suspend fun getDeletionRequestStatus(): Resource<Pair<String, Long>?> = withContext(Dispatchers.IO) {
+        try {
+            val userId = auth.currentUser?.uid ?: return@withContext Resource.Error("Not logged in")
+
+            val deletionRequest = firestore.collection("deletionRequests")
+                .document(userId).get().await()
+
+            if (!deletionRequest.exists()) {
+                return@withContext Resource.Success(null)
+            }
+
+            val status = deletionRequest.getString("status") ?: "UNKNOWN"
+            val scheduledDate = deletionRequest.getLong("scheduledDeleteDate") ?: 0L
+
+            Resource.Success(Pair(status, scheduledDate))
+        } catch (e: Exception) {
+            Resource.Success(null)  // Return null if document doesn't exist
+        }
+    }
 }
 

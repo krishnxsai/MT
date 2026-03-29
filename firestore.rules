@@ -67,6 +67,27 @@ service cloud.firestore {
              request.auth.uid in patientData.assignedDoctors;
     }
 
+    // Helper function: Patient can read appointment schedule for assigned doctors
+    // Used by booking flow to compute available slots from occupied appointment times.
+    function canPatientReadAssignedDoctorSchedule(doctorId) {
+      let me = getUserData(request.auth.uid);
+      return isAuthenticated() &&
+             me.role == 'PATIENT' &&
+             'assignedDoctors' in me &&
+             doctorId in me.assignedDoctors;
+    }
+
+    // Helper function: Patient can read profile of assigned doctors only.
+    function canPatientReadAssignedDoctorProfile(targetUserId) {
+      let me = getUserData(request.auth.uid);
+      let target = getUserData(targetUserId);
+      return isAuthenticated() &&
+             me.role == 'PATIENT' &&
+             target.role == 'DOCTOR' &&
+             'assignedDoctors' in me &&
+             targetUserId in me.assignedDoctors;
+    }
+
     // Helper function: Check if current pharmacy user owns the given pharmacy
     // Used for cross-tenant isolation — ensures pharmacy A cannot access pharmacy B's data
     function isPharmacyOwner(pharmacyId) {
@@ -89,16 +110,6 @@ service cloud.firestore {
              (current == 'READY'           && next in ['SHIPPED', 'CANCELLED']) ||
              (current == 'SHIPPED'         && next in ['DELIVERED']) ||
              (current == 'DELIVERED'       && next in ['RETURNED']);
-    }
-
-    // Helper: Validate appointment status transitions
-    function isValidAppointmentTransition() {
-      let current = resource.data.status;
-      let next = request.resource.data.status;
-      return (current == 'PENDING'    && next in ['CONFIRMED', 'CANCELLED', 'REJECTED']) ||
-             (current == 'CONFIRMED'  && next in ['COMPLETED', 'CANCELLED', 'NO_SHOW']) ||
-             (current == 'CANCELLED'  && false) ||
-             (current == 'COMPLETED'  && false);
     }
 
     // Helper: Validate medicine fields
@@ -124,11 +135,6 @@ service cloud.firestore {
           && d.role is string && d.role in ['PATIENT', 'DOCTOR', 'PHARMACY'];
     }
 
-    // Helper: Check if pharmacy has an order from the user (for scoped reads)
-    function pharmacyHasActiveOrderFromUser(userId) {
-      return isApprovedPharmacy();
-    }
-
     // ==================== Users Collection ====================
     match /users/{userId} {
       // Users can read their own profile
@@ -138,6 +144,7 @@ service cloud.firestore {
       allow read: if isOwner(userId) ||
                   isAdmin() ||
                   isDoctorAssignedToPatient(userId) ||
+                  canPatientReadAssignedDoctorProfile(userId) ||
                   isApprovedPharmacy();
 
       // Users can only create their own document
@@ -205,7 +212,8 @@ service cloud.firestore {
       // Users can create health logs with their own userId
       allow create: if isAuthenticated() &&
                     request.resource.data.userId == request.auth.uid &&
-                    hasRequiredFields(['userId', 'date']);
+                    hasRequiredFields(['userId', 'date']) &&
+                    isValidHealthLog();
 
       // Users can update their own health logs
       allow update: if isAuthenticated() &&
@@ -404,6 +412,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                   (resource.data.doctorId == request.auth.uid ||
                    resource.data.patientId == request.auth.uid ||
+                   canPatientReadAssignedDoctorSchedule(resource.data.doctorId) ||
                    isAdmin());
 
       // Patients or doctors can create appointments (booking)
@@ -574,6 +583,154 @@ service cloud.firestore {
       // Users can delete their own cart
       allow delete: if isAuthenticated() &&
                     resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== Delivery Tracking Collection ====================
+    // Real-time GPS tracking for delivery persons while order is OUT_FOR_DELIVERY
+    // One document per active delivery order: ongoing_{orderId}
+    match /deliveryTracking/{trackingId} {
+      // Patients can read tracking updates for their own orders (real-time listener)
+      // Rule: Check if this tracking document belongs to a delivery of user's order
+      allow read: if isAuthenticated() &&
+                  exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
+                  get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.userId == request.auth.uid;
+
+      // Delivery person can create/update tracking for their active deliveries
+      // Write permission: deliveryPersonId matches authenticated user OR
+      // Coming from Delivery Location Service (all write operations)
+      allow create, update: if isAuthenticated() &&
+                            request.resource.data.deliveryPersonId == request.auth.uid &&
+                            request.resource.data.orderId != "";
+
+      // Only delivery persons can write tracking data (no patients, no direct deletes)
+      allow delete: if false;
+    }
+
+    // ==================== Payments Collection (Razorpay) ====================
+    // Stores payment order records from Razorpay integration
+    // Reference: /payments/{paymentId}
+    match /payments/{paymentId} {
+      // Users can read their own payment records
+      // Admins can read all payments for auditing
+      allow read: if isAuthenticated() &&
+                  (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Users can create payment records with their own userId
+      // These are created by /ui/payment/PaymentActivity via RazorpayRepository
+      allow create: if isAuthenticated() &&
+                    hasRequiredFields(['userId', 'amount', 'currency']) &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // Payments are immutable — no updates after creation
+      // (Razorpay payment records cannot be modified, only viewed)
+      allow update: if false;
+
+      // Payments are never deleted — they form audit trail
+      // (Regulatory requirement: payment records must be retained)
+      allow delete: if false;
+    }
+
+    // ==================== Notification Preferences Collection ====================
+    // Stores user notification settings: quiet hours, notification type toggles
+    // Reference: /notificationPreferences/{userId}
+    match /notificationPreferences/{userId} {
+      // Users can read their own notification preferences
+      // Admins can read all preferences
+      allow read: if isAuthenticated() &&
+                  (isOwner(userId) || isAdmin());
+
+      // Users can create their own notification preference document
+      allow create: if isAuthenticated() &&
+                    isOwner(userId) &&
+                    hasRequiredFields(['userId']);
+
+      // Users can update their own notification preferences
+      // userId is immutable after creation
+      allow update: if isAuthenticated() &&
+                    isOwner(userId) &&
+                    request.resource.data.userId == resource.data.userId;
+
+      // Only admins can delete notification preferences
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Cancellation Requests Collection ====================
+    // Stores order cancellation requests with approval workflow and refund tracking
+    // Reference: /cancellationRequests/{requestId}
+    match /cancellationRequests/{requestId} {
+      // Users can read their own cancellation requests
+      // Pharmacies can read cancellation requests for their orders (approvals)
+      // Admins can read all cancellation requests
+      allow read: if isAuthenticated() &&
+                  (resource.data.userId == request.auth.uid ||
+                   isAdmin() ||
+                   (isApprovedPharmacy() && exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
+                    get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.pharmacyId == getUserData(request.auth.uid).pharmacyId));
+
+      // Users can create cancellation requests for their own pending/confirmed/preparing orders
+      allow create: if isAuthenticated() &&
+                    hasRequiredFields(['userId', 'orderId', 'reason']) &&
+                    request.resource.data.userId == request.auth.uid &&
+                    exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId));
+
+      // Pharmacies/Admins can update cancellation status for approval
+      // Users cannot update their own requests once created
+      allow update: if isAuthenticated() &&
+                    (isAdmin() ||
+                     (isApprovedPharmacy() && exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
+                      get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.pharmacyId == getUserData(request.auth.uid).pharmacyId)) &&
+                    // Only certain fields can be updated during approval
+                    (request.resource.data.requestStatus != resource.data.requestStatus ||
+                     request.resource.data.approvedBy != resource.data.approvedBy ||
+                     request.resource.data.refundStatus != resource.data.refundStatus);
+
+      // Cancellation requests cannot be deleted (they form audit trail)
+      allow delete: if false;
+    }
+
+    // ==================== Deletion Requests Collection ====================
+    // Stores user account deletion requests with 30-day grace period
+    // Reference: /deletionRequests/{userId}
+    match /deletionRequests/{userId} {
+      // Users can read their own deletion request
+      // Admins can read all deletion requests
+      allow read: if isAuthenticated() &&
+                  (isOwner(userId) || isAdmin());
+
+      // Users can create deletion request for their own account
+      allow create: if isAuthenticated() &&
+                    isOwner(userId) &&
+                    hasRequiredFields(['userId', 'requestedAt', 'scheduledDeleteDate', 'status']);
+
+      // Users can update their own deletion request to cancel (within grace period)
+      // Admins can update any deletion request
+      allow update: if isAuthenticated() &&
+                    (isAdmin() ||
+                     (isOwner(userId) && request.resource.data.status == 'CANCELLED')) &&
+                    isOwner(userId);
+
+      // Deletion requests cannot be manually deleted (audit trail)
+      allow delete: if false;
+    }
+
+    // ==================== Audit Logs Collection ====================
+    // Immutable audit trail for compliance and debugging
+    // Reference: /auditLogs/{docId}
+    match /auditLogs/{docId} {
+      // Admins can read audit logs
+      // Users can read their own audit entries
+      allow read: if isAuthenticated() &&
+                  (isAdmin() ||
+                   (resource.data.userId == request.auth.uid));
+
+      // Only the system (via Cloud Functions) can create audit logs
+      // But clients can also create for local actions
+      allow create: if isAuthenticated() &&
+                    hasRequiredFields(['action', 'timestamp']);
+
+      // Audit logs are immutable (never update or delete)
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

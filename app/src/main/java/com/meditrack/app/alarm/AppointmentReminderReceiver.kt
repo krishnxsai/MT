@@ -8,7 +8,12 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.meditrack.app.MediTrackApplication
 import com.meditrack.app.R
+import com.meditrack.app.data.model.NotificationType
+import com.meditrack.app.data.repository.NotificationPreferenceRepository
 import com.meditrack.app.ui.appointment.AppointmentsListActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * BroadcastReceiver that fires ~30 minutes before an appointment
@@ -36,7 +41,17 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         val title = "Appointment Reminder"
         val body = "Your appointment (Dr. $doctorName & $patientName)$timeText is in about 30 minutes."
 
-        showNotification(context, appointmentId, title, body)
+        // Check notification preferences before showing notification
+        val preferenceRepo = NotificationPreferenceRepository()
+        CoroutineScope(Dispatchers.IO).launch {
+            val isAllowed = preferenceRepo.isNotificationAllowed(NotificationType.APPOINTMENT)
+            if (isAllowed) {
+                showNotification(context, appointmentId, title, body)
+                Log.d(TAG, "Appointment notification shown (preferences allowed)")
+            } else {
+                Log.d(TAG, "Appointment notification suppressed (quiet hours or disabled)")
+            }
+        }
     }
 
     private fun showNotification(context: Context, appointmentId: String, title: String, body: String) {

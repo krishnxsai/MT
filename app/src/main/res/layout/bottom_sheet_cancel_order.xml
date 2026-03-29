@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cancel Order"
+        android:textAppearance="?attr/textAppearanceHeadline6"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tell us why you want to cancel this order. Your payment will be refunded."
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:alpha="0.7"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Predefined Reason Chips -->
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select or enter reason:"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:selectionRequired="false">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_unauthorized"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ordered by mistake"
+            app:chipIcon="@drawable/ic_close"
+            app:chipIconTint="?attr/colorPrimary" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_delay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Taking too long"
+            app:chipIcon="@drawable/ic_clock"
+            app:chipIconTint="?attr/colorPrimary" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_wrong_item"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wrong item/qty"
+            app:chipIcon="@drawable/ic_close_circle"
+            app:chipIconTint="?attr/colorPrimary" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_other"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Other"
+            app:chipIcon="@drawable/ic_help"
+            app:chipIconTint="?attr/colorPrimary" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Reason Text Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Reason for cancellation (optional)"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_cancellation_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:minLines="2" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Loading Progress -->
+    <ProgressBar
+        android:id="@+id/loading_progress_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginTop="12dp" />
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Keep Order"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_order"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel Order"
+            style="@style/Widget.MaterialComponents.Button"
+            app:backgroundTint="?attr/colorError" />
+    </LinearLayout>
+
+    <!-- Info Text -->
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚠️ Cancelled orders cannot be restored. Your payment will be refunded within 5-7 business days."
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:alpha="0.7"
+        android:layout_marginTop="8dp" />
+</LinearLayout>

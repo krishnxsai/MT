@@ -1,9 +1,11 @@
 package com.meditrack.app.core.di
 
+import android.content.Context
 import com.meditrack.app.data.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -37,7 +39,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideOrderRepository(): OrderRepository = OrderRepository()
+    fun provideOrderRepository(@ApplicationContext context: Context): OrderRepository =
+        OrderRepository(context)
 
     @Provides
     @Singleton
@@ -70,4 +73,30 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideRefillAlertRepository(): RefillAlertRepository = RefillAlertRepository()
+
+    @Provides
+    @Singleton
+    fun provideDeliveryTrackingRepository(): DeliveryTrackingRepository = DeliveryTrackingRepository()
+
+    @Provides
+    @Singleton
+    fun provideStockForecastRepository(): StockForecastRepository = StockForecastRepository()
+
+    @Provides
+    @Singleton
+    fun provideRazorpayRepository(@ApplicationContext context: Context): RazorpayRepository =
+        RazorpayRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideNotificationPreferenceRepository(): NotificationPreferenceRepository =
+        NotificationPreferenceRepository()
+
+    @Provides
+    @Singleton
+    fun providePricingRepository(): PricingRepository = PricingRepository()
+
+    @Provides
+    @Singleton
+    fun provideFeatureFlagRepository(): FeatureFlagRepository = FeatureFlagRepository()
 }

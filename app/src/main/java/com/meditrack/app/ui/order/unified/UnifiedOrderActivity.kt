@@ -22,13 +22,18 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.meditrack.app.R
 import com.meditrack.app.databinding.ActivityUnifiedOrderBinding
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.Pharmacy
+import com.meditrack.app.ui.payment.PaymentActivity
+import com.meditrack.app.util.FeatureFlags
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /**
  * Unified medicine ordering screen.
@@ -40,6 +45,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_CODE_MAP = 1001
+        private const val REQUEST_CODE_PAYMENT = 1002
     }
 
     private lateinit var binding: ActivityUnifiedOrderBinding
@@ -309,6 +315,55 @@ class UnifiedOrderActivity : AppCompatActivity() {
                 startActivity(intent)
                 finish()
             }
+            is UnifiedOrderViewModel.NavigationEvent.ToPayment -> {
+                // Check feature flag for payment
+                if (FeatureFlags.isEnabled(FeatureFlags.PAYMENT_ENABLED)) {
+                    launchPaymentActivity(event.orderId, event.amount)
+                } else {
+                    // Fallback: auto-confirm order and go to tracking
+                    val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
+                    intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+    }
+
+    private fun launchPaymentActivity(orderId: String, amount: Double) {
+        lifecycleScope.launch {
+            try {
+                // Get current user
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser == null) {
+                    Toast.makeText(this@UnifiedOrderActivity, "User not authenticated", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                // Fetch user details from Firestore
+                val userDoc = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(currentUser.uid)
+                    .get()
+                    .await()
+
+                val userEmail = userDoc.getString("email") ?: currentUser.email ?: ""
+                val userPhone = userDoc.getString("phone") ?: ""
+                val userName = userDoc.getString("fullName") ?: currentUser.displayName ?: "User"
+
+                // Create intent for PaymentActivity
+                val intent = Intent(this@UnifiedOrderActivity, PaymentActivity::class.java).apply {
+                    putExtra(PaymentActivity.EXTRA_ORDER_ID, orderId)
+                    putExtra(PaymentActivity.EXTRA_AMOUNT, amount)
+                    putExtra(PaymentActivity.EXTRA_USER_EMAIL, userEmail)
+                    putExtra(PaymentActivity.EXTRA_USER_PHONE, userPhone)
+                    putExtra(PaymentActivity.EXTRA_USER_NAME, userName)
+                }
+
+                startActivityForResult(intent, REQUEST_CODE_PAYMENT)
+            } catch (e: Exception) {
+                Toast.makeText(this@UnifiedOrderActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -380,11 +435,22 @@ class UnifiedOrderActivity : AppCompatActivity() {
 
         bottomSheet.setOnOrderConfirmListener(object : OrderConfirmationBottomSheet.OnOrderConfirmListener {
             override fun onOrderConfirmed(deliveryAddress: String) {
+                // Ensure we have valid location coordinates
+                val location = currentUserLocation
+                if (location == null) {
+                    Toast.makeText(
+                        this@UnifiedOrderActivity,
+                        "Location not available. Please enable location permission and try again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+
                 viewModel.placeOrder(
                     deliveryAddress = com.meditrack.app.data.model.DeliveryAddress(
                         fullAddress = deliveryAddress,
-                        latitude = currentUserLocation?.latitude ?: 0.0,
-                        longitude = currentUserLocation?.longitude ?: 0.0
+                        latitude = location.latitude,
+                        longitude = location.longitude
                     )
                 )
             }
@@ -443,6 +509,28 @@ class UnifiedOrderActivity : AppCompatActivity() {
             pharmacyId?.let { id ->
                 viewModel.selectPharmacyById(id)
             }
+        }
+
+        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_OK) {
+            // Payment successful - navigate to order tracking
+            val orderId = data?.getStringExtra(PaymentActivity.EXTRA_ORDER_ID)
+            if (orderId != null) {
+                val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
+                intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, orderId)
+                startActivity(intent)
+                finish()
+            }
+        }
+
+        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_CANCELED) {
+            // Payment cancelled - show error and return to previous screen
+            Toast.makeText(this, "Payment cancelled", Toast.LENGTH_SHORT).show()
+        }
+
+        if (requestCode == REQUEST_CODE_PAYMENT && resultCode == RESULT_FIRST_USER) {
+            // Payment failed - show error
+            val errorMessage = data?.getStringExtra("error_message") ?: "Payment failed"
+            Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
         }
     }
 }

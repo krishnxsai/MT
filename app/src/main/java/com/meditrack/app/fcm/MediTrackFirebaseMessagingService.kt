@@ -11,7 +11,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.meditrack.app.R
+import com.meditrack.app.data.model.NotificationType
+import com.meditrack.app.data.repository.NotificationPreferenceRepository
 import com.meditrack.app.ui.order.OrderTrackingActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Firebase Cloud Messaging service for handling push notifications.
@@ -74,7 +79,17 @@ class MediTrackFirebaseMessagingService : FirebaseMessagingService() {
             else -> return
         }
 
-        showOrderNotification(orderId, title, body)
+        // Check notification preferences before showing notification
+        val preferenceRepo = NotificationPreferenceRepository()
+        CoroutineScope(Dispatchers.IO).launch {
+            val isAllowed = preferenceRepo.isNotificationAllowed(NotificationType.ORDER_STATUS)
+            if (isAllowed) {
+                showOrderNotification(orderId, title, body)
+                Log.d(TAG, "Order notification shown: $status (preferences allowed)")
+            } else {
+                Log.d(TAG, "Order notification suppressed: $status (quiet hours or disabled)")
+            }
+        }
     }
 
     private fun handleGenericNotification(message: RemoteMessage) {

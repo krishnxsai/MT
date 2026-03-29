@@ -154,13 +154,25 @@
 
         </LinearLayout>
 
+        <!-- Call Button -->
+        <ImageView
+            android:id="@+id/btnCall"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:src="@drawable/ic_phone"
+            app:tint="@color/success"
+            android:contentDescription="@string/call_pharmacy" />
+
         <!-- Select Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelect"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="4dp"
             android:text="Select"
             android:textSize="11sp"
             app:cornerRadius="16dp"

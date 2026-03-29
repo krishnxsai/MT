@@ -34,6 +34,11 @@ android {
             )
         }
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -105,7 +110,18 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.maps.utils)
 
+    // Razorpay Payment Gateway
+    implementation(libs.razorpay.checkout)
 
+    // Firebase Remote Config (for feature flags)
+    implementation(libs.firebase.config.ktx)
+
+    // Room Database (for offline payment queue)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

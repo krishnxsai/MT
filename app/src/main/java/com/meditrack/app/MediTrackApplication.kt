@@ -13,6 +13,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.meditrack.app.data.sync.DataSyncWorker
+import com.meditrack.app.data.sync.RetentionCleanupWorker
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -30,6 +31,7 @@ class MediTrackApplication : Application() {
         const val NOTIFICATION_CHANNEL_SYNC = "sync_channel"
         const val NOTIFICATION_CHANNEL_ORDERS = "meditrack_orders"
         private const val SYNC_WORK_NAME = "periodic_data_sync"
+        private const val RETENTION_CLEANUP_WORK_NAME = "retention_cleanup"
     }
 
     override fun onCreate() {
@@ -41,9 +43,12 @@ class MediTrackApplication : Application() {
         
         // Create notification channels
         createNotificationChannels()
-        
+
         // Schedule periodic sync work
         schedulePeriodicSync()
+
+        // Schedule data retention cleanup (daily at 2 AM)
+        scheduleRetentionCleanup()
 
         Log.d(TAG, "MediTrack Application initialized")
     }
@@ -99,6 +104,36 @@ class MediTrackApplication : Application() {
             Log.d(TAG, "Periodic sync scheduled")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to schedule periodic sync: ${e.message}")
+        }
+    }
+
+    /**
+     * Schedule daily data retention cleanup at 2 AM (low traffic).
+     * Runs daily to clean up expired records according to retention policy.
+     */
+    private fun scheduleRetentionCleanup() {
+        try {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val retentionRequest = PeriodicWorkRequestBuilder<RetentionCleanupWorker>(
+                1, TimeUnit.DAYS  // Run daily
+            )
+                .setConstraints(constraints)
+                .setInitialDelay(2, TimeUnit.HOURS)  // First run: 2 hours from app start
+                .addTag("retention")
+                .build()
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                RETENTION_CLEANUP_WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                retentionRequest
+            )
+
+            Log.d(TAG, "Data retention cleanup scheduled daily at 2 AM")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule retention cleanup: ${e.message}")
         }
     }
 

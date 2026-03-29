@@ -97,6 +97,30 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Live Delivery Map (visible only when OUT_FOR_DELIVERY) -->
+            <FrameLayout
+                android:id="@+id/mapContainer"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:layout_marginTop="16dp"
+                android:background="@color/surface"
+                android:visibility="gone">
+
+                <fragment
+                    android:id="@+id/deliveryMap"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <!-- Loading indicator for map -->
+                <ProgressBar
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
             <!-- Divider -->
             <View
                 android:layout_width="match_parent"

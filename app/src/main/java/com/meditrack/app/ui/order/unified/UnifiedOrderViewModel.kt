@@ -81,6 +81,7 @@ class UnifiedOrderViewModel @Inject constructor(
         data class ToOrderConfirmation(val orderId: String) : NavigationEvent()
         data class ToPharmacyMap(val pharmacies: List<Pharmacy>) : NavigationEvent()
         data class ToOrderTracking(val orderId: String) : NavigationEvent()
+        data class ToPayment(val orderId: String, val amount: Double) : NavigationEvent()
     }
 
     // ==================== STATE FLOWS ====================
@@ -451,8 +452,8 @@ class UnifiedOrderViewModel @Inject constructor(
                         // Clear cart
                         clearCart()
 
-                        // Navigate to order tracking screen
-                        _navigationEvent.emit(NavigationEvent.ToOrderTracking(orderId))
+                        // Navigate to payment screen (feature flag check will be done in Activity)
+                        _navigationEvent.emit(NavigationEvent.ToPayment(orderId, total))
                     }
                     is Resource.Error -> {
                         _error.value = result.message ?: "Failed to place order"

@@ -35,6 +35,12 @@ data class OrderTransaction(
     val prescriptionVerified: Boolean = false,
     val prescriptionId: String = "",
 
+    // ── Razorpay Payment Fields ───────────────────────────────────
+    val razorpayOrderId: String = "",           // Razorpay order ID
+    val razorpayPaymentId: String = "",         // Razorpay payment ID (after success)
+    val paymentMethod: String = "UPI",          // CARD, UPI, NETBANKING, etc.
+    val transactionRef: String = "",            // Razorpay transaction reference
+
     val notes: String = "",
 
     @ServerTimestamp
@@ -55,6 +61,10 @@ data class OrderTransaction(
         "pharmacyName" to pharmacyName,
         "prescriptionVerified" to prescriptionVerified,
         "prescriptionId" to prescriptionId,
+        "razorpayOrderId" to razorpayOrderId,
+        "razorpayPaymentId" to razorpayPaymentId,
+        "paymentMethod" to paymentMethod,
+        "transactionRef" to transactionRef,
         "notes" to notes,
         "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
     )
@@ -78,6 +88,10 @@ data class OrderTransaction(
             pharmacyName = map["pharmacyName"] as? String ?: "",
             prescriptionVerified = map["prescriptionVerified"] as? Boolean ?: false,
             prescriptionId = map["prescriptionId"] as? String ?: "",
+            razorpayOrderId = map["razorpayOrderId"] as? String ?: "",
+            razorpayPaymentId = map["razorpayPaymentId"] as? String ?: "",
+            paymentMethod = map["paymentMethod"] as? String ?: "UPI",
+            transactionRef = map["transactionRef"] as? String ?: "",
             notes = map["notes"] as? String ?: "",
             createdAt = (map["createdAt"] as? Timestamp)?.toDate()
         )

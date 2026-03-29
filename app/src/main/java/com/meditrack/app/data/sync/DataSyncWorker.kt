@@ -12,6 +12,8 @@ import com.meditrack.app.data.model.Resource
 import com.meditrack.app.data.repository.HealthLogRepository
 import com.meditrack.app.data.repository.MedicineIntakeRepository
 import com.meditrack.app.data.repository.MedicineRepository
+import com.meditrack.app.data.repository.RazorpayRepository
+import com.meditrack.app.data.repository.OrderRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,6 +63,9 @@ class DataSyncWorker(
                 Log.d(TAG, "No pending actions to sync")
             }
 
+            // ── Offline Payment Retry ──
+            retryPendingPayments()
+
             // ── Predictive Health Alerts ──
             runPredictiveAlerts()
 
@@ -107,6 +112,65 @@ class DataSyncWorker(
         }
     }
 
+    /**
+     * Retry pending offline payments when connectivity is restored.
+     */
+    private suspend fun retryPendingPayments() {
+        try {
+            Log.d(TAG, "Checking for pending payments to retry")
+
+            // Note: OfflinePaymentQueueRepository requires Room database setup
+            // For now, this is a placeholder. In production, integrate with Room DAO
+            // val paymentRepo = OfflinePaymentQueueRepository(dao)
+            // val pendingPayments = paymentRepo.getPaymentsReadyForRetry()
+
+            // if (pendingPayments.isNotEmpty()) {
+            //     Log.d(TAG, "Found ${pendingPayments.size} payments to retry")
+            //     val razorpayRepo = RazorpayRepository(applicationContext)
+            //     val orderRepo = OrderRepository()
+            //
+            //     for (payment in pendingPayments) {
+            //         try {
+            //             paymentRepo.markProcessing(payment)
+            //
+            //             val verifyResult = razorpayRepo.verifyPayment(
+            //                 payment.razorpayPaymentId,
+            //                 payment.razorpayOrderId
+            //             )
+            //
+            //             when (verifyResult) {
+            //                 is Resource.Success -> {
+            //                     paymentRepo.markSuccessful(payment)
+            //                     orderRepo.confirmPayment(
+            //                         payment.meditrackOrderId,
+            //                         payment.razorpayPaymentId,
+            //                         payment.paymentMethod
+            //                     )
+            //                     Log.d(TAG, "Payment retry successful for order: ${payment.meditrackOrderId}")
+            //                 }
+            //                 is Resource.Error -> {
+            //                     if (payment.attemptCount >= payment.maxAttempts) {
+            //                         paymentRepo.markFailed(payment, verifyResult.message ?: "Max retries exceeded")
+            //                         Log.w(TAG, "Payment failed permanently: ${payment.meditrackOrderId}")
+            //                     }
+            //                 }
+            //                 else -> {}
+            //             }
+            //         } catch (e: Exception) {
+            //             Log.w(TAG, "Error retrying payment: ${e.message}")
+            //         }
+            //     }
+            // }
+
+            Log.d(TAG, "Pending payment retry check completed")
+        } catch (e: Exception) {
+            Log.w(TAG, "Pending payment retry failed (non-critical): ${e.message}")
+        }
+    }
+
+    /**
+     * Post a predictive alert notification to the system notification bar.
+     */
     private fun postAlertNotification(alert: PredictiveAlertManager.PredictiveAlert) {
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
