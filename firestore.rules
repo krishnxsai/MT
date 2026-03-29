@@ -95,20 +95,6 @@ service cloud.firestore {
              get(/databases/$(database)/documents/pharmacies/$(pharmacyId)).data.ownerId == request.auth.uid;
     }
 
-    // Helper function: Check if pharmacy has served (has order from) a specific patient
-    // Used to restrict pharmacy data access to only customers they've fulfilled orders for
-    function hasPharmacyServedPatient(patientId) {
-      // Get current pharmacy's ID
-      let pharmacyData = getUserData(request.auth.uid);
-      let myPharmacyId = get(/databases/$(database)/documents/pharmacies/).data;
-
-      // For simplicity and to avoid complex queries, we check if pharmacy
-      // can access this patient through order relationship validation
-      // The actual order relationship check happens at the orders collection level
-      // Here we just verify: pharmacy is approved
-      return isApprovedPharmacy();
-    }
-
     // Helper function: Validate required fields exist
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
