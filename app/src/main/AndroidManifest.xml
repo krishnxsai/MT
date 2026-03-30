@@ -240,21 +240,20 @@
 
         <!-- Razorpay API Key -->
         <!-- NOTE: This is REQUIRED meta-data for Razorpay SDK initialization.
-             The value is populated dynamically via Firebase Remote Config, which is updated
-             from Google Cloud Secret Manager by the backend service.
+             The value is injected at build time via manifestPlaceholders in build.gradle.kts
+
+             Razorpay SDK validates this meta-data exists, so it MUST have an actual value,
+             not a string resource reference (SDK cannot resolve @string references reliably).
 
              Architecture:
-             1. Backend retrieves from Cloud Secret Manager
-             2. Backend populates Firebase Remote Config with the key
-             3. Android app fetches from Firebase Remote Config (ConfigRepository)
-             4. Falls back to this manifest meta-data if Remote Config unavailable
-
-             For build-time injection (dev/test only):
-             Add to build.gradle: resValue "string", "razorpay_key_id", "rzp_test_xxxxx"
+             1. build.gradle.kts injects key via manifestPlaceholders["razorpay_key_value"]
+             2. AndroidManifest.xml uses ${razorpay_key_value} placeholder
+             3. Razorpay SDK reads the resolved value at runtime
+             4. Falls back to Firebase Remote Config for production key rotation
         -->
         <meta-data
             android:name="com.razorpay.api_key"
-            android:value="@string/razorpay_key_id" />
+            android:value="${razorpay_key_value}" />
 
         <!-- Full-Screen Alarm Activity -->
         <activity

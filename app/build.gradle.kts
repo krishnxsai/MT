@@ -27,6 +27,10 @@ android {
             // Razorpay test credentials injected at build time
             resValue("string", "razorpay_key_id", "rzp_test_RjeW6fl4U06Kl0")
             resValue("string", "razorpay_key_secret", "AgwJFN2oLaVgs4fZLeShpS2w")
+
+            // Inject Razorpay key directly into manifest meta-data (Razorpay SDK requirement)
+            // This overrides the AndroidManifest.xml value during build
+            manifestPlaceholders["razorpay_key_value"] = "rzp_test_RjeW6fl4U06Kl0"
         }
         release {
             isMinifyEnabled = true
@@ -38,6 +42,9 @@ android {
             // TODO: Production credentials should come from Firebase Remote Config
             resValue("string", "razorpay_key_id", "rzp_live_XXXX")
             resValue("string", "razorpay_key_secret", "XXXX")
+
+            // Inject Razorpay key directly into manifest meta-data (Razorpay SDK requirement)
+            manifestPlaceholders["razorpay_key_value"] = "rzp_live_XXXX"
         }
     }
 
