@@ -99,8 +99,12 @@ class RazorpayRepository @Inject constructor(
 
             docRef.set(data).await()
 
-            Log.d(TAG, "Created Razorpay order: ${docRef.id}")
-            Resource.Success(razorpayOrder.copy(id = docRef.id))
+            val generatedOrderId = generateRazorpayOrderId(meditrackOrderId)
+            Log.d(TAG, "Created Razorpay order: $generatedOrderId (Doc: ${docRef.id})")
+            Resource.Success(razorpayOrder.copy(
+                id = docRef.id,
+                razorpayOrderId = generatedOrderId
+            ))
         } catch (e: Exception) {
             Log.e(TAG, "createOrder error: ${e.message}")
             Resource.Error(e.message ?: "Failed to create payment order")

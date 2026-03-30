@@ -24,6 +24,9 @@ android {
         debug {
             isMinifyEnabled = false
             isShrinkResources = false
+            // Razorpay test credentials injected at build time
+            resValue("string", "razorpay_key_id", "rzp_test_RjeW6fl4U06Kl0")
+            resValue("string", "razorpay_key_secret", "AgwJFN2oLaVgs4fZLeShpS2w")
         }
         release {
             isMinifyEnabled = true
@@ -32,7 +35,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // TODO: Production credentials should come from Firebase Remote Config
+            resValue("string", "razorpay_key_id", "rzp_live_XXXX")
+            resValue("string", "razorpay_key_secret", "XXXX")
         }
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     lint {
@@ -126,6 +136,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

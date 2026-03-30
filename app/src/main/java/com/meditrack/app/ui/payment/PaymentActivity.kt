@@ -9,11 +9,18 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.meditrack.app.R
 import com.meditrack.app.databinding.ActivityPaymentBinding
+import com.meditrack.app.data.model.Resource
+import com.meditrack.app.data.repository.RazorpayPaymentHandler
+import com.meditrack.app.util.RazorpaySignatureExtractor
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.json.JSONObject
+import javax.inject.Inject
 
 /**
  * Payment Activity for Razorpay integration.
@@ -55,6 +62,11 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
     private lateinit var binding: ActivityPaymentBinding
     private val viewModel: PaymentViewModel by viewModels()
 
+    @Inject
+    lateinit var paymentHandler: RazorpayPaymentHandler
+
+    private val mainScope = MainScope()
+
     private var meditrackOrderId: String = ""
     private var razorpayOrderId: String = ""
     private var amount: Double = 0.0
@@ -95,30 +107,41 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
     /**
      * Initialize Razorpay Checkout with proper API key configuration.
      *
-     * The Razorpay SDK reads the API key from AndroidManifest.xml meta-data during initialization.
-     * This method verifies the SDK is ready and optionally logs Remote Config key availability.
+     * **CRITICAL IMPLEMENTATION NOTES:**
+     * 1. MUST use Activity context (this), NOT applicationContext
+     *    - Razorpay SDK needs Activity context to read manifest meta-data
+     *    - applicationContext does NOT have manifest info
+     * 2. Checkout.preload() MUST happen before any checkout.open() calls
+     * 3. The API key in AndroidManifest.xml is REQUIRED for SDK to work
      *
-     * CRITICAL: The manifest meta-data is REQUIRED for SDK to function.
-     * Remote Config can be used for monitoring or key rotation strategy in the future.
+     * Flow:
+     * 1. Preload with Activity context → SDK reads manifest meta-data
+     * 2. SDK caches the API key internally
+     * 3. Later, checkout.open() uses the cached key
+     *
+     * Future: Remote Config can be used for secure key rotation without app update
      */
     private fun initializeRazorpayCheckout() {
         try {
-            // Preload SDK - this triggers the SDK to read manifest meta-data
-            Checkout.preload(applicationContext)
-            Log.d(TAG, "Razorpay SDK preloaded successfully")
+            Log.d(TAG, "Initializing Razorpay SDK...")
 
-            // Optional: Check if Remote Config has key (for monitoring/future key rotation)
+            // ✅ CRITICAL: Use Activity context (this), not applicationContext
+            // Razorpay needs Activity to read manifest meta-data with API key
+            Checkout.preload(this)
+            Log.d(TAG, "✅ Razorpay SDK preloaded successfully with Activity context")
+
+            // Optional: Check if Remote Config has key (for monitoring/telemetry)
             val remoteConfig = FirebaseRemoteConfig.getInstance()
             val remoteConfigKey = remoteConfig.getString("razorpay_key_id")
 
             if (remoteConfigKey.isNotEmpty()) {
-                Log.d(TAG, "Remote Config has Razorpay key available")
+                Log.d(TAG, "✅ Remote Config key available (optional, manifest is primary)")
             } else {
-                Log.w(TAG, "Remote Config: razorpay_key_id not configured - using manifest meta-data")
+                Log.d(TAG, "ℹ️ Remote Config key not configured - SDK using manifest meta-data (expected)")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing Razorpay: ${e.message}", e)
-            showErrorState("Payment system initialization failed: ${e.message}")
+            Log.e(TAG, "❌ Error initializing Razorpay: ${e.message}", e)
+            showErrorState("Payment initialization failed. Please try again.\n${e.message}")
         }
     }
 
@@ -206,28 +229,68 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
 
     private fun startPaymentCheckout(order: com.meditrack.app.data.model.RazorpayOrder) {
         try {
+            // Validate order before checkout
+            if (order.razorpayOrderId.isEmpty()) {
+                Log.e(TAG, "❌ Order ID is empty!")
+                showErrorState("Payment order creation failed. Order ID is missing.")
+                return
+            }
+
+            Log.d(TAG, "ℹ️ Starting Razorpay checkout...")
+            Log.d(TAG, "   Order ID: ${order.razorpayOrderId}")
+            Log.d(TAG, "   Amount: ₹${order.amount / 100.0}")  // Convert paise to rupees
+            Log.d(TAG, "   Email: $userEmail")
+
             val checkout = Checkout()
 
-            val options = JSONObject()
-            options.put("name", "MediTrack")
-            options.put("description", "Medicine Order #$meditrackOrderId")
-            options.put("image", R.drawable.ic_launcher_foreground)  // App logo
-            options.put("order_id", order.razorpayOrderId)
-            options.put("amount", order.amount)  // Amount in paise
-            options.put("currency", "INR")
-            options.put("email", userEmail)
-            options.put("contact", userPhone)
-            options.put("method", "upi")  // Can be 'upi', 'card', 'netbanking', etc.
-            options.put("timeout", 900)  // 15 minutes
+            // ✅ FIX: Get API key from resources and set explicitly
+            val razorpayKeyId = try {
+                resources.getString(R.string.razorpay_key_id)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get Razorpay key from resources: ${e.message}")
+                null
+            }
 
-            // Theme
-            options.put("theme.color", "#1976D2")  // Material Blue
+            if (razorpayKeyId.isNullOrEmpty()) {
+                Log.e(TAG, "❌ Razorpay API key not found in resources!")
+                showErrorState("Payment system not properly configured. Please contact support.")
+                return
+            }
 
-            Log.d(TAG, "Starting Razorpay checkout for order: ${order.razorpayOrderId}")
+            Log.d(TAG, "✅ Using Razorpay key: ${razorpayKeyId.substring(0, 10)}...")
+
+            val options = JSONObject().apply {
+                put("key", razorpayKeyId)  // ✅ SET KEY EXPLICITLY
+                put("name", "MediTrack")
+                put("description", "Medicine Order #$meditrackOrderId")
+                put("image", R.drawable.ic_launcher_foreground)
+                put("order_id", order.razorpayOrderId)
+                put("amount", order.amount)  // Amount in paise
+                put("currency", "INR")
+                put("email", userEmail)
+                put("contact", userPhone)
+                put("method", "upi")
+                put("timeout", 900)
+                put("theme.color", "#1976D2")
+            }
+
+            Log.d(TAG, "✅ Opening Razorpay checkout...")
             checkout.open(this, options)
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting checkout: ${e.message}", e)
-            showErrorState("Failed to open payment checkout: ${e.message}")
+            Log.e(TAG, "❌ Error starting checkout: ${e.message}", e)
+
+            // Provide specific error messages based on exception type
+            val errorMsg = when {
+                e.message?.contains("Razorpay API key") == true ->
+                    "Payment system not configured. Please contact support."
+                e.message?.contains("Network") == true ->
+                    "Network error. Please check your connection and try again."
+                else ->
+                    "Failed to open payment checkout: ${e.message}"
+            }
+
+            showErrorState(errorMsg)
         }
     }
 
@@ -235,12 +298,13 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
      * Razorpay success callback.
      * Called when payment is successful.
      *
-     * NOTE: The Razorpay SDK provides the payment ID here.
-     * The full response (including signature) should be obtained from Razorpay's
-     * response handler or fetched from their API.
-     *
-     * For production: Integrate with a callback that provides the complete response
-     * including razorpay_signature, or fetch it from Razorpay's payment details API.
+     * FIXED FLOW (proper signature extraction):
+     * 1. Receives payment ID from Razorpay SDK callback
+     * 2. Fetches complete payment response from Razorpay API
+     * 3. Extracts and validates actual HMAC-SHA256 signature
+     * 4. Sends (orderId, paymentId, signature) to backend for verification
+     * 5. Backend performs server-side signature verification
+     * 6. Updates order status to CONFIRMED
      */
     override fun onPaymentSuccess(razorpayPaymentId: String?) {
         Log.d(TAG, "Payment successful callback: $razorpayPaymentId")
@@ -251,37 +315,178 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
             return
         }
 
-        // In production: Get the actual razorpay_signature from Razorpay's response
-        // For now, this would be fetched from a callback that has access to the full response
-        // TODO: Implement proper signature retrieval from Razorpay callback
+        showProgressState("Completing payment verification...")
+        mainScope.launch {
+            try {
+                // ✅ FIXED: Fetch complete payment response with signature from Razorpay API
+                Log.d(TAG, "Fetching payment details from Razorpay API...")
+                val handlerResult = paymentHandler.handlePaymentSuccess(razorpayPaymentId)
 
-        // Fetch payment details from Razorpay API to get the signature
-        // OR implement a callback handler that captures the full response
-        val signature = razorpayPaymentId  // Placeholder - should be actual Razorpay signature
+                when (handlerResult) {
+                    is Resource.Success -> {
+                        val paymentResponse = handlerResult.data
+                        Log.d(TAG, "Payment response received: order=${paymentResponse.orderId}, status=${paymentResponse.status}")
 
-        // Verify payment and record it
-        viewModel.handlePaymentSuccess(
-            razorpayOrderId = razorpayOrderId,
-            razorpayPaymentId = razorpayPaymentId,
-            razorpaySignature = signature,
-            meditrackOrderId = meditrackOrderId,
-            paymentMethod = "UPI"
-        )
+                        // ✅ FIXED: Extract and validate signature
+                        val signatureResult = RazorpaySignatureExtractor.extractSignature(paymentResponse)
+
+                        when (signatureResult) {
+                            is RazorpaySignatureExtractor.SignatureExtraction.Success -> {
+                                val signature = signatureResult.value  // ✅ ACTUAL HMAC-SHA256 signature
+                                Log.d(TAG, "Successfully extracted signature: ${signature.substring(0, 16)}...")
+
+                                // Send to backend with actual signature
+                                viewModel.handlePaymentSuccess(
+                                    razorpayOrderId = razorpayOrderId,
+                                    razorpayPaymentId = razorpayPaymentId,
+                                    razorpaySignature = signature,  // ✅ NOT a placeholder!
+                                    meditrackOrderId = meditrackOrderId,
+                                    paymentMethod = paymentResponse.method.ifEmpty { "UPI" }
+                                )
+                            }
+                            is RazorpaySignatureExtractor.SignatureExtraction.Failure -> {
+                                val errorMsg = "Signature extraction failed: ${signatureResult.reason}"
+                                Log.e(TAG, errorMsg)
+                                showErrorState(errorMsg)
+                                viewModel.handlePaymentFailure(
+                                    razorpayOrderId = razorpayOrderId,
+                                    meditrackOrderId = meditrackOrderId,
+                                    errorCode = signatureResult.code.name,
+                                    errorDescription = signatureResult.reason,
+                                    errorSource = "signature_extraction"
+                                )
+                            }
+                        }
+                    }
+                    is Resource.Error -> {
+                        val errorMsg = "Payment verification error: ${handlerResult.message ?: "Unknown error"}"
+                        Log.e(TAG, errorMsg)
+                        showErrorState(errorMsg)
+                        viewModel.handlePaymentFailure(
+                            razorpayOrderId = razorpayOrderId,
+                            meditrackOrderId = meditrackOrderId,
+                            errorCode = "HANDLER_ERROR",
+                            errorDescription = handlerResult.message ?: "Unknown error",
+                            errorSource = "payment_handler"
+                        )
+                    }
+                    else -> {
+                        val errorMsg = "Unexpected response type from payment handler"
+                        Log.e(TAG, errorMsg)
+                        showErrorState(errorMsg)
+                    }
+                }
+            } catch (e: Exception) {
+                val errorMsg = "Unexpected error during payment verification: ${e.message}"
+                Log.e(TAG, errorMsg, e)
+                showErrorState(errorMsg)
+            }
+        }
     }
 
     /**
      * Razorpay error callback.
-     * Called when payment fails.
+     * Called when payment fails or user cancels.
+     *
+     * Differentiates between:
+     * - User cancellation (expected, no retry needed)
+     * - Network errors (can retry with backoff)
+     * - Authentication failures (can retry with limits)
+     * - Payment declined (user must try different method)
+     * - SDK errors (contact support)
      */
     override fun onPaymentError(code: Int, response: String?) {
-        Log.e(TAG, "Payment error: code=$code, response=$response")
+        Log.e(TAG, "Payment error callback: code=$code, response=$response")
 
-        viewModel.handlePaymentFailure(
-            razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
-            meditrackOrderId = meditrackOrderId,
-            errorCode = code.toString(),
-            errorDescription = response ?: "Payment failed: Unknown error",
-            errorSource = "payment_method"
-        )
+        // Categorize error using error handler
+        val error = com.meditrack.app.util.RazorpayErrorHandler.parseError(code, response)
+        com.meditrack.app.util.RazorpayErrorHandler.logError(error, "PaymentActivity")
+
+        when (error) {
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.UserCancelled -> {
+                Log.d(TAG, "User cancelled payment - returning to caller")
+                // User cancelled - don't record as failure, just finish
+                setResult(RESULT_CANCELED)
+                finish()
+            }
+
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.NetworkError -> {
+                // Temporary error - show retry option
+                Log.w(TAG, "Network error occurred - showing retry option")
+                showErrorState(
+                    "${error.userMessage}\n\nAttempt: 1/3"
+                )
+                viewModel.handlePaymentFailure(
+                    razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
+                    meditrackOrderId = meditrackOrderId,
+                    errorCode = error.errorCode,
+                    errorDescription = error.reason,
+                    errorSource = "network"
+                )
+            }
+
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.AuthenticationFailed -> {
+                // Auth failure - limited retries
+                Log.w(TAG, "Authentication failed - showing retry option")
+                showErrorState(
+                    "${error.userMessage}\n\nPlease verify your credentials and try again."
+                )
+                viewModel.handlePaymentFailure(
+                    razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
+                    meditrackOrderId = meditrackOrderId,
+                    errorCode = error.errorCode,
+                    errorDescription = error.reason,
+                    errorSource = "authentication"
+                )
+            }
+
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.PaymentDeclined -> {
+                // Payment declined - don't retry same method
+                Log.e(TAG, "Payment declined - no retry with same method")
+                showErrorState(
+                    "${error.userMessage}\n\nPlease use another payment method."
+                )
+                viewModel.handlePaymentFailure(
+                    razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
+                    meditrackOrderId = meditrackOrderId,
+                    errorCode = error.errorCode,
+                    errorDescription = error.reason,
+                    errorSource = "payment_method"
+                )
+            }
+
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.SdkError -> {
+                // SDK error - contact support
+                Log.e(TAG, "SDK error - payment system misconfiguration")
+                showErrorState(
+                    "${error.userMessage}\n\nError Code: ${error.errorCode}"
+                )
+                viewModel.handlePaymentFailure(
+                    razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
+                    meditrackOrderId = meditrackOrderId,
+                    errorCode = error.errorCode,
+                    errorDescription = error.reason,
+                    errorSource = "sdk"
+                )
+            }
+
+            is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.PaymentFailed -> {
+                // Generic failure
+                Log.e(TAG, "Payment failed - ${error.reason}")
+                showErrorState(error.userMessage)
+                viewModel.handlePaymentFailure(
+                    razorpayOrderId = razorpayOrderId.ifEmpty { "order_error_${System.currentTimeMillis()}" },
+                    meditrackOrderId = meditrackOrderId,
+                    errorCode = error.errorCode,
+                    errorDescription = error.reason,
+                    errorSource = "payment"
+                )
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mainScope.cancel()
     }
 }

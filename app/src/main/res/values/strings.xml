@@ -8,7 +8,8 @@
 
     <!-- Razorpay Key - Populated by Firebase Remote Config from Cloud Secret Manager -->
     <!-- For local development, override in build.gradle with resValue -->
-    <string name="razorpay_key_id"></string>
+    <!-- Fallback placeholder: will be overridden by build.gradle resValue for debug -->
+    <string name="razorpay_key_id">rzp_test_RjeW6fl4U06Kl0</string>
 
     <!-- Auth Screens -->
     <string name="welcome_back">Welcome Back</string>

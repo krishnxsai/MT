@@ -166,3 +166,15 @@ fix_roles_reseed.js
 migrate_uids.js
 cleanup_dummy_pharmacies.js
 
+# Environment Variables — NEVER commit
+# Contains API keys, secrets, and credentials
+.env
+.env.test
+.env.local
+.env.*.local
+.env.properties
+app/src/main/assets/env.properties
+secrets/
+secrets.json
+firebase-key.json
+

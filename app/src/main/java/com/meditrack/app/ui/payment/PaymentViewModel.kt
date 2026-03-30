@@ -69,7 +69,7 @@ class PaymentViewModel @Inject constructor(
                 when (result) {
                     is Resource.Success -> {
                         val order = result.data
-                        Log.d(TAG, "Payment order created: ${order.id}")
+                        Log.d(TAG, "Payment order created: ${order.razorpayOrderId} (Doc: ${order.id})")
                         _paymentState.value = PaymentUIState.OrderCreated(order)
                     }
                     is Resource.Error -> {
@@ -218,7 +218,107 @@ class PaymentViewModel @Inject constructor(
     }
 
     /**
-     * Retry payment after failure.
+     * Retry payment after failure with exponential backoff.
+     *
+     * Implements automatic retry for temporary errors:
+     * - Network errors: retry up to 3 times with backoff
+     * - Authentication failures: retry up to 2 times with backoff
+     * - Other errors: show error to user
+     *
+     * Backoff strategy: delay = baseDelay * (multiplier ^ attempt)
+     * Example: 1s, 2s, 4s, 8s (with multiplier=2)
+     */
+    fun retryPaymentWithBackoff(
+        amount: Double,
+        meditrackOrderId: String,
+        userEmail: String,
+        userPhone: String,
+        userName: String,
+        attempt: Int = 1,
+        maxAttempts: Int = 3,
+        baseDelayMs: Long = 1000
+    ) {
+        // Check if we've exhausted retries
+        if (attempt > maxAttempts) {
+            Log.w(TAG, "Max retry attempts ($maxAttempts) exceeded")
+            _errorMessage.value = "Unable to complete payment after multiple attempts. Please try again later."
+            _paymentState.value = PaymentUIState.Error("Max retry attempts exceeded")
+            return
+        }
+
+        // Calculate backoff delay
+        val delay = com.meditrack.app.util.RazorpayErrorHandler.computeRetryDelay(
+            attempt = attempt - 1,  // 0-indexed
+            baseDelayMs = baseDelayMs,
+            multiplier = 2.0,
+            maxDelayMs = 30000
+        )
+
+        Log.d(TAG, "Scheduling retry attempt $attempt/$maxAttempts after ${delay}ms delay")
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(delay)
+
+            Log.d(TAG, "Executing retry attempt $attempt/$maxAttempts for order: $meditrackOrderId")
+            _paymentState.value = PaymentUIState.CreatingOrder
+            _errorMessage.value = null
+
+            try {
+                val result = razorpayRepository.createOrder(
+                    amount = amount,
+                    meditrackOrderId = meditrackOrderId,
+                    customerEmail = userEmail,
+                    customerPhone = userPhone,
+                    customerName = userName
+                )
+
+                when (result) {
+                    is Resource.Success -> {
+                        val order = result.data
+                        Log.d(TAG, "Payment order created on retry $attempt: ${order.razorpayOrderId}")
+                        _paymentState.value = PaymentUIState.OrderCreated(order)
+                    }
+                    is Resource.Error -> {
+                        Log.e(TAG, "Retry $attempt failed: ${result.message}")
+
+                        // Retry only on transient errors
+                        if (result.message?.contains("timeout", ignoreCase = true) == true ||
+                            result.message?.contains("network", ignoreCase = true) == true) {
+
+                            if (attempt < maxAttempts) {
+                                Log.w(TAG, "Transient error detected, scheduling retry")
+                                retryPaymentWithBackoff(
+                                    amount = amount,
+                                    meditrackOrderId = meditrackOrderId,
+                                    userEmail = userEmail,
+                                    userPhone = userPhone,
+                                    userName = userName,
+                                    attempt = attempt + 1,
+                                    maxAttempts = maxAttempts,
+                                    baseDelayMs = baseDelayMs
+                                )
+                                return@launch
+                            }
+                        }
+
+                        _errorMessage.value = result.message
+                        _paymentState.value = PaymentUIState.Error(result.message)
+                    }
+                    is Resource.Loading -> {
+                        _paymentState.value = PaymentUIState.CreatingOrder
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during retry $attempt: ${e.message}")
+                _errorMessage.value = "Failed to retry payment: ${e.message}"
+                _paymentState.value = PaymentUIState.Error("Failed to retry payment")
+            }
+        }
+    }
+
+    /**
+     * Simple retry triggered by user clicking retry button.
+     * Use retryPaymentWithBackoff() for automatic retries.
      */
     fun retryPayment(
         amount: Double,
