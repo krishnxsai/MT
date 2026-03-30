@@ -2,6 +2,7 @@ package com.meditrack.app.data.repository
 
 import android.util.Log
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -22,28 +23,56 @@ import javax.inject.Inject
  * ✅ Server-side audit trail for secret access
  * ✅ Offline fallback capability
  */
-class ConfigRepository @Inject constructor() {
+class ConfigRepository @Inject constructor(
+    private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
+) {
 
     companion object {
         private const val TAG = "ConfigRepository"
+        private const val DEFAULT_FETCH_INTERVAL_SECONDS = 3600L
+        private const val MIN_KEY_LENGTH = 15
 
         // Firebase Remote Config keys (correspond to Cloud Secret Manager secrets)
         const val KEY_RAZORPAY_KEY_ID = "razorpay_key_id"
     }
 
-    private val remoteConfig: FirebaseRemoteConfig by lazy {
-        FirebaseRemoteConfig.getInstance()
+    enum class RazorpayKeySource {
+        REMOTE_CONFIG,
+        RESOURCE_FALLBACK,
+        NONE
+    }
+
+    data class RazorpayKeyResolution(
+        val key: String?,
+        val source: RazorpayKeySource,
+        val reason: String
+    )
+
+    init {
+        configureRemoteConfigDefaults()
+    }
+
+    private fun configureRemoteConfigDefaults() {
+        val settings = FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(DEFAULT_FETCH_INTERVAL_SECONDS)
+            .build()
+
+        remoteConfig.setConfigSettingsAsync(settings)
+        remoteConfig.setDefaultsAsync(
+            mapOf(
+                KEY_RAZORPAY_KEY_ID to ""
+            )
+        )
     }
 
     /**
      * Get Razorpay API Key from Firebase Remote Config.
      *
-     * @return Razorpay Key ID if available, empty string if not found
+      * @return Valid Razorpay Key ID if available, empty string if missing/invalid
      *
      * Priority:
      * 1. Firebase Remote Config (server-side, from Cloud Secret Manager)
-     * 2. Manifest meta-data (build-time fallback)
-     * 3. Empty string (error case - will use SDK's fallback)
+      * 2. Empty string (caller handles fallback strategy)
      */
     suspend fun getRazorpayKeyId(): String = withContext(Dispatchers.IO) {
         try {
@@ -52,21 +81,56 @@ class ConfigRepository @Inject constructor() {
             Log.d(TAG, "Firebase Remote Config fetched successfully")
 
             // Get the key
-            val key = remoteConfig.getString(KEY_RAZORPAY_KEY_ID)
+            val key = remoteConfig.getString(KEY_RAZORPAY_KEY_ID).trim()
 
-            if (key.isNotEmpty()) {
+            if (isValidRazorpayKey(key)) {
                 Log.d(TAG, "✅ Razorpay key loaded from Remote Config (length: ${key.length})")
                 return@withContext key
+            } else if (key.isNotEmpty()) {
+                Log.w(TAG, "⚠️ Remote Config key format invalid, ignoring value")
+                return@withContext ""
             } else {
-                Log.w(TAG, "⚠️ Remote Config: $KEY_RAZORPAY_KEY_ID not found - SDK will use manifest meta-data")
+                Log.w(TAG, "⚠️ Remote Config: $KEY_RAZORPAY_KEY_ID not found")
                 return@withContext ""
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error fetching Razorpay key from Remote Config: ${e.message}")
-            Log.w(TAG, "⚠️ Will use manifest meta-data as fallback")
+            Log.w(TAG, "⚠️ Caller will use configured fallback source")
             return@withContext ""
         }
     }
+
+    /**
+     * Resolve checkout key with runtime priority:
+     * 1) Firebase Remote Config
+     * 2) Resource fallback from current build variant
+     */
+    suspend fun resolveCheckoutKey(resourceFallbackKey: String?): RazorpayKeyResolution =
+        withContext(Dispatchers.IO) {
+            val remoteConfigKey = getRazorpayKeyId()
+            if (remoteConfigKey.isNotEmpty()) {
+                return@withContext RazorpayKeyResolution(
+                    key = remoteConfigKey,
+                    source = RazorpayKeySource.REMOTE_CONFIG,
+                    reason = "Using Razorpay key from Firebase Remote Config"
+                )
+            }
+
+            val fallbackKey = resourceFallbackKey?.trim().orEmpty()
+            if (isValidRazorpayKey(fallbackKey)) {
+                return@withContext RazorpayKeyResolution(
+                    key = fallbackKey,
+                    source = RazorpayKeySource.RESOURCE_FALLBACK,
+                    reason = "Using build-time fallback Razorpay key"
+                )
+            }
+
+            return@withContext RazorpayKeyResolution(
+                key = null,
+                source = RazorpayKeySource.NONE,
+                reason = "No valid Razorpay key available from Remote Config or resources"
+            )
+        }
 
     /**
      * Check availability of Razorpay key (for diagnostics/monitoring).
@@ -76,13 +140,26 @@ class ConfigRepository @Inject constructor() {
      */
     fun isRazorpayKeyAvailable(): Boolean {
         return try {
-            val key = remoteConfig.getString(KEY_RAZORPAY_KEY_ID)
-            key.isNotEmpty().also {
+            val key = remoteConfig.getString(KEY_RAZORPAY_KEY_ID).trim()
+            isValidRazorpayKey(key).also {
                 Log.d(TAG, "Razorpay key availability: $it")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error checking Razorpay key availability: ${e.message}")
             false
         }
+    }
+
+    private fun isValidRazorpayKey(key: String): Boolean {
+        if (key.isBlank()) return false
+        if (!(key.startsWith("rzp_test_") || key.startsWith("rzp_live_"))) return false
+        if (key.length < MIN_KEY_LENGTH) return false
+
+        val lower = key.lowercase()
+        if (lower.contains("xxxx") || lower.contains("placeholder") || lower.contains("dummy")) {
+            return false
+        }
+
+        return true
     }
 }

@@ -627,9 +627,28 @@ service cloud.firestore {
                     hasRequiredFields(['userId', 'amount', 'currency']) &&
                     request.resource.data.userId == request.auth.uid;
 
-      // Payments are immutable — no updates after creation
-      // (Razorpay payment records cannot be modified, only viewed)
-      allow update: if false;
+      // Users can update payment status details for their own records only.
+      // Admins can also update for support/auditing workflows.
+      // Immutable identity fields prevent tampering with payment ownership or amount.
+      allow update: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isAdmin()) &&
+                    request.resource.data.userId == resource.data.userId &&
+                    request.resource.data.amount == resource.data.amount &&
+                    request.resource.data.currency == resource.data.currency &&
+                    request.resource.data.meditrackOrderId == resource.data.meditrackOrderId &&
+                    request.resource.data.razorpayOrderId == resource.data.razorpayOrderId &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'status',
+                      'paymentId',
+                      'signatureId',
+                      'paymentMethod',
+                      'completedAt',
+                      'updatedAt',
+                      'errorCode',
+                      'errorDescription',
+                      'errorSource',
+                      'attempts'
+                    ]);
 
       // Payments are never deleted — they form audit trail
       // (Regulatory requirement: payment records must be retained)

@@ -75,6 +75,30 @@ class RazorpayRepository @Inject constructor(
 
             val amountInPaise = (amount * 100).toInt()
 
+            @Suppress("UNCHECKED_CAST")
+            val createOrderResponse = functions
+                .getHttpsCallable("createRazorpayOrder")
+                .call(
+                    mapOf(
+                        "amount" to amountInPaise,
+                        "currency" to "INR",
+                        "receipt" to meditrackOrderId,
+                        "meditrackOrderId" to meditrackOrderId
+                    )
+                )
+                .await()
+                .getData() as? Map<String, Any?>
+
+            if (createOrderResponse == null) {
+                return@withContext Resource.Error("Invalid Razorpay order response")
+            }
+
+            val razorpayOrderId = createOrderResponse["orderId"] as? String
+                ?: createOrderResponse["id"] as? String
+                ?: return@withContext Resource.Error("Razorpay order ID missing in response")
+
+            val receipt = createOrderResponse["receipt"] as? String ?: meditrackOrderId
+
             // Create local RazorpayOrder document first
             val razorpayOrder = RazorpayOrder(
                 meditrackOrderId = meditrackOrderId,
@@ -85,7 +109,7 @@ class RazorpayRepository @Inject constructor(
                 customerPhone = customerPhone,
                 customerName = customerName,
                 status = PaymentStatus.CREATED,
-                receipt = meditrackOrderId,
+                receipt = receipt,
                 attempts = 0
             )
 
@@ -93,17 +117,16 @@ class RazorpayRepository @Inject constructor(
             val docRef = paymentsCol.document()
             val data = razorpayOrder.copy(
                 id = docRef.id,
-                razorpayOrderId = generateRazorpayOrderId(meditrackOrderId)
+                razorpayOrderId = razorpayOrderId
             ).toMap().toMutableMap()
             data["createdAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
 
             docRef.set(data).await()
 
-            val generatedOrderId = generateRazorpayOrderId(meditrackOrderId)
-            Log.d(TAG, "Created Razorpay order: $generatedOrderId (Doc: ${docRef.id})")
+            Log.d(TAG, "Created Razorpay order: $razorpayOrderId (Doc: ${docRef.id})")
             Resource.Success(razorpayOrder.copy(
                 id = docRef.id,
-                razorpayOrderId = generatedOrderId
+                razorpayOrderId = razorpayOrderId
             ))
         } catch (e: Exception) {
             Log.e(TAG, "createOrder error: ${e.message}")
@@ -150,7 +173,8 @@ class RazorpayRepository @Inject constructor(
                     "signature" to signature,
                     "meditrackOrderId" to meditrackOrderId
                 ))
-                .await() as? Map<String, Any?>
+                .await()
+                .getData() as? Map<String, Any?>
 
             val isValid = responseMap?.get("isValid") as? Boolean ?: false
 
@@ -179,8 +203,11 @@ class RazorpayRepository @Inject constructor(
         paymentMethod: String = ""
     ): Resource<String> = withContext(Dispatchers.IO) {
         try {
+            val userId = currentUserId ?: return@withContext Resource.Error("Not logged in")
+
             // Find payment document by razorpayOrderId
             val paymentDocs = paymentsCol
+                .whereEqualTo("userId", userId)
                 .whereEqualTo("razorpayOrderId", orderId)
                 .whereEqualTo("meditrackOrderId", meditrackOrderId)
                 .limit(1)
@@ -224,7 +251,10 @@ class RazorpayRepository @Inject constructor(
         errorSource: String
     ): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
+            val userId = currentUserId ?: return@withContext Resource.Error("Not logged in")
+
             val paymentDocs = paymentsCol
+                .whereEqualTo("userId", userId)
                 .whereEqualTo("razorpayOrderId", orderId)
                 .whereEqualTo("meditrackOrderId", meditrackOrderId)
                 .limit(1)
@@ -248,6 +278,7 @@ class RazorpayRepository @Inject constructor(
             )
 
             paymentsCol.document(paymentDocId).update(updates).await()
+            Log.w(TAG, "Payment failure recorded: paymentDocId=$paymentDocId, code=$errorCode")
             Resource.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "recordPaymentFailure error: ${e.message}")
@@ -331,7 +362,10 @@ class RazorpayRepository @Inject constructor(
     suspend fun getPaymentByOrderId(meditrackOrderId: String): Resource<RazorpayOrder?> =
         withContext(Dispatchers.IO) {
             try {
+                val userId = currentUserId ?: return@withContext Resource.Error("Not logged in")
+
                 val snapshot = paymentsCol
+                    .whereEqualTo("userId", userId)
                     .whereEqualTo("meditrackOrderId", meditrackOrderId)
                     .limit(1)
                     .get()
@@ -348,15 +382,4 @@ class RazorpayRepository @Inject constructor(
             }
         }
 
-    // ─────────────── Helper Methods ───────────────
-
-    /**
-     * Generate a unique Razorpay Order ID based on order details.
-     * Format: order_<timestamp>_<hashOfOrderId>
-     */
-    private fun generateRazorpayOrderId(meditrackOrderId: String): String {
-        val timestamp = System.currentTimeMillis() / 1000
-        val hash = meditrackOrderId.hashCode().toLong() and 0xFFFFFFFFL
-        return "order_$timestamp"  // Simplified; Razorpay generates actual IDs
-    }
 }

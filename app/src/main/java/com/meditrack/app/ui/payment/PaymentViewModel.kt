@@ -192,7 +192,7 @@ class PaymentViewModel @Inject constructor(
             _errorMessage.value = null
 
             try {
-                razorpayRepository.recordPaymentFailure(
+                val recordResult = razorpayRepository.recordPaymentFailure(
                     orderId = razorpayOrderId,
                     meditrackOrderId = meditrackOrderId,
                     errorCode = errorCode,
@@ -200,9 +200,23 @@ class PaymentViewModel @Inject constructor(
                     errorSource = errorSource
                 )
 
-                Log.w(TAG, "Payment failed: $errorCode - $errorDescription")
-                _errorMessage.value = errorDescription
-                _paymentState.value = PaymentUIState.PaymentFailed(errorDescription)
+                when (recordResult) {
+                    is Resource.Success -> {
+                        Log.w(TAG, "Payment failed: $errorCode - $errorDescription")
+                        _errorMessage.value = errorDescription
+                        _paymentState.value = PaymentUIState.PaymentFailed(errorDescription)
+                    }
+                    is Resource.Error -> {
+                        Log.e(TAG, "Failed to persist payment failure: ${recordResult.message}")
+                        val message = "$errorDescription\n\n(Failed to record payment attempt: ${recordResult.message})"
+                        _errorMessage.value = message
+                        _paymentState.value = PaymentUIState.PaymentFailed(message)
+                    }
+                    else -> {
+                        _errorMessage.value = errorDescription
+                        _paymentState.value = PaymentUIState.PaymentFailed(errorDescription)
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception recording payment failure: ${e.message}")
                 _paymentState.value = PaymentUIState.PaymentFailed("Payment failed: ${e.message}")

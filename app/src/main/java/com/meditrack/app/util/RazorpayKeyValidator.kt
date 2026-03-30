@@ -172,6 +172,24 @@ object RazorpayKeyValidator {
     }
 
     /**
+     * Validate expected Razorpay key shape.
+     */
+    fun isValidKeyFormat(apiKey: String?): Boolean {
+        val key = apiKey?.trim().orEmpty()
+        if (key.isEmpty()) return false
+        if (!(key.startsWith("rzp_test_") || key.startsWith("rzp_live_"))) return false
+        return key.length >= 15
+    }
+
+    /**
+     * Detect obvious placeholder values that should never be used at runtime.
+     */
+    fun isPlaceholderKey(apiKey: String?): Boolean {
+        val lower = apiKey?.lowercase().orEmpty()
+        return lower.contains("xxxx") || lower.contains("placeholder") || lower.contains("dummy")
+    }
+
+    /**
      * Check if key is a test key (rzp_test_*).
      */
     fun isTestKey(apiKey: String?): Boolean {
@@ -220,7 +238,7 @@ object RazorpayKeyValidator {
     fun isConfigured(context: Context): Boolean {
         return try {
             val key = context.resources.getString(R.string.razorpay_key_id)
-            key.isNotEmpty() && (key.startsWith("rzp_test_") || key.startsWith("rzp_live_"))
+            isValidKeyFormat(key) && !isPlaceholderKey(key)
         } catch (e: Exception) {
             false
         }

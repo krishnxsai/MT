@@ -6,10 +6,10 @@
 
     <string name="google_maps_api_key">AIzaSyB27yys2IdmH0nvhfRtTuENZYtdBo2W4RQ</string>
 
-    <!-- Razorpay Key - Populated by Firebase Remote Config from Cloud Secret Manager -->
-    <!-- For local development, override in build.gradle with resValue -->
-    <!-- Fallback placeholder: will be overridden by build.gradle resValue for debug -->
-    <string name="razorpay_key_id">rzp_test_RjeW6fl4U06Kl0</string>
+    <!-- Razorpay checkout key fallback.
+         Build variants override this value via Gradle resValue.
+         Runtime key resolution prefers Firebase Remote Config and only falls back here. -->
+    <string name="razorpay_key_id"></string>
 
     <!-- Auth Screens -->
     <string name="welcome_back">Welcome Back</string>

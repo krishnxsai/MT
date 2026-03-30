@@ -68,7 +68,8 @@ export const verifyRazorpayPayment = functions.https.onCall(
       // For now, we'll use environment variable or Remote Config
       // In production: Use Firebase Secret Manager
       // Reference: https://firebase.google.com/docs/functions/config-env
-      let keySecret = process.env.RAZORPAY_KEY_SECRET;
+      const runtimeConfig = functions.config();
+      let keySecret = process.env.RAZORPAY_KEY_SECRET || runtimeConfig.razorpay?.key_secret;
 
       if (!keySecret) {
         console.warn("RAZORPAY_KEY_SECRET not set in environment");

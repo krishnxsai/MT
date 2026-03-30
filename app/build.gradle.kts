@@ -6,6 +6,27 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val debugRazorpayKey = providers.gradleProperty("razorpay.debug.key")
+    .orElse(providers.environmentVariable("RAZORPAY_DEBUG_KEY"))
+    .orElse("rzp_test_RjeW6fl4U06Kl0")
+    .get()
+
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any {
+    it.contains("Release", ignoreCase = true)
+}
+
+val releaseRazorpayKey = providers.gradleProperty("razorpay.live.key").orNull
+    ?: providers.environmentVariable("RAZORPAY_LIVE_KEY").orNull
+    ?: if (isReleaseTaskRequested) {
+        throw org.gradle.api.GradleException(
+            "Missing Razorpay live key. Set gradle property 'razorpay.live.key' " +
+                "or environment variable 'RAZORPAY_LIVE_KEY' before building release."
+        )
+    } else {
+        // Keep non-release builds usable when release secrets are not available.
+        "rzp_live_CONFIGURE_BEFORE_RELEASE"
+    }
+
 android {
     namespace = "com.meditrack.app"
     compileSdk = 36
@@ -25,12 +46,11 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             // Razorpay test credentials injected at build time
-            resValue("string", "razorpay_key_id", "rzp_test_RjeW6fl4U06Kl0")
-            resValue("string", "razorpay_key_secret", "AgwJFN2oLaVgs4fZLeShpS2w")
+            resValue("string", "razorpay_key_id", debugRazorpayKey)
 
             // Inject Razorpay key directly into manifest meta-data (Razorpay SDK requirement)
             // This overrides the AndroidManifest.xml value during build
-            manifestPlaceholders["razorpay_key_value"] = "rzp_test_RjeW6fl4U06Kl0"
+            manifestPlaceholders["razorpay_key_value"] = debugRazorpayKey
         }
         release {
             isMinifyEnabled = true
@@ -39,12 +59,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // TODO: Production credentials should come from Firebase Remote Config
-            resValue("string", "razorpay_key_id", "rzp_live_XXXX")
-            resValue("string", "razorpay_key_secret", "XXXX")
+            // Runtime checkout key is read from Firebase Remote Config, but Razorpay SDK still
+            // requires a manifest bootstrap key value at app startup.
+            resValue("string", "razorpay_key_id", releaseRazorpayKey)
 
             // Inject Razorpay key directly into manifest meta-data (Razorpay SDK requirement)
-            manifestPlaceholders["razorpay_key_value"] = "rzp_live_XXXX"
+            manifestPlaceholders["razorpay_key_value"] = releaseRazorpayKey
         }
     }
 

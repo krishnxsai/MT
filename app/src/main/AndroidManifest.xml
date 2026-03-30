@@ -248,9 +248,14 @@
              Architecture:
              1. build.gradle.kts injects key via manifestPlaceholders["razorpay_key_value"]
              2. AndroidManifest.xml uses ${razorpay_key_value} placeholder
-             3. Razorpay SDK reads the resolved value at runtime
-             4. Falls back to Firebase Remote Config for production key rotation
+             3. Razorpay SDK reads the resolved value at runtime (case-sensitive key name)
+             4. Checkout options use Remote Config key at runtime, with this as bootstrap fallback
         -->
+        <meta-data
+            android:name="com.razorpay.ApiKey"
+            android:value="${razorpay_key_value}" />
+
+        <!-- Temporary alias for older app assumptions. Remove after one stable release cycle. -->
         <meta-data
             android:name="com.razorpay.api_key"
             android:value="${razorpay_key_value}" />

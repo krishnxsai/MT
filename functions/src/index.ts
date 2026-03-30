@@ -321,6 +321,7 @@ export const cleanupNotificationLogs = functions.pubsub
 
 // Export the payment verification function from the separate module
 export { verifyRazorpayPayment } from "./verifyRazorpayPayment";
+export { createRazorpayOrder } from "./createRazorpayOrder";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Cloud Secret Manager Sync

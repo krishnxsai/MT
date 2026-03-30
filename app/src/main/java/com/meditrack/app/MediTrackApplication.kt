@@ -15,6 +15,8 @@ import androidx.work.WorkManager
 import com.meditrack.app.data.sync.DataSyncWorker
 import com.meditrack.app.data.sync.RetentionCleanupWorker
 import com.google.firebase.FirebaseApp
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
@@ -37,6 +39,9 @@ class MediTrackApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
+
+        // Configure Remote Config early so key lookups have default values.
+        initializeRemoteConfig()
         
         // Enable Firestore offline persistence with cache settings
         enableFirestoreOfflinePersistence()
@@ -51,6 +56,35 @@ class MediTrackApplication : Application() {
         scheduleRetentionCleanup()
 
         Log.d(TAG, "MediTrack Application initialized")
+    }
+
+    private fun initializeRemoteConfig() {
+        try {
+            val remoteConfig = FirebaseRemoteConfig.getInstance()
+            val isDebuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+            val fetchInterval = if (isDebuggable) 0L else 3600L
+
+            val settings = FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(fetchInterval)
+                .build()
+
+            remoteConfig.setConfigSettingsAsync(settings)
+            remoteConfig.setDefaultsAsync(
+                mapOf(
+                    "razorpay_key_id" to ""
+                )
+            )
+
+            remoteConfig.fetchAndActivate()
+                .addOnSuccessListener { activated ->
+                    Log.d(TAG, "Remote Config initialized (activated=$activated)")
+                }
+                .addOnFailureListener { error ->
+                    Log.w(TAG, "Remote Config init fetch failed: ${error.message}")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize Remote Config: ${e.message}")
+        }
     }
 
     /**
