@@ -115,6 +115,34 @@ class MedicineViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Update medicine stock with optimistic UI update.
+     * Called when medicine is marked as taken to immediately reflect quantity decrease.
+     * Falls back to reload if update fails.
+     */
+    fun updateMedicineStock(medicineId: String, newQuantity: Int) {
+        // Optimistic update: Update local list immediately
+        val currentList = (_medicines.value as? Resource.Success)?.data
+        if (currentList != null) {
+            val updatedList = currentList.map { medicine ->
+                if (medicine.id == medicineId) {
+                    medicine.copy(currentQuantity = newQuantity)
+                } else {
+                    medicine
+                }
+            }
+            _medicines.postValue(Resource.Success(updatedList))
+        }
+
+        // Also update current medicine if viewing details
+        val currentMedicine = (_currentMedicine.value as? Resource.Success)?.data
+        if (currentMedicine?.id == medicineId) {
+            _currentMedicine.postValue(
+                Resource.Success(currentMedicine.copy(currentQuantity = newQuantity))
+            )
+        }
+    }
+
     fun clearSaveResult() {
         _saveMedicineResult.value = null
     }

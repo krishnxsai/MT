@@ -186,5 +186,55 @@ class MedicineRepository {
             Resource.Error(e.message ?: "Failed to check low stock", e)
         }
     }
+
+    /**
+     * Atomically decrement medicine stock by 1 when taken.
+     * Prevents stock from going below 0.
+     * Returns the new quantity after decrement.
+     */
+    suspend fun decrementMedicineStock(medicineId: String): Resource<Int> = withContext(Dispatchers.IO) {
+        try {
+            var newQuantity = 0
+            firestore.runTransaction { transaction ->
+                val medRef = medicinesCollection.document(medicineId)
+                val snapshot = transaction.get(medRef)
+                val currentQuantity = (snapshot.getLong("currentQuantity") ?: -1L).toInt()
+
+                if (currentQuantity > -1) {  // -1 means tracking not enabled
+                    newQuantity = (currentQuantity - 1).coerceAtLeast(0)
+                    transaction.update(medRef, mapOf(
+                        "currentQuantity" to newQuantity,
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    ))
+                } else {
+                    newQuantity = -1  // Tracking not enabled
+                }
+            }.await()
+
+            Resource.Success(newQuantity)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to decrement stock", e)
+        }
+    }
+
+    /**
+     * Batch update multiple medicines' quantities.
+     * Used for offline sync operations to avoid individual transaction overhead.
+     */
+    suspend fun batchUpdateStock(updates: Map<String, Int>): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val batch = firestore.batch()
+            updates.forEach { (medicineId, newQuantity) ->
+                batch.update(medicinesCollection.document(medicineId), mapOf(
+                    "currentQuantity" to newQuantity.coerceAtLeast(0),
+                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                ))
+            }
+            batch.commit().await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to batch update stock", e)
+        }
+    }
 }
 

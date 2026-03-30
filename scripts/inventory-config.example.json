@@ -1,0 +1,46 @@
+{
+  "operations": [
+    {
+      "pharmacyId": "lakshmi-pharmacy",
+      "medicineId": "azee-500",
+      "stockQuantity": 0,
+      "reorderLevel": 20,
+      "maxStockLevel": 150
+    },
+    {
+      "pharmacyId": "lakshmi-pharmacy",
+      "medicineId": "calpol-500",
+      "stockQuantity": 5,
+      "reorderLevel": 10,
+      "maxStockLevel": 100
+    },
+    {
+      "pharmacyId": "lakshmi-pharmacy",
+      "medicineId": "aspirin-500",
+      "stockQuantity": 150,
+      "reorderLevel": 20,
+      "maxStockLevel": 200
+    },
+    {
+      "pharmacyId": "sri-sai-medicals",
+      "medicineId": "azee-500",
+      "stockQuantity": 120,
+      "reorderLevel": 20,
+      "maxStockLevel": 200
+    },
+    {
+      "pharmacyId": "sri-sai-medicals",
+      "medicineId": "calpol-500",
+      "stockQuantity": 85,
+      "reorderLevel": 15,
+      "maxStockLevel": 150
+    },
+    {
+      "pharmacyId": "sri-sai-medicals",
+      "medicineId": "aspirin-500",
+      "stockQuantity": 200,
+      "reorderLevel": 25,
+      "maxStockLevel": 250
+    }
+  ]
+}

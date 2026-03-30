@@ -10,6 +10,7 @@ import com.meditrack.app.data.model.*
 import com.meditrack.app.data.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -218,25 +219,28 @@ class UnifiedOrderViewModel @Inject constructor(
                 // Fetch pricing from selected pharmacy's inventory
                 val selectedPharmacy = _selectedPharmacy.value
                 val priced = if (selectedPharmacy != null) {
+                    // Use async to fetch all prices in parallel, then await
                     cartItems.map { item ->
-                        // Query price from pharmacyInventory
-                        val inventoryResult = pharmacyInventoryRepository.getInventoryItem(
-                            pharmacyId = selectedPharmacy.id,
-                            medicineId = item.medicineId
-                        )
+                        async {
+                            // Query price from pharmacyInventory
+                            val inventoryResult = pharmacyInventoryRepository.getInventoryItem(
+                                pharmacyId = selectedPharmacy.id,
+                                medicineName = item.medicineName
+                            )
 
-                        val unitPrice = when (inventoryResult) {
-                            is Resource.Success -> inventoryResult.data?.unitPrice ?: 50.0
-                            else -> 50.0  // Fallback to default if not found
+                            val unitPrice = when (inventoryResult) {
+                                is Resource.Success -> inventoryResult.data?.unitPrice ?: 50.0
+                                else -> 50.0  // Fallback to default if not found
+                            }
+
+                            CartItemWithPrice(
+                                cartItem = item,
+                                unitPrice = unitPrice,
+                                totalPrice = unitPrice * item.quantity,
+                                isAvailable = inventoryResult is Resource.Success && inventoryResult.data != null
+                            )
                         }
-
-                        CartItemWithPrice(
-                            cartItem = item,
-                            unitPrice = unitPrice,
-                            totalPrice = unitPrice * item.quantity,
-                            isAvailable = inventoryResult is Resource.Success && inventoryResult.data != null
-                        )
-                    }
+                    }.awaitAll()
                 } else {
                     // No pharmacy selected yet, use default prices
                     cartItems.map { item ->
@@ -421,6 +425,31 @@ class UnifiedOrderViewModel @Inject constructor(
             _isPlacingOrder.value = true
 
             try {
+                // Validate inventory before placing order
+                val unavailableItems = mutableListOf<String>()
+                for (cartItem in cartItems) {
+                    val inventoryResult = pharmacyInventoryRepository.getInventoryItem(
+                        pharmacyId = pharmacy.id,
+                        medicineName = cartItem.medicineName
+                    )
+
+                    val availableQuantity = when (inventoryResult) {
+                        is Resource.Success -> inventoryResult.data?.stockQuantity ?: 0
+                        else -> 0
+                    }
+
+                    if (availableQuantity < cartItem.quantity) {
+                        unavailableItems.add("${cartItem.medicineName} (available: $availableQuantity, requested: ${cartItem.quantity})")
+                    }
+                }
+
+                if (unavailableItems.isNotEmpty()) {
+                    val errorMsg = "Insufficient stock:\n${unavailableItems.joinToString("\n")}\n\nPlease select a different pharmacy or reduce quantities."
+                    _error.value = errorMsg
+                    _isPlacingOrder.value = false
+                    return@launch
+                }
+
                 // Build order items
                 val orderItems = _cartWithPrices.value.map { cartItemWithPrice ->
                     OrderItem(

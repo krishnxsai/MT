@@ -321,3 +321,14 @@ export const cleanupNotificationLogs = functions.pubsub
 
 // Export the payment verification function from the separate module
 export { verifyRazorpayPayment } from "./verifyRazorpayPayment";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cloud Secret Manager Sync
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Export the secrets sync functions
+export {
+  syncSecretsFromCloudSecretManager,
+  onSyncSecretsScheduled,
+  verifySyncConfiguration,
+} from "./syncSecretsToRemoteConfig";

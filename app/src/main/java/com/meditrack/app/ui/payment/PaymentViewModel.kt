@@ -19,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class PaymentViewModel @Inject constructor(
     private val razorpayRepository: RazorpayRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val configRepository: com.meditrack.app.data.repository.ConfigRepository
 ) : ViewModel() {
 
     companion object {

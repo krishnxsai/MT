@@ -117,8 +117,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
     }
 
     /**
-     * Log a medicine reminder action to Firestore for adherence tracking.
-     * Also decrements stock when the medicine was actually taken.
+     * Log medicine reminder action (TAKE/SKIP) using MedicineIntakeService.
+     * - TAKE: Decrements stock atomically + creates intake record
+     * - SKIP: Creates intake record only (no stock change)
+     * - Queues offline actions if not connected
      */
     private fun logMedicineAction(
         context: Context,
@@ -129,54 +131,48 @@ class NotificationActionReceiver : BroadcastReceiver() {
         source: String
     ) {
         if (medicineId.isEmpty()) return
-        try {
-            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-            val userId = auth.currentUser?.uid ?: return
-            val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 
-            val intake = hashMapOf(
-                "userId" to userId,
-                "medicineId" to medicineId,
-                "medicineName" to medicineName,
-                "scheduledTime" to (reminderTime ?: ""),
-                "taken" to taken,
-                "status" to if (taken) "TAKEN" else "SKIPPED",
-                "takenAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-                "source" to source
-            )
+        // Launch on background thread to log action asynchronously
+        Thread {
+            try {
+                val offlineRepo = com.meditrack.app.data.repository.OfflineActionRepository(context)
+                val intakeService = com.meditrack.app.data.repository.MedicineIntakeService(
+                    context,
+                    offlineRepo
+                )
 
-            firestore.collection("medicineIntakes")
-                .add(intake)
-                .addOnSuccessListener {
-                    Log.d(TAG, "Medicine action logged: $medicineId, taken=$taken")
+                // Use runBlocking to execute suspend function
+                kotlinx.coroutines.runBlocking {
+                    val result = if (taken) {
+                        intakeService.markAsTaken(
+                            medicineId = medicineId,
+                            medicineName = medicineName,
+                            reminderTime = reminderTime,
+                            source = source
+                        )
+                    } else {
+                        intakeService.markAsSkipped(
+                            medicineId = medicineId,
+                            medicineName = medicineName,
+                            reminderTime = reminderTime,
+                            source = source
+                        )
+                    }
+
+                    when (result) {
+                        is com.meditrack.app.data.model.Resource.Success -> {
+                            Log.d(TAG, "Medicine action logged successfully: $medicineId, taken=$taken")
+                        }
+                        is com.meditrack.app.data.model.Resource.Error -> {
+                            Log.e(TAG, "Failed to log medicine action: ${result.message}")
+                        }
+                        else -> {}
+                    }
                 }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Failed to log medicine action: ${e.message}")
-                }
-
-            if (!taken) {
-                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in logMedicineAction: ${e.message}", e)
             }
-
-            // Decrement stock if refill tracking is enabled
-            val medRef = firestore.collection("medicines").document(medicineId)
-            firestore.runTransaction { transaction ->
-                val snapshot = transaction.get(medRef)
-                val current = (snapshot.getLong("currentQuantity") ?: -1)
-                if (current > 0) {
-                    transaction.update(medRef, mapOf(
-                        "currentQuantity" to (current - 1).coerceAtLeast(0),
-                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                    ))
-                }
-            }.addOnSuccessListener {
-                Log.d(TAG, "Stock decremented for: $medicineId")
-            }.addOnFailureListener { e ->
-                Log.e(TAG, "Failed to decrement stock: ${e.message}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error logging medicine action: ${e.message}")
-        }
+        }.start()
     }
 
     /**

@@ -299,8 +299,94 @@ class OrderRepository @Inject constructor(
     // ─────────────── PHASE 3: Inventory Validation ───────────────
 
     /**
+     * Find inventory document by pharmacy and medicine name.
+     * Searches by pharmacyId field + medicineName, not by medicineId (which doesn't exist in docs).
+     * This ensures we find the actual inventory document regardless of how it was created.
+     */
+    private suspend fun findInventoryDocId(
+        pharmacyId: String,
+        medicineName: String
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            val snapshot = inventoryCol
+                .whereEqualTo("pharmacyId", pharmacyId)
+                .whereEqualTo("medicineName", medicineName)
+                .limit(1)
+                .get().await()
+
+            snapshot.documents.firstOrNull()?.id
+        } catch (e: Exception) {
+            Log.w(TAG, "findInventoryDocId error for pharmacy=$pharmacyId, medicine=$medicineName: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Read stock from the canonical field while supporting legacy docs.
+     */
+    private fun getInventoryQuantity(invDoc: com.google.firebase.firestore.DocumentSnapshot): Int {
+        val stockQuantity = invDoc.getLong("stockQuantity")
+        if (stockQuantity != null) return stockQuantity.toInt()
+        return (invDoc.getLong("quantity") ?: 0L).toInt()
+    }
+
+    /**
+     * Apply stock delta with transactional safety to prevent race conditions.
+     * Supports both stockQuantity and legacy quantity fields.
+     */
+    private suspend fun applyInventoryDelta(docId: String, delta: Long) {
+        withContext(Dispatchers.IO) {
+            try {
+                val docRef = inventoryCol.document(docId)
+
+                // Use transaction for atomic update
+                firestore.runTransaction { transaction ->
+                    val invDoc = transaction.get(docRef)
+
+                    val updates = mutableMapOf<String, Any>(
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+
+                    val hasStockQuantity = invDoc.get("stockQuantity") != null
+                    val hasLegacyQuantity = invDoc.get("quantity") != null
+
+                    // Update primary field
+                    if (hasStockQuantity) {
+                        val currentStock = (invDoc.getLong("stockQuantity") ?: 0L).toInt()
+                        val newStock = (currentStock + delta).coerceAtLeast(0)
+                        updates["stockQuantity"] = newStock
+                    }
+
+                    // Keep legacy field in sync
+                    if (hasLegacyQuantity) {
+                        val currentQty = (invDoc.getLong("quantity") ?: 0L).toInt()
+                        val newQty = (currentQty + delta).coerceAtLeast(0)
+                        updates["quantity"] = newQty
+                    }
+
+                    // If neither field exists, initialize canonical stock field
+                    if (!hasStockQuantity && !hasLegacyQuantity) {
+                        val newStock = (0 + delta).coerceAtLeast(0)
+                        updates["stockQuantity"] = newStock
+                    }
+
+                    transaction.update(docRef, updates)
+                }.await()
+
+                Log.d(TAG, "Inventory delta applied: docId=$docId, delta=$delta")
+            } catch (e: Exception) {
+                Log.e(TAG, "applyInventoryDelta error: ${e.message}")
+                throw e
+            }
+        }
+    }
+
+    /**
      * Validate that pharmacy has sufficient inventory for all order items.
      * Must pass before allowing order placement.
+     *
+     * Queries inventory by pharmacyId + medicineName, ensuring we find the correct document
+     * regardless of how it was created.
      *
      * @param order Order with items to validate
      * @return Success if all items in stock, Error otherwise
@@ -309,11 +395,14 @@ class OrderRepository @Inject constructor(
         try {
             // If single-item order (legacy), validate that single item
             if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
-                val docId = "${order.pharmacyId}_${order.medicineId}"
+                val docId = findInventoryDocId(order.pharmacyId, order.medicineName)
+                    ?: return Resource.Error("${order.medicineName} not found in inventory")
+
                 val invDoc = inventoryCol.document(docId).get().await()
-                val inventory = invDoc.getLong("quantity")?.toInt() ?: 0
+                val inventory = getInventoryQuantity(invDoc)
 
                 if (inventory < order.quantity) {
+                    Log.w(TAG, "Insufficient stock for ${order.medicineName}: have $inventory, need ${order.quantity}")
                     return Resource.Error("${order.medicineName} unavailable (in stock: $inventory, requested: ${order.quantity})")
                 }
                 return Resource.Success(Unit)
@@ -321,16 +410,19 @@ class OrderRepository @Inject constructor(
 
             // Multi-item order: validate each item
             for (item in order.items) {
-                val docId = "${order.pharmacyId}_${item.medicineId}"
+                val docId = findInventoryDocId(order.pharmacyId, item.medicineName)
+                    ?: return Resource.Error("${item.medicineName} not found in inventory")
+
                 val invDoc = inventoryCol.document(docId).get().await()
-                val inventory = invDoc.getLong("quantity")?.toInt() ?: 0
+                val inventory = getInventoryQuantity(invDoc)
 
                 if (inventory < item.quantity) {
+                    Log.w(TAG, "Insufficient stock for ${item.medicineName}: have $inventory, need ${item.quantity}")
                     return Resource.Error("${item.medicineName} unavailable (in stock: $inventory, requested: ${item.quantity})")
                 }
             }
 
-            Log.d(TAG, "Inventory validation passed for order")
+            Log.d(TAG, "Inventory validation passed for order: all items in stock")
             return Resource.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "validateInventory error: ${e.message}")
@@ -342,27 +434,34 @@ class OrderRepository @Inject constructor(
      * Reduce pharmacy inventory after order confirmation.
      * Called after order is created in Firestore.
      *
+     * Finds inventory documents by pharmacyId + medicineName query (not composite ID)
+     * and applies stock reduction atomically within a transaction.
+     *
      * @param order Order with items to reduce
      */
     private suspend fun reduceInventory(order: RefillOrder) {
         try {
             // If single-item order
             if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
-                val docId = "${order.pharmacyId}_${order.medicineId}"
-                inventoryCol.document(docId).update(
-                    "quantity", com.google.firebase.firestore.FieldValue.increment(-order.quantity.toLong())
-                ).await()
-                Log.d(TAG, "Inventory reduced: -${order.quantity} units of ${order.medicineName}")
+                val docId = findInventoryDocId(order.pharmacyId, order.medicineName)
+                if (docId != null) {
+                    applyInventoryDelta(docId, -order.quantity.toLong())
+                    Log.d(TAG, "Inventory reduced: -${order.quantity} units of ${order.medicineName} (docId=$docId)")
+                } else {
+                    Log.w(TAG, "Could not find inventory doc to reduce for ${order.medicineName}")
+                }
                 return
             }
 
             // Multi-item order
             for (item in order.items) {
-                val docId = "${order.pharmacyId}_${item.medicineId}"
-                inventoryCol.document(docId).update(
-                    "quantity", com.google.firebase.firestore.FieldValue.increment(-item.quantity.toLong())
-                ).await()
-                Log.d(TAG, "Inventory reduced: -${item.quantity} units of ${item.medicineName}")
+                val docId = findInventoryDocId(order.pharmacyId, item.medicineName)
+                if (docId != null) {
+                    applyInventoryDelta(docId, -item.quantity.toLong())
+                    Log.d(TAG, "Inventory reduced: -${item.quantity} units of ${item.medicineName} (docId=$docId)")
+                } else {
+                    Log.w(TAG, "Could not find inventory doc to reduce for ${item.medicineName}")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "reduceInventory error: ${e.message}")
@@ -778,7 +877,7 @@ class OrderRepository @Inject constructor(
             // Rollback inventory if applicable (inventory validation coming in Phase 3)
             if (order.medicineId.isNotEmpty() && order.quantity > 0) {
                 try {
-                    rollbackInventory(order.pharmacyId, order.medicineId, order.quantity)
+                    rollbackInventory(order.pharmacyId, order.medicineName, order.quantity)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to rollback inventory: ${e.message}")
                     // Continue with cancellation even if rollback fails
@@ -799,24 +898,23 @@ class OrderRepository @Inject constructor(
     /**
      * Rollback pharmacy inventory when order is cancelled.
      * Inverse operation of inventory reduction that happens on order confirmation.
-     * This is a helper for Phase 4 cancellation.
+     * Finds and updates the inventory document by pharmacyId + medicineName.
      *
      * @param pharmacyId Pharmacy ID
-     * @param medicineId Medicine ID
+     * @param medicineName Medicine name
      * @param quantity Quantity to add back
      */
     private suspend fun rollbackInventory(
         pharmacyId: String,
-        medicineId: String,
+        medicineName: String,
         quantity: Int
     ): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
-            val docId = "${pharmacyId}_${medicineId}"
-            inventoryCol.document(docId).update(
-                "quantity", com.google.firebase.firestore.FieldValue.increment(quantity.toLong())
-            ).await()
+            val docId = findInventoryDocId(pharmacyId, medicineName)
+                ?: return@withContext Resource.Error("Inventory item not found for rollback")
 
-            Log.d(TAG, "Inventory rollback: +$quantity of medicine $medicineId at pharmacy $pharmacyId")
+            applyInventoryDelta(docId, quantity.toLong())
+            Log.d(TAG, "Inventory rollback: +$quantity of medicine $medicineName at pharmacy $pharmacyId")
             Resource.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "rollbackInventory error: ${e.message}")
@@ -903,10 +1001,10 @@ class OrderRepository @Inject constructor(
 
             // ── 1. Restore inventory ──────────────────────────────────
             if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
-                rollbackInventory(order.pharmacyId, order.medicineId, order.quantity)
+                rollbackInventory(order.pharmacyId, order.medicineName, order.quantity)
             } else {
                 for (item in order.items) {
-                    rollbackInventory(order.pharmacyId, item.medicineId, item.quantity)
+                    rollbackInventory(order.pharmacyId, item.medicineName, item.quantity)
                 }
             }
 

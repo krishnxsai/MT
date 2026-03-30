@@ -269,9 +269,12 @@ class OrderConfirmationBottomSheet : BottomSheetDialogFragment() {
                             return@resolveAddress
                         }
 
-                        etDeliveryAddress.setText(addressText)
-                        etDeliveryAddress.setSelection(addressText.length)
-                        tilDeliveryAddress.error = null
+                        // Post to main thread to update UI
+                        view?.post {
+                            etDeliveryAddress.setText(addressText)
+                            etDeliveryAddress.setSelection(addressText.length)
+                            tilDeliveryAddress.error = null
+                        }
                     }
                 )
             }

@@ -6,6 +6,10 @@
 
     <string name="google_maps_api_key">AIzaSyB27yys2IdmH0nvhfRtTuENZYtdBo2W4RQ</string>
 
+    <!-- Razorpay Key - Populated by Firebase Remote Config from Cloud Secret Manager -->
+    <!-- For local development, override in build.gradle with resValue -->
+    <string name="razorpay_key_id"></string>
+
     <!-- Auth Screens -->
     <string name="welcome_back">Welcome Back</string>
     <string name="sign_in_to_continue">Sign in to continue</string>

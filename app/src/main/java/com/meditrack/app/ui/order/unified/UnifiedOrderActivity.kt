@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -46,6 +47,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CODE_MAP = 1001
         private const val REQUEST_CODE_PAYMENT = 1002
+        private const val TAG = "UnifiedOrderActivity"
     }
 
     private lateinit var binding: ActivityUnifiedOrderBinding
@@ -253,7 +255,22 @@ class UnifiedOrderActivity : AppCompatActivity() {
         // Error handling
         viewModel.error.observe(this) { message ->
             message?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show()
+                Log.e(TAG, "Error: $it")
+
+                // Show as dialog for critical errors like inventory
+                if (it.contains("Insufficient stock") || it.contains("unavailable")) {
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("Unable to Place Order")
+                        .setMessage(it)
+                        .setPositiveButton("Select Different Pharmacy") { _, _ ->
+                            // Clear cart and return to home page
+                            viewModel.clearCart()
+                        }
+                        .setCancelable(false)
+                        .show()
+                } else {
+                    Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show()
+                }
                 viewModel.clearError()
             }
         }
@@ -330,8 +347,10 @@ class UnifiedOrderActivity : AppCompatActivity() {
     }
 
     private fun handleNavigationEvent(event: UnifiedOrderViewModel.NavigationEvent) {
+        Log.d(TAG, "handleNavigationEvent: $event")
         when (event) {
             is UnifiedOrderViewModel.NavigationEvent.ToOrderTracking -> {
+                Log.d(TAG, "Navigating to OrderTracking with orderId: ${event.orderId}")
                 val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
                 intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
                 startActivity(intent)
@@ -339,21 +358,26 @@ class UnifiedOrderActivity : AppCompatActivity() {
             }
             is UnifiedOrderViewModel.NavigationEvent.ToPharmacyMap -> {
                 // Open PharmacyMapActivity
+                Log.d(TAG, "Navigating to PharmacyMap")
                 val intent = Intent(this, PharmacyMapActivity::class.java)
                 mapActivityLauncher.launch(intent)
             }
             is UnifiedOrderViewModel.NavigationEvent.ToOrderConfirmation -> {
                 // Order placed successfully — navigate to tracking
+                Log.d(TAG, "Navigating to OrderConfirmation with orderId: ${event.orderId}")
                 val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
                 intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
                 startActivity(intent)
                 finish()
             }
             is UnifiedOrderViewModel.NavigationEvent.ToPayment -> {
+                Log.d(TAG, "Navigating to Payment: orderId=${event.orderId}, amount=${event.amount}")
                 // Check feature flag for payment
                 if (FeatureFlags.isEnabled(FeatureFlags.PAYMENT_ENABLED)) {
+                    Log.d(TAG, "Payment feature flag enabled, launching PaymentActivity")
                     launchPaymentActivity(event.orderId, event.amount)
                 } else {
+                    Log.d(TAG, "Payment feature flag disabled, navigating to OrderTracking instead")
                     // Fallback: auto-confirm order and go to tracking
                     val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
                     intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, event.orderId)
@@ -365,16 +389,19 @@ class UnifiedOrderActivity : AppCompatActivity() {
     }
 
     private fun launchPaymentActivity(orderId: String, amount: Double) {
+        Log.d(TAG, "launchPaymentActivity: orderId=$orderId, amount=$amount")
         currentPaymentOrderId = orderId  // Store for use in onActivityResult
         lifecycleScope.launch {
             try {
                 // Get current user
                 val currentUser = FirebaseAuth.getInstance().currentUser
                 if (currentUser == null) {
+                    Log.e(TAG, "launchPaymentActivity: User not authenticated")
                     Toast.makeText(this@UnifiedOrderActivity, "User not authenticated", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
+                Log.d(TAG, "launchPaymentActivity: Fetching user details for uid=${currentUser.uid}")
                 // Fetch user details from Firestore
                 val userDoc = FirebaseFirestore.getInstance()
                     .collection("users")
@@ -386,6 +413,8 @@ class UnifiedOrderActivity : AppCompatActivity() {
                 val userPhone = userDoc.getString("phone") ?: ""
                 val userName = userDoc.getString("fullName") ?: currentUser.displayName ?: "User"
 
+                Log.d(TAG, "launchPaymentActivity: Got user data - email=$userEmail, phone=$userPhone, name=$userName")
+
                 // Create intent for PaymentActivity
                 val intent = Intent(this@UnifiedOrderActivity, PaymentActivity::class.java).apply {
                     putExtra(PaymentActivity.EXTRA_ORDER_ID, orderId)
@@ -395,8 +424,10 @@ class UnifiedOrderActivity : AppCompatActivity() {
                     putExtra(PaymentActivity.EXTRA_USER_NAME, userName)
                 }
 
+                Log.d(TAG, "launchPaymentActivity: Launching PaymentActivity with launcher")
                 paymentActivityLauncher.launch(intent)
             } catch (e: Exception) {
+                Log.e(TAG, "launchPaymentActivity: Exception occurred", e)
                 Toast.makeText(this@UnifiedOrderActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -470,6 +501,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
 
         bottomSheet.setOnOrderConfirmListener(object : OrderConfirmationBottomSheet.OnOrderConfirmListener {
             override fun onOrderConfirmed(deliveryAddress: String) {
+                Log.d(TAG, "onOrderConfirmed: deliveryAddress=$deliveryAddress")
                 // Ensure we have valid location coordinates
                 var location = currentUserLocation
                 if (location == null) {
@@ -480,6 +512,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
                     }
                 }
 
+                Log.d(TAG, "onOrderConfirmed: Calling placeOrder with location lat=${location.latitude}, lon=${location.longitude}")
                 viewModel.placeOrder(
                     deliveryAddress = com.meditrack.app.data.model.DeliveryAddress(
                         fullAddress = deliveryAddress,
@@ -490,6 +523,7 @@ class UnifiedOrderActivity : AppCompatActivity() {
             }
 
             override fun onChangePharmacy() {
+                Log.d(TAG, "onChangePharmacy: Clearing pharmacy selection")
                 viewModel.clearPharmacySelection()
             }
         })

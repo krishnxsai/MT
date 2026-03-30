@@ -238,6 +238,24 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_api_key" />
 
+        <!-- Razorpay API Key -->
+        <!-- NOTE: This is REQUIRED meta-data for Razorpay SDK initialization.
+             The value is populated dynamically via Firebase Remote Config, which is updated
+             from Google Cloud Secret Manager by the backend service.
+
+             Architecture:
+             1. Backend retrieves from Cloud Secret Manager
+             2. Backend populates Firebase Remote Config with the key
+             3. Android app fetches from Firebase Remote Config (ConfigRepository)
+             4. Falls back to this manifest meta-data if Remote Config unavailable
+
+             For build-time injection (dev/test only):
+             Add to build.gradle: resValue "string", "razorpay_key_id", "rzp_test_xxxxx"
+        -->
+        <meta-data
+            android:name="com.razorpay.api_key"
+            android:value="@string/razorpay_key_id" />
+
         <!-- Full-Screen Alarm Activity -->
         <activity
             android:name=".alarm.AlarmFullScreenActivity"

@@ -307,33 +307,42 @@ class PharmacyInventoryRepository @Inject constructor() {
     }
 
     /**
-     * Get a single inventory item by pharmacy and medicine ID.
+     * Get a single inventory item by pharmacy and medicine name.
      * Used for fetching pricing information for cart items.
      *
      * @param pharmacyId Pharmacy ID
-     * @param medicineId Medicine ID to get pricing for
+     * @param medicineName Medicine name to get pricing for (matches case-insensitive)
      * @return InventoryItem with pricing, or null if not found
      */
     suspend fun getInventoryItem(
         pharmacyId: String,
-        medicineId: String
+        medicineName: String
     ): Resource<InventoryItem?> = withContext(Dispatchers.IO) {
         try {
             val snapshot = inventoryCol
                 .whereEqualTo("pharmacyId", pharmacyId)
-                .whereEqualTo("medicineId", medicineId)
                 .whereEqualTo("isActive", true)
-                .limit(1)
+                .limit(100)
                 .get()
                 .await()
 
             if (snapshot.documents.isEmpty()) {
-                Log.d(TAG, "Inventory item not found: pharmacy=$pharmacyId, medicine=$medicineId")
+                Log.d(TAG, "Inventory item not found: pharmacy=$pharmacyId, medicine=$medicineName")
                 return@withContext Resource.Success(null)
             }
 
-            val item = InventoryItem.fromMap(snapshot.documents[0].id, snapshot.documents[0].data!!)
-            Log.d(TAG, "Found inventory item: ${item.medicineName}, price: ₹${item.unitPrice}")
+            // Match by medicine name (case-insensitive) since medicineName is the key field
+            val item = snapshot.documents
+                .mapNotNull { doc -> InventoryItem.fromMap(doc.id, doc.data!!) }
+                .filter { it.isActive }
+                .find { it.medicineName.equals(medicineName, ignoreCase = true) }
+
+            if (item != null) {
+                Log.d(TAG, "Found inventory item: ${item.medicineName}, stock: ${item.stockQuantity}, price: ₹${item.unitPrice}")
+            } else {
+                Log.d(TAG, "Inventory item not found: pharmacy=$pharmacyId, medicine=$medicineName")
+            }
+
             Resource.Success(item)
         } catch (e: Exception) {
             Log.e(TAG, "getInventoryItem error: ${e.message}")

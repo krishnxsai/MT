@@ -84,11 +84,42 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
         setupUI()
         setupObservers()
 
-        // Initialize Razorpay Checkout
-        Checkout.preload(applicationContext)
+        // Initialize Razorpay Checkout with API key
+        // This MUST happen before any checkout operations
+        initializeRazorpayCheckout()
 
         // Create payment order
         viewModel.createPaymentOrder(amount, meditrackOrderId, userEmail, userPhone, userName)
+    }
+
+    /**
+     * Initialize Razorpay Checkout with proper API key configuration.
+     *
+     * The Razorpay SDK reads the API key from AndroidManifest.xml meta-data during initialization.
+     * This method verifies the SDK is ready and optionally logs Remote Config key availability.
+     *
+     * CRITICAL: The manifest meta-data is REQUIRED for SDK to function.
+     * Remote Config can be used for monitoring or key rotation strategy in the future.
+     */
+    private fun initializeRazorpayCheckout() {
+        try {
+            // Preload SDK - this triggers the SDK to read manifest meta-data
+            Checkout.preload(applicationContext)
+            Log.d(TAG, "Razorpay SDK preloaded successfully")
+
+            // Optional: Check if Remote Config has key (for monitoring/future key rotation)
+            val remoteConfig = FirebaseRemoteConfig.getInstance()
+            val remoteConfigKey = remoteConfig.getString("razorpay_key_id")
+
+            if (remoteConfigKey.isNotEmpty()) {
+                Log.d(TAG, "Remote Config has Razorpay key available")
+            } else {
+                Log.w(TAG, "Remote Config: razorpay_key_id not configured - using manifest meta-data")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing Razorpay: ${e.message}", e)
+            showErrorState("Payment system initialization failed: ${e.message}")
+        }
     }
 
     private fun setupUI() {
@@ -113,6 +144,7 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
                 is PaymentUIState.OrderCreated -> {
                     razorpayOrderId = state.order.razorpayOrderId
                     Log.d(TAG, "Payment order created: $razorpayOrderId")
+                    // Start checkout after order created
                     startPaymentCheckout(state.order)
                 }
                 is PaymentUIState.VerifyingPayment -> {
@@ -176,17 +208,6 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
         try {
             val checkout = Checkout()
 
-            // Get Razorpay key from Remote Config
-            val remoteConfig = FirebaseRemoteConfig.getInstance()
-            val razorpayKeyId = remoteConfig.getString("razorpay_key_id")
-
-            if (razorpayKeyId.isNotEmpty()) {
-                checkout.setKeyID(razorpayKeyId)
-                Log.d(TAG, "Razorpay key configured from Remote Config")
-            } else {
-                Log.w(TAG, "Razorpay key not found in Remote Config - SDK may provide default behavior")
-            }
-
             val options = JSONObject()
             options.put("name", "MediTrack")
             options.put("description", "Medicine Order #$meditrackOrderId")
@@ -202,9 +223,10 @@ class PaymentActivity : AppCompatActivity(), PaymentResultListener {
             // Theme
             options.put("theme.color", "#1976D2")  // Material Blue
 
+            Log.d(TAG, "Starting Razorpay checkout for order: ${order.razorpayOrderId}")
             checkout.open(this, options)
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting checkout: ${e.message}")
+            Log.e(TAG, "Error starting checkout: ${e.message}", e)
             showErrorState("Failed to open payment checkout: ${e.message}")
         }
     }
