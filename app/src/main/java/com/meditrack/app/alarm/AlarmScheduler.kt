@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.RepeatType
 import java.util.Calendar
-import kotlin.random.Random
 
 /**
  * Scheduler for medicine reminder alarms.
@@ -206,7 +205,7 @@ class AlarmScheduler(private val context: Context) {
         dosage: String,
         reminderTime: String
     ): Int {
-        val alarmId = generateAlarmId()
+        val alarmId = generateDeterministicAlarmId(medicineId, reminderTime)
 
         // Get tomorrow's trigger time
         val triggerTime = getNextTriggerTime(reminderTime, forceNextDay = true)
@@ -303,13 +302,6 @@ class AlarmScheduler(private val context: Context) {
      */
     private fun generateDeterministicAlarmId(medicineId: String, timeKey: String): Int {
         return ("$medicineId:$timeKey".hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
-    }
-
-    /**
-     * Generate a unique alarm ID (legacy fallback for snooze / one-shot alarms).
-     */
-    private fun generateAlarmId(): Int {
-        return Random.nextInt(1, Int.MAX_VALUE)
     }
 
     /**

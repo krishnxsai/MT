@@ -523,6 +523,33 @@ class UnifiedOrderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cancel a pending unpaid order when the user exits payment without completing it.
+     * This avoids leaving abandoned orders in the "Waiting for confirmation" state.
+     */
+    suspend fun cancelPendingOrderAfterPaymentExit(
+        orderId: String,
+        reason: String
+    ): Resource<Unit> {
+        if (orderId.isBlank()) {
+            return Resource.Error("Order ID is required")
+        }
+
+        return when (val orderResult = orderRepository.getOrder(orderId)) {
+            is Resource.Success -> {
+                val order = orderResult.data
+                if (order.status != OrderStatus.PENDING) {
+                    // No-op: order already advanced or terminal.
+                    Resource.Success(Unit)
+                } else {
+                    orderRepository.cancelOrderWithRefund(orderId, reason)
+                }
+            }
+            is Resource.Error -> Resource.Error(orderResult.message ?: "Unable to load order")
+            is Resource.Loading -> Resource.Error("Order status is still loading")
+        }
+    }
+
     // ==================== MAP VIEW ====================
 
     fun openPharmacyMap() {

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -284,9 +285,8 @@ class OrderRepository @Inject constructor(
 
             docRef.set(data).await()
 
-            // ── PHASE 3: REDUCE INVENTORY ───────────────────────────────────
-            // Reduce pharmacy inventory after order is confirmed
-            reduceInventory(order)
+            // Inventory mutations are handled server-side by Cloud Functions
+            // when order status transitions are persisted.
 
             Log.d(TAG, "Order placed successfully: ${docRef.id}")
             Resource.Success(docRef.id)
@@ -300,17 +300,40 @@ class OrderRepository @Inject constructor(
 
     /**
      * Find inventory document by pharmacy and medicine name.
-     * Searches by pharmacyId field + medicineName, not by medicineId (which doesn't exist in docs).
-     * This ensures we find the actual inventory document regardless of how it was created.
+     * Searches normalized name first, then falls back to legacy exact medicineName.
      */
+    private fun normalizeMedicineName(value: String): String {
+        return value.trim().lowercase(Locale.ROOT)
+    }
+
     private suspend fun findInventoryDocId(
         pharmacyId: String,
         medicineName: String
     ): String? = withContext(Dispatchers.IO) {
         try {
+            val normalizedName = normalizeMedicineName(medicineName)
+            if (normalizedName.isNotEmpty()) {
+                try {
+                    val normalizedSnapshot = inventoryCol
+                        .whereEqualTo("pharmacyId", pharmacyId)
+                        .whereEqualTo("medicineNameNormalized", normalizedName)
+                        .limit(1)
+                        .get().await()
+
+                    normalizedSnapshot.documents.firstOrNull()?.id?.let { return@withContext it }
+                } catch (queryError: Exception) {
+                    Log.w(TAG, "Normalized inventory lookup failed, falling back to legacy name query: ${queryError.message}")
+                }
+            }
+
+            val legacyName = medicineName.trim()
+            if (legacyName.isEmpty()) {
+                return@withContext null
+            }
+
             val snapshot = inventoryCol
                 .whereEqualTo("pharmacyId", pharmacyId)
-                .whereEqualTo("medicineName", medicineName)
+                .whereEqualTo("medicineName", legacyName)
                 .limit(1)
                 .get().await()
 
@@ -385,8 +408,7 @@ class OrderRepository @Inject constructor(
      * Validate that pharmacy has sufficient inventory for all order items.
      * Must pass before allowing order placement.
      *
-     * Queries inventory by pharmacyId + medicineName, ensuring we find the correct document
-     * regardless of how it was created.
+      * Queries inventory by normalized medicine name first, with legacy exact-name fallback.
      *
      * @param order Order with items to validate
      * @return Success if all items in stock, Error otherwise
@@ -434,8 +456,8 @@ class OrderRepository @Inject constructor(
      * Reduce pharmacy inventory after order confirmation.
      * Called after order is created in Firestore.
      *
-     * Finds inventory documents by pharmacyId + medicineName query (not composite ID)
-     * and applies stock reduction atomically within a transaction.
+      * Finds inventory documents by normalized name (legacy fallback supported)
+      * and applies stock reduction atomically within a transaction.
      *
      * @param order Order with items to reduce
      */
@@ -500,9 +522,8 @@ class OrderRepository @Inject constructor(
                 "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
             )
 
-            // If shipped, start delivery tracking service
             if (newStatus == OrderStatus.SHIPPED) {
-                startDeliveryLocationTracking(orderId, order)
+                updates["deliveryTrackingId"] = "ongoing_$orderId"
             }
 
             // If delivered, record delivery time and update medicine stock
@@ -517,6 +538,11 @@ class OrderRepository @Inject constructor(
             }
 
             ordersCol.document(orderId).update(updates).await()
+
+            if (newStatus == OrderStatus.SHIPPED) {
+                startDeliveryLocationTracking(orderId)
+            }
+
             Resource.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "updateOrderStatus error: ${e.message}")
@@ -528,7 +554,7 @@ class OrderRepository @Inject constructor(
      * Start delivery location tracking service when order transitions to SHIPPED.
      * The delivery person's location will be tracked in real-time and written to Firestore.
      */
-    private suspend fun startDeliveryLocationTracking(orderId: String, order: RefillOrder) {
+    private suspend fun startDeliveryLocationTracking(orderId: String) {
         try {
             val currentUser = FirebaseAuth.getInstance().currentUser
             if (currentUser == null) {
@@ -726,34 +752,20 @@ class OrderRepository @Inject constructor(
         newStatus: String,
         note: String = "",
         cancelReason: String? = null
-    ): Resource<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val orderRef = ordersCol.document(orderId)
-            val orderSnap = orderRef.get().await()
-            val existingOrder = orderSnap.data?.let { RefillOrder.fromMap(orderSnap.id, it) }
-                ?: return@withContext Resource.Error("Order not found")
-
-            val statusEntry = mapOf(
-                "status" to newStatus,
-                "changedAt" to Date(),
-                "note" to note
-            )
-            val updates = mutableMapOf<String, Any>(
-                "status" to newStatus,
-                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-                "statusHistory" to com.google.firebase.firestore.FieldValue.arrayUnion(statusEntry)
-            )
-            if (newStatus == OrderStatus.CANCELLED.name) {
-                updates["cancelReason"] = cancelReason ?: "Cancelled by pharmacy"
-            }
-
-            orderRef.update(updates).await()
-
-            Resource.Success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "updateOrderStatus error: ${e.message}")
-            Resource.Error(e.message ?: "Failed to update order status")
+    ): Resource<Unit> {
+        val parsedStatus = try {
+            OrderStatus.valueOf(newStatus)
+        } catch (_: IllegalArgumentException) {
+            return Resource.Error("Invalid order status: $newStatus")
         }
+
+        val effectiveNote = when (parsedStatus) {
+            OrderStatus.CANCELLED -> cancelReason?.takeIf { it.isNotBlank() }
+                ?: note.ifBlank { "Cancelled by pharmacy" }
+            else -> note
+        }
+
+        return updateOrderStatus(orderId, parsedStatus, effectiveNote)
     }
 
     /**
@@ -874,16 +886,6 @@ class OrderRepository @Inject constructor(
                 return@withContext Resource.Error("Cannot cancel ${order.status.displayName()} order")
             }
 
-            // Rollback inventory if applicable (inventory validation coming in Phase 3)
-            if (order.medicineId.isNotEmpty() && order.quantity > 0) {
-                try {
-                    rollbackInventory(order.pharmacyId, order.medicineName, order.quantity)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to rollback inventory: ${e.message}")
-                    // Continue with cancellation even if rollback fails
-                }
-            }
-
             // Update order status to CANCELLED
             updateOrderStatus(orderId, OrderStatus.CANCELLED, reason.ifEmpty { "Cancelled by user" })
 
@@ -999,16 +1001,9 @@ class OrderRepository @Inject constructor(
             val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
                 ?: return@withContext Resource.Error("Order not found")
 
-            // ── 1. Restore inventory ──────────────────────────────────
-            if (order.items.isEmpty() && order.medicineId.isNotEmpty()) {
-                rollbackInventory(order.pharmacyId, order.medicineName, order.quantity)
-            } else {
-                for (item in order.items) {
-                    rollbackInventory(order.pharmacyId, item.medicineName, item.quantity)
-                }
-            }
+            // Inventory rollback is handled server-side on CANCELLED status transitions.
 
-            // ── 2. Update cancellation request ────────────────────────
+            // ── 1. Update cancellation request ────────────────────────
             cancellationRequestsCol.document(cancellationRequestId).update(mapOf(
                 "requestStatus" to CancellationStatus.COMPLETED.name,
                 "approvedBy" to approvedBy,
@@ -1018,17 +1013,17 @@ class OrderRepository @Inject constructor(
                 "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
             )).await()
 
-            // ── 3. Update order status ────────────────────────────────
+            // ── 2. Update order status ────────────────────────────────
             updateOrderStatus(
                 orderId,
                 OrderStatus.CANCELLED,
                 "Order cancelled (request: $cancellationRequestId)"
             )
 
-            // ── 4. Initiate refund if payment was made ────────────────
+            // ── 3. Initiate refund if payment was made ────────────────
             initiateRefund(orderId, order, cancellationRequestId)
 
-            Log.d(TAG, "Order $orderId cancelled and inventory restored")
+            Log.d(TAG, "Order $orderId cancelled; inventory rollback handled server-side")
             Resource.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "processCancellation error: ${e.message}")

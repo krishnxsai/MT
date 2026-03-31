@@ -31,8 +31,15 @@ class VerifyAndAcceptOrderUseCase @Inject constructor(
             return when (val result = pharmacyRepository.verifyPrescription(medicine)) {
                 is Resource.Success -> {
                     if (result.data.isValid) {
-                        orderRepository.updateOrderStatus(order.id, OrderStatus.CONFIRMED.name)
-                        AcceptOrderResult.Accepted("Prescription verified — order confirmed")
+                        when (val updateResult = orderRepository.updateOrderStatus(
+                            order.id,
+                            OrderStatus.CONFIRMED,
+                            "Prescription verified"
+                        )) {
+                            is Resource.Success -> AcceptOrderResult.Accepted("Prescription verified — order confirmed")
+                            is Resource.Error -> AcceptOrderResult.Error(updateResult.message)
+                            is Resource.Loading -> AcceptOrderResult.Error("Unexpected loading state")
+                        }
                     } else {
                         AcceptOrderResult.PrescriptionInvalid(result.data.reason)
                     }
@@ -44,13 +51,17 @@ class VerifyAndAcceptOrderUseCase @Inject constructor(
 
         // Regular status advancement
         val nextStatus = when (order.status) {
-            OrderStatus.PENDING -> OrderStatus.CONFIRMED.name
-            OrderStatus.CONFIRMED -> OrderStatus.PREPARING.name
-            OrderStatus.PREPARING -> OrderStatus.SHIPPED.name
-            OrderStatus.SHIPPED -> OrderStatus.DELIVERED.name
+            OrderStatus.PENDING -> OrderStatus.CONFIRMED
+            OrderStatus.CONFIRMED -> OrderStatus.PREPARING
+            OrderStatus.PREPARING -> OrderStatus.SHIPPED
+            OrderStatus.SHIPPED -> OrderStatus.DELIVERED
             else -> return AcceptOrderResult.Error("Cannot advance order in current status")
         }
-        orderRepository.updateOrderStatus(order.id, nextStatus)
-        return AcceptOrderResult.StatusAdvanced(nextStatus)
+
+        return when (val updateResult = orderRepository.updateOrderStatus(order.id, nextStatus)) {
+            is Resource.Success -> AcceptOrderResult.StatusAdvanced(nextStatus.name)
+            is Resource.Error -> AcceptOrderResult.Error(updateResult.message)
+            is Resource.Loading -> AcceptOrderResult.Error("Unexpected loading state")
+        }
     }
 }

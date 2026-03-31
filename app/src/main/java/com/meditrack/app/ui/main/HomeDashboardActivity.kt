@@ -1,13 +1,18 @@
 package com.meditrack.app.ui.main
 
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.os.Bundle
+import android.os.Build
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.meditrack.app.R
+import com.meditrack.app.alarm.NotificationActionReceiver
 import com.meditrack.app.data.analytics.VitalAlertEngine
 import com.meditrack.app.data.analytics.RiskScoreEngine
 import com.meditrack.app.data.model.ClinicalDecision
@@ -50,6 +55,17 @@ class HomeDashboardActivity : AppCompatActivity() {
 
     private var cachedLogs: List<com.meditrack.app.data.model.HealthLog> = emptyList()
     private var cachedMedicines: List<Medicine> = emptyList()
+    private var intakeRefreshReceiverRegistered = false
+
+    private val intakeRefreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != NotificationActionReceiver.ACTION_MEDICINE_INTAKE_RECORDED) {
+                return
+            }
+            // Force a medicine/adherence refresh after TAKE/SKIP actions from alarm notifications.
+            medicineViewModel.loadMedicinesOnce()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +77,7 @@ class HomeDashboardActivity : AppCompatActivity() {
         observeViewModel()
         observeRiskCard()
         observeAdherenceStats()
+        registerIntakeRefreshReceiver()
         updateGreeting()
     }
 
@@ -72,6 +89,34 @@ class HomeDashboardActivity : AppCompatActivity() {
         binding.bottomNavigation?.setOnItemSelectedListener(null)
         binding.bottomNavigation?.selectedItemId = R.id.nav_home
         setupBottomNavigation()
+    }
+
+    override fun onDestroy() {
+        unregisterIntakeRefreshReceiver()
+        super.onDestroy()
+    }
+
+    private fun registerIntakeRefreshReceiver() {
+        if (intakeRefreshReceiverRegistered) return
+
+        val filter = IntentFilter(NotificationActionReceiver.ACTION_MEDICINE_INTAKE_RECORDED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(intakeRefreshReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(intakeRefreshReceiver, filter)
+        }
+        intakeRefreshReceiverRegistered = true
+    }
+
+    private fun unregisterIntakeRefreshReceiver() {
+        if (!intakeRefreshReceiverRegistered) return
+        try {
+            unregisterReceiver(intakeRefreshReceiver)
+        } catch (_: IllegalArgumentException) {
+            // Receiver might already be unregistered by the framework.
+        }
+        intakeRefreshReceiverRegistered = false
     }
 
     private fun setupBottomNavigation() {
@@ -384,6 +429,7 @@ class HomeDashboardActivity : AppCompatActivity() {
         val activeMedicines = medicines.filter { it.isActive }
 
         if (activeMedicines.isEmpty()) {
+            homeDashboardViewModel.stopAdherenceObservation()
             binding.nextMedicineName.text = getString(R.string.no_medicines_scheduled)
             binding.nextMedicineTime.text = "—"
             binding.progressText.text = "0/0 taken"
@@ -434,7 +480,7 @@ class HomeDashboardActivity : AppCompatActivity() {
             binding.nextMedicineTime.text = "—"
         }
 
-        homeDashboardViewModel.loadAdherenceStats(activeMedicines)
+        homeDashboardViewModel.observeAdherenceStats(activeMedicines)
     }
 
     private fun formatTime(time24: String): String {

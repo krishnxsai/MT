@@ -14,6 +14,531 @@ admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+const INVENTORY_ADJUSTMENTS_COLLECTION = "inventoryAdjustments";
+const PAYMENTS_COLLECTION = "payments";
+const TRANSACTIONS_COLLECTION = "transactions";
+const PURCHASE_TRANSACTION_DOC_PREFIX = "purchase_";
+const ROLLBACK_ELIGIBLE_STATUSES = new Set([
+  "CONFIRMED",
+  "PREPARING",
+  "READY",
+  "SHIPPED",
+]);
+
+interface InventoryOrderItem {
+  medicineNameRaw: string;
+  medicineNameNormalized: string;
+  medicineName: string;
+  quantity: number;
+}
+
+type InventoryMatchMethod = "medicineNameNormalized" | "medicineName";
+
+interface InventoryMatchRecord {
+  medicineName: string;
+  quantity: number;
+  matchedBy: InventoryMatchMethod;
+  inventoryDocPath: string;
+}
+
+interface ResolvedInventoryItem {
+  item: InventoryOrderItem;
+  inventoryDoc: FirebaseFirestore.QueryDocumentSnapshot;
+  matchedBy: InventoryMatchMethod;
+}
+
+interface MedicineSummary {
+  medicineId: string;
+  medicineName: string;
+}
+
+function parseInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.floor(value);
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.floor(parsed);
+    }
+  }
+
+  return null;
+}
+
+function toInt(value: unknown, fallback = 0): number {
+  const parsed = parseInteger(value);
+  return parsed === null ? fallback : parsed;
+}
+
+function toPositiveInt(value: unknown): number | null {
+  const parsed = parseInteger(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+function toPositiveNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function normalizeMedicineName(value: unknown): string {
+  return asString(value).trim().toLowerCase();
+}
+
+function extractInventoryItems(
+  orderData: FirebaseFirestore.DocumentData
+): InventoryOrderItem[] {
+  const extracted: InventoryOrderItem[] = [];
+  const rawItems = orderData.items;
+
+  if (Array.isArray(rawItems)) {
+    for (const rawItem of rawItems) {
+      if (!rawItem || typeof rawItem !== "object") {
+        continue;
+      }
+
+      const item = rawItem as Record<string, unknown>;
+      const medicineNameRaw = asString(item.medicineName).trim();
+      const medicineNameNormalized = normalizeMedicineName(item.medicineName);
+      const quantity = toPositiveInt(item.quantity);
+
+      if (medicineNameRaw && medicineNameNormalized && quantity !== null) {
+        extracted.push({
+          medicineNameRaw,
+          medicineNameNormalized,
+          medicineName: medicineNameRaw,
+          quantity,
+        });
+      }
+    }
+  }
+
+  if (extracted.length > 0) {
+    return extracted;
+  }
+
+  const legacyMedicineNameRaw = asString(orderData.medicineName).trim();
+  const legacyMedicineNameNormalized = normalizeMedicineName(orderData.medicineName);
+  const legacyQuantity = toPositiveInt(orderData.quantity);
+
+  if (legacyMedicineNameRaw && legacyMedicineNameNormalized && legacyQuantity !== null) {
+    extracted.push({
+      medicineNameRaw: legacyMedicineNameRaw,
+      medicineNameNormalized: legacyMedicineNameNormalized,
+      medicineName: legacyMedicineNameRaw,
+      quantity: legacyQuantity,
+    });
+  }
+
+  return extracted;
+}
+
+function extractMedicineSummary(
+  orderData: FirebaseFirestore.DocumentData,
+  orderId: string
+): MedicineSummary {
+  const fallbackName = `Order #${orderId.slice(-6)}`;
+  const rawItems = orderData.items;
+
+  if (Array.isArray(rawItems)) {
+    const items = rawItems
+      .filter((rawItem) => rawItem && typeof rawItem === "object")
+      .map((rawItem) => rawItem as Record<string, unknown>);
+
+    const first = items[0];
+    const firstName = asString(first?.medicineName).trim();
+    const firstId = asString(first?.medicineId).trim();
+
+    if (firstName) {
+      const displayName =
+        items.length > 1 ? `${firstName} +${items.length - 1} more` : firstName;
+      return {
+        medicineId: firstId,
+        medicineName: displayName,
+      };
+    }
+  }
+
+  const legacyName = asString(orderData.medicineName).trim();
+  const legacyId = asString(orderData.medicineId).trim();
+
+  return {
+    medicineId: legacyId,
+    medicineName: legacyName || fallbackName,
+  };
+}
+
+function getCapturedPaymentRecord(
+  paymentSnapshot: FirebaseFirestore.QuerySnapshot
+): FirebaseFirestore.DocumentData | null {
+  if (paymentSnapshot.empty) {
+    return null;
+  }
+
+  const docs = paymentSnapshot.docs.map((doc) => doc.data());
+  const captured = docs.find((doc) => asString(doc.status) === "CAPTURED");
+  if (captured) {
+    return captured;
+  }
+
+  const fallback = docs.find((doc) => {
+    const paymentId = asString(doc.paymentId).trim() || asString(doc.razorpayPaymentId).trim();
+    return paymentId.length > 0;
+  });
+
+  return fallback || null;
+}
+
+function getTransactionAmountRupees(
+  orderData: FirebaseFirestore.DocumentData,
+  paymentData: FirebaseFirestore.DocumentData
+): number | null {
+  const orderTotal = toPositiveNumber(orderData.totalAmount);
+  if (orderTotal !== null) {
+    return orderTotal;
+  }
+
+  const paymentAmountPaise = toPositiveInt(paymentData.amount);
+  if (paymentAmountPaise !== null) {
+    return paymentAmountPaise / 100;
+  }
+
+  const subtotal = toPositiveNumber(orderData.subtotal);
+  if (subtotal !== null) {
+    return subtotal;
+  }
+
+  return null;
+}
+
+async function syncRevenueTransactionForConfirmedOrder(
+  orderId: string,
+  oldStatus: string,
+  newStatus: string,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<void> {
+  if (newStatus !== "CONFIRMED" || oldStatus === "CONFIRMED") {
+    return;
+  }
+
+  const pharmacyId = asString(orderData.pharmacyId).trim();
+  if (!pharmacyId) {
+    console.warn(`Order ${orderId}: missing pharmacyId, skipping revenue sync`);
+    return;
+  }
+
+  const orderRef = db.collection("orders").doc(orderId);
+  const paymentsQuery = db.collection(PAYMENTS_COLLECTION)
+    .where("meditrackOrderId", "==", orderId)
+    .limit(5);
+  const purchaseTxQuery = db.collection(TRANSACTIONS_COLLECTION)
+    .where("orderId", "==", orderId)
+    .where("type", "==", "PURCHASE")
+    .limit(5);
+
+  await db.runTransaction(async (transaction) => {
+    const latestOrderSnapshot = await transaction.get(orderRef);
+    const latestStatus = asString(latestOrderSnapshot.get("status"));
+
+    if (latestStatus !== "CONFIRMED") {
+      console.log(
+        `Order ${orderId}: skip revenue sync because latest status is ${latestStatus || "UNKNOWN"}`
+      );
+      return;
+    }
+
+    const paymentSnapshot = await transaction.get(paymentsQuery);
+    const paymentData = getCapturedPaymentRecord(paymentSnapshot);
+    if (!paymentData) {
+      console.log(`Order ${orderId}: no captured payment record found, skipping revenue sync`);
+      return;
+    }
+
+    const amount = getTransactionAmountRupees(orderData, paymentData);
+    if (amount === null || amount <= 0) {
+      console.warn(`Order ${orderId}: missing positive amount, skipping revenue sync`);
+      return;
+    }
+
+    const paymentId = asString(paymentData.paymentId).trim() ||
+      asString(paymentData.razorpayPaymentId).trim();
+    const razorpayOrderId = asString(paymentData.razorpayOrderId).trim();
+    const paymentMethod = asString(paymentData.paymentMethod).trim() || "UPI";
+    const currency = asString(paymentData.currency).trim() || "INR";
+    const userId = asString(orderData.userId).trim() ||
+      asString(orderData.patientId).trim() ||
+      asString(paymentData.userId).trim();
+    const medicineSummary = extractMedicineSummary(orderData, orderId);
+
+    const purchaseTxSnapshot = await transaction.get(purchaseTxQuery);
+    const transactionRef = purchaseTxSnapshot.empty
+      ? db.collection(TRANSACTIONS_COLLECTION).doc(`${PURCHASE_TRANSACTION_DOC_PREFIX}${orderId}`)
+      : purchaseTxSnapshot.docs[0].ref;
+
+    const payload: Record<string, unknown> = {
+      userId,
+      orderId,
+      medicineId: medicineSummary.medicineId,
+      medicineName: medicineSummary.medicineName,
+      type: "PURCHASE",
+      amount,
+      currency,
+      status: "COMPLETED",
+      pharmacyId,
+      pharmacyName: asString(orderData.pharmacyName).trim(),
+      razorpayOrderId,
+      razorpayPaymentId: paymentId,
+      paymentMethod,
+      transactionRef: paymentId,
+      notes: "Payment captured and order confirmed",
+    };
+
+    if (purchaseTxSnapshot.empty) {
+      payload.createdAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+
+    transaction.set(transactionRef, payload, { merge: true });
+  });
+}
+
+async function applyInventoryItemsDelta(
+  transaction: FirebaseFirestore.Transaction,
+  orderId: string,
+  pharmacyId: string,
+  items: InventoryOrderItem[],
+  direction: 1 | -1
+): Promise<InventoryMatchRecord[]> {
+  const resolvedItems: ResolvedInventoryItem[] = [];
+
+  for (const item of items) {
+    const normalizedQuery = db.collection("pharmacyInventory")
+      .where("pharmacyId", "==", pharmacyId)
+      .where("medicineNameNormalized", "==", item.medicineNameNormalized)
+      .limit(2);
+
+    let inventorySnapshot: FirebaseFirestore.QuerySnapshot | null = null;
+    let matchedBy: InventoryMatchMethod = "medicineNameNormalized";
+
+    try {
+      inventorySnapshot = await transaction.get(normalizedQuery);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.warn(
+        `Order ${orderId}: normalized inventory query failed for ${item.medicineNameRaw}. ` +
+        `Falling back to legacy name query. ${err.message || ""}`
+      );
+    }
+
+    if (!inventorySnapshot || inventorySnapshot.empty) {
+      const legacyNameQuery = db.collection("pharmacyInventory")
+        .where("pharmacyId", "==", pharmacyId)
+        .where("medicineName", "==", item.medicineNameRaw)
+        .limit(2);
+
+      inventorySnapshot = await transaction.get(legacyNameQuery);
+      matchedBy = "medicineName";
+    }
+
+    if (inventorySnapshot.empty) {
+      throw new Error(
+        `Inventory not found for "${item.medicineNameRaw}" in pharmacy ${pharmacyId}`
+      );
+    }
+
+    if (inventorySnapshot.size > 1) {
+      throw new Error(
+        `Ambiguous inventory match for "${item.medicineNameRaw}" in pharmacy ${pharmacyId}`
+      );
+    }
+
+    resolvedItems.push({
+      item,
+      inventoryDoc: inventorySnapshot.docs[0],
+      matchedBy,
+    });
+  }
+
+  const aggregatedByDoc = new Map<string, {
+    inventoryDoc: FirebaseFirestore.QueryDocumentSnapshot;
+    totalQuantity: number;
+  }>();
+
+  for (const resolved of resolvedItems) {
+    const docPath = resolved.inventoryDoc.ref.path;
+    const current = aggregatedByDoc.get(docPath);
+    if (current) {
+      current.totalQuantity += resolved.item.quantity;
+    } else {
+      aggregatedByDoc.set(docPath, {
+        inventoryDoc: resolved.inventoryDoc,
+        totalQuantity: resolved.item.quantity,
+      });
+    }
+  }
+
+  for (const { inventoryDoc, totalQuantity } of aggregatedByDoc.values()) {
+    const stockValue = inventoryDoc.get("stockQuantity");
+    const legacyValue = inventoryDoc.get("quantity");
+    const hasStockQuantity = stockValue !== undefined && stockValue !== null;
+    const hasLegacyQuantity = legacyValue !== undefined && legacyValue !== null;
+
+    if (direction === -1 && !hasStockQuantity && !hasLegacyQuantity) {
+      throw new Error(
+        `Inventory document ${inventoryDoc.ref.path} has no stock field for deduction`
+      );
+    }
+
+    const currentQuantity = hasStockQuantity ? toInt(stockValue) : toInt(legacyValue);
+    if (direction === -1 && currentQuantity < totalQuantity) {
+      throw new Error(
+        `Insufficient stock for ${inventoryDoc.ref.path}: available=${currentQuantity}, requested=${totalQuantity}`
+      );
+    }
+
+    const nextQuantity = currentQuantity + (direction * totalQuantity);
+    const updates: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // Keep legacy and canonical fields aligned using one computed quantity.
+    if (hasStockQuantity || !hasLegacyQuantity) {
+      updates.stockQuantity = nextQuantity;
+    }
+
+    if (hasLegacyQuantity) {
+      updates.quantity = nextQuantity;
+    }
+
+    transaction.update(inventoryDoc.ref, updates);
+  }
+
+  return resolvedItems.map((resolved) => ({
+    medicineName: resolved.item.medicineName,
+    quantity: resolved.item.quantity,
+    matchedBy: resolved.matchedBy,
+    inventoryDocPath: resolved.inventoryDoc.ref.path,
+  }));
+}
+
+async function syncInventoryForOrderStatusChange(
+  orderId: string,
+  oldStatus: string,
+  newStatus: string,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<void> {
+  const isConfirmTransition = newStatus === "CONFIRMED";
+  const isCancelRollbackTransition =
+    newStatus === "CANCELLED" && ROLLBACK_ELIGIBLE_STATUSES.has(oldStatus);
+
+  if (!isConfirmTransition && !isCancelRollbackTransition) {
+    return;
+  }
+
+  const pharmacyId = asString(orderData.pharmacyId).trim();
+  if (!pharmacyId) {
+    console.warn(`Order ${orderId}: missing pharmacyId, skipping inventory sync`);
+    return;
+  }
+
+  const items = extractInventoryItems(orderData);
+  if (items.length === 0) {
+    console.warn(`Order ${orderId}: no inventory items found, skipping inventory sync`);
+    return;
+  }
+
+  const adjustmentRef = db.collection(INVENTORY_ADJUSTMENTS_COLLECTION).doc(orderId);
+  const orderRef = db.collection("orders").doc(orderId);
+
+  await db.runTransaction(async (transaction) => {
+    const latestOrderSnapshot = await transaction.get(orderRef);
+    const latestStatus = asString(latestOrderSnapshot.get("status"));
+
+    if (isConfirmTransition && latestStatus !== "CONFIRMED") {
+      console.log(
+        `Order ${orderId}: skip CONFIRMED inventory sync because latest status is ${latestStatus || "UNKNOWN"}`
+      );
+      return;
+    }
+
+    if (isCancelRollbackTransition && latestStatus !== "CANCELLED") {
+      console.log(
+        `Order ${orderId}: skip CANCELLED inventory rollback because latest status is ${latestStatus || "UNKNOWN"}`
+      );
+      return;
+    }
+
+    const adjustmentSnapshot = await transaction.get(adjustmentRef);
+    const adjustmentData =
+      (adjustmentSnapshot.data() as Record<string, unknown> | undefined) || {};
+
+    const alreadyReduced = adjustmentData.confirmedApplied === true;
+    const alreadyRolledBack = adjustmentData.cancelledRollbackApplied === true;
+
+    if (isConfirmTransition) {
+      if (alreadyReduced) {
+        console.log(`Order ${orderId}: inventory reduction already applied`);
+        return;
+      }
+
+      const confirmedMatchRecords = await applyInventoryItemsDelta(
+        transaction,
+        orderId,
+        pharmacyId,
+        items,
+        -1
+      );
+
+      transaction.set(adjustmentRef, {
+        confirmedApplied: true,
+        confirmedAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+        confirmedMatchRecords,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return;
+    }
+
+    if (!alreadyReduced) {
+      console.log(`Order ${orderId}: skipping rollback because reduction was not applied`);
+      return;
+    }
+
+    if (alreadyRolledBack) {
+      console.log(`Order ${orderId}: inventory rollback already applied`);
+      return;
+    }
+
+    const rollbackMatchRecords = await applyInventoryItemsDelta(
+      transaction,
+      orderId,
+      pharmacyId,
+      items,
+      1
+    );
+
+    transaction.set(adjustmentRef, {
+      cancelledRollbackApplied: true,
+      cancelledRollbackAppliedAt: admin.firestore.FieldValue.serverTimestamp(),
+      rollbackMatchRecords,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Order Status Notification Trigger
 // ═══════════════════════════════════════════════════════════════════════════
@@ -26,12 +551,12 @@ export const onOrderStatusChange = functions.firestore
   .document("orders/{orderId}")
   .onUpdate(async (change, context) => {
     const orderId = context.params.orderId;
-    const beforeData = change.before.data();
-    const afterData = change.after.data();
+    const beforeData = change.before.data() as FirebaseFirestore.DocumentData;
+    const afterData = change.after.data() as FirebaseFirestore.DocumentData;
 
     // Check if status actually changed
-    const oldStatus = beforeData.status;
-    const newStatus = afterData.status;
+    const oldStatus = asString(beforeData.status);
+    const newStatus = asString(afterData.status);
 
     if (oldStatus === newStatus) {
       console.log(`Order ${orderId}: Status unchanged (${oldStatus})`);
@@ -39,6 +564,12 @@ export const onOrderStatusChange = functions.firestore
     }
 
     console.log(`Order ${orderId}: Status changed from ${oldStatus} to ${newStatus}`);
+
+    // Inventory changes are applied server-side to avoid client permission issues.
+    await syncInventoryForOrderStatusChange(orderId, oldStatus, newStatus, afterData);
+
+    // Revenue transaction sync runs on paid confirmation transitions.
+    await syncRevenueTransactionForConfirmedOrder(orderId, oldStatus, newStatus, afterData);
 
     // Get patient's FCM token
     const patientId = afterData.patientId;

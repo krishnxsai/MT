@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
+import java.util.Locale
 
 /**
  * Represents a medicine item in a pharmacy's inventory.
@@ -16,6 +17,7 @@ data class InventoryItem(
 
     // ── Medicine info ────────────────────────────────────────────
     val medicineName: String = "",
+    val medicineNameNormalized: String = "",
     val genericName: String = "",
     val category: String = "",
     val manufacturer: String = "",
@@ -42,27 +44,41 @@ data class InventoryItem(
     val isLowStock: Boolean get() = stockQuantity <= lowStockThreshold
     val isExpired: Boolean get() = expiryDate != null && expiryDate.before(Date())
 
-    fun toMap(): Map<String, Any?> = mapOf(
-        "pharmacyId" to pharmacyId,
-        "medicineName" to medicineName,
-        "genericName" to genericName,
-        "category" to category,
-        "manufacturer" to manufacturer,
-        "batchNumber" to batchNumber,
-        "stockQuantity" to stockQuantity,
-        "unitPrice" to unitPrice,
-        "unit" to unit,
-        "lowStockThreshold" to lowStockThreshold,
-        "expiryDate" to expiryDate,
-        "isActive" to isActive,
-        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-    )
+    fun toMap(): Map<String, Any?> {
+        val normalizedName = normalizeMedicineName(
+            if (medicineNameNormalized.isNotBlank()) medicineNameNormalized else medicineName
+        )
+
+        return mapOf(
+            "pharmacyId" to pharmacyId,
+            "medicineName" to medicineName,
+            "medicineNameNormalized" to normalizedName,
+            "genericName" to genericName,
+            "category" to category,
+            "manufacturer" to manufacturer,
+            "batchNumber" to batchNumber,
+            "stockQuantity" to stockQuantity,
+            "unitPrice" to unitPrice,
+            "unit" to unit,
+            "lowStockThreshold" to lowStockThreshold,
+            "expiryDate" to expiryDate,
+            "isActive" to isActive,
+            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        )
+    }
 
     companion object {
+        private fun normalizeMedicineName(value: String): String {
+            return value.trim().lowercase(Locale.ROOT)
+        }
+
         fun fromMap(id: String, map: Map<String, Any?>): InventoryItem = InventoryItem(
             id = id,
             pharmacyId = map["pharmacyId"] as? String ?: "",
             medicineName = map["medicineName"] as? String ?: "",
+            medicineNameNormalized =
+                (map["medicineNameNormalized"] as? String)?.takeIf { it.isNotBlank() }
+                    ?: normalizeMedicineName(map["medicineName"] as? String ?: ""),
             genericName = map["genericName"] as? String ?: "",
             category = map["category"] as? String ?: "",
             manufacturer = map["manufacturer"] as? String ?: "",

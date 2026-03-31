@@ -5,13 +5,16 @@ import com.meditrack.app.data.analytics.ReminderOptimizer
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.Resource
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Calendar
-import java.util.Date
 
 /**
  * Repository for medicine intake tracking.
@@ -165,74 +168,133 @@ class MedicineIntakeRepository {
                     .get()
                     .await()
 
-                val intakeBySlot = linkedMapOf<String, Boolean>()
-                snapshot.documents.forEach { doc ->
-                    val medicineId = doc.getString("medicineId") ?: return@forEach
-                    val scheduledTime = doc.getString("scheduledTime") ?: return@forEach
-                    val slotKey = "$medicineId|$scheduledTime"
-                    if (!intakeBySlot.containsKey(slotKey)) {
-                        val wasTaken = doc.getBoolean("taken") ?: (doc.getDate("takenAt") != null)
-                        intakeBySlot[slotKey] = wasTaken
-                    }
-                }
-
-                var totalScheduled = 0
-                var taken = 0
-                var missed = 0
-                var pending = 0
-
-                medicines.filter { it.isActive }.forEach { medicine ->
-                    medicine.reminderTimes.forEach { timeStr ->
-                        totalScheduled++
-                        val parts = timeStr.split(":")
-                        if (parts.size != 2) {
-                            pending++
-                            return@forEach
-                        }
-
-                        val hour = parts[0].toIntOrNull()
-                        val minute = parts[1].toIntOrNull()
-                        if (hour == null || minute == null) {
-                            pending++
-                            return@forEach
-                        }
-
-                        val slotKey = "${medicine.id}|$timeStr"
-                        when (intakeBySlot[slotKey]) {
-                            true -> taken++
-                            false -> missed++
-                            null -> {
-                                val scheduledMinutes = hour * 60 + minute
-                                if (scheduledMinutes > currentTimeMinutes) {
-                                    pending++
-                                } else {
-                                    pending++
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val adherencePercentage = if ((taken + missed) > 0) {
-                    (taken.toFloat() / (taken + missed).toFloat()) * 100f
-                } else if (totalScheduled > 0) {
-                    (taken.toFloat() / totalScheduled.toFloat()) * 100f
-                } else {
-                    100f
-                }
-
                 Resource.Success(
-                    HealthAnalytics.AdherenceStats(
-                        totalScheduled = totalScheduled,
-                        taken = taken,
-                        missed = missed,
-                        pending = pending,
-                        adherencePercentage = adherencePercentage
+                    calculateTodayAdherenceStats(
+                        medicines = medicines,
+                        intakeDocuments = snapshot.documents,
+                        currentTimeMinutes = currentTimeMinutes
                     )
                 )
             } catch (e: Exception) {
                 Resource.Error(e.message ?: "Failed to get adherence stats")
             }
         }
+
+    /**
+     * Observe today's adherence stats in real time.
+     * Emits updates whenever today's intake records change.
+     */
+    fun observeTodayAdherenceStats(medicines: List<Medicine>): Flow<Resource<HealthAnalytics.AdherenceStats>> =
+        callbackFlow {
+            val userId = currentUserId
+            if (userId == null) {
+                trySend(Resource.Error("Not logged in"))
+                close()
+                return@callbackFlow
+            }
+
+            trySend(Resource.Loading)
+
+            val startOfDay = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startDate = startOfDay.time
+
+            val listener = intakesCollection
+                .whereEqualTo("userId", userId)
+                .whereGreaterThanOrEqualTo("takenAt", startDate)
+                .orderBy("takenAt", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        trySend(Resource.Error(error.message ?: "Failed to observe adherence stats"))
+                        return@addSnapshotListener
+                    }
+
+                    val now = Calendar.getInstance()
+                    val currentTimeMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+
+                    val stats = calculateTodayAdherenceStats(
+                        medicines = medicines,
+                        intakeDocuments = snapshot?.documents ?: emptyList(),
+                        currentTimeMinutes = currentTimeMinutes
+                    )
+                    trySend(Resource.Success(stats))
+                }
+
+            awaitClose { listener.remove() }
+        }
+
+    private fun calculateTodayAdherenceStats(
+        medicines: List<Medicine>,
+        intakeDocuments: List<DocumentSnapshot>,
+        currentTimeMinutes: Int
+    ): HealthAnalytics.AdherenceStats {
+        val intakeBySlot = linkedMapOf<String, Boolean>()
+        intakeDocuments.forEach { doc ->
+            val medicineId = doc.getString("medicineId") ?: return@forEach
+            val scheduledTime = doc.getString("scheduledTime") ?: return@forEach
+            val slotKey = "$medicineId|$scheduledTime"
+            if (!intakeBySlot.containsKey(slotKey)) {
+                val wasTaken = doc.getBoolean("taken") ?: (doc.getDate("takenAt") != null)
+                intakeBySlot[slotKey] = wasTaken
+            }
+        }
+
+        var totalScheduled = 0
+        var taken = 0
+        var missed = 0
+        var pending = 0
+
+        medicines.filter { it.isActive }.forEach { medicine ->
+            medicine.reminderTimes.forEach { timeStr ->
+                totalScheduled++
+                val parts = timeStr.split(":")
+                if (parts.size != 2) {
+                    pending++
+                    return@forEach
+                }
+
+                val hour = parts[0].toIntOrNull()
+                val minute = parts[1].toIntOrNull()
+                if (hour == null || minute == null) {
+                    pending++
+                    return@forEach
+                }
+
+                val slotKey = "${medicine.id}|$timeStr"
+                when (intakeBySlot[slotKey]) {
+                    true -> taken++
+                    false -> missed++
+                    null -> {
+                        val scheduledMinutes = hour * 60 + minute
+                        if (scheduledMinutes > currentTimeMinutes) {
+                            pending++
+                        } else {
+                            pending++
+                        }
+                    }
+                }
+            }
+        }
+
+        val adherencePercentage = if ((taken + missed) > 0) {
+            (taken.toFloat() / (taken + missed).toFloat()) * 100f
+        } else if (totalScheduled > 0) {
+            (taken.toFloat() / totalScheduled.toFloat()) * 100f
+        } else {
+            100f
+        }
+
+        return HealthAnalytics.AdherenceStats(
+            totalScheduled = totalScheduled,
+            taken = taken,
+            missed = missed,
+            pending = pending,
+            adherencePercentage = adherencePercentage
+        )
+    }
 }
 

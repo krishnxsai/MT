@@ -9,6 +9,9 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Receiver for handling notification action buttons (Take, Snooze, Skip/Dismiss).
@@ -21,29 +24,43 @@ class NotificationActionReceiver : BroadcastReceiver() {
         const val ACTION_SNOOZE = "com.meditrack.app.ACTION_SNOOZE"
         const val ACTION_DISMISS = "com.meditrack.app.ACTION_DISMISS"
         const val ACTION_SKIP = "com.meditrack.app.ACTION_SKIP"
+        const val ACTION_MEDICINE_INTAKE_RECORDED = "com.meditrack.app.ACTION_MEDICINE_INTAKE_RECORDED"
+        const val EXTRA_WAS_TAKEN = "extra_was_taken"
         private const val SNOOZE_DURATION_MINUTES = 10
         private const val TAG = "NotificationAction"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        val appContext = context.applicationContext
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                handleAction(appContext, intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to process notification action: ${e.message}", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private suspend fun handleAction(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra(MedicineAlarmReceiver.EXTRA_ALARM_ID, 0)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // ALWAYS stop alarm sound and vibration first for all actions
-        stopAlarmService(context)
+        // Stop only the alarm instance tied to this action to avoid silencing other active alarms.
+        stopAlarmService(context, notificationId)
 
         when (intent.action) {
             ACTION_MARK_TAKEN -> {
                 Log.d(TAG, "Medicine marked as taken")
                 notificationManager.cancel(notificationId)
 
-                // Show confirmation toast
-                showToast(context, "Medicine marked as taken ✓")
-
                 val medicineId = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_ID) ?: ""
                 val medicineName = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_NAME) ?: ""
                 val reminderTime = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_REMINDER_TIME)
-                logMedicineAction(
+
+                val logged = logMedicineAction(
                     context = context,
                     medicineId = medicineId,
                     medicineName = medicineName,
@@ -51,6 +68,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     taken = true,
                     source = "notification_action_taken"
                 )
+                if (logged) {
+                    notifyIntakeRecorded(context, medicineId, reminderTime, true)
+                }
+
+                showToast(context, "Medicine marked as taken ✓")
             }
 
             ACTION_SNOOZE -> {
@@ -60,18 +82,28 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val medicineName = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_NAME) ?: "Medicine"
                 val medicineId = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_ID) ?: ""
                 val dosage = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_DOSAGE) ?: ""
+                val reminderTime = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_REMINDER_TIME)
 
-                scheduleSnoozeAlarm(context, notificationId, medicineName, medicineId, dosage)
+                scheduleSnoozeAlarm(
+                    context = context,
+                    alarmId = notificationId,
+                    medicineName = medicineName,
+                    medicineId = medicineId,
+                    dosage = dosage,
+                    reminderTime = reminderTime
+                )
                 showToast(context, "Reminder snoozed for $SNOOZE_DURATION_MINUTES minutes ⏰")
             }
 
             ACTION_DISMISS, ACTION_SKIP -> {
                 Log.d(TAG, "Alarm dismissed/skipped")
                 notificationManager.cancel(notificationId)
+
                 val medicineId = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_ID) ?: ""
                 val medicineName = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_NAME) ?: ""
                 val reminderTime = intent.getStringExtra(MedicineAlarmReceiver.EXTRA_REMINDER_TIME)
-                logMedicineAction(
+
+                val logged = logMedicineAction(
                     context = context,
                     medicineId = medicineId,
                     medicineName = medicineName,
@@ -79,6 +111,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     taken = false,
                     source = "notification_action_skipped"
                 )
+                if (logged) {
+                    notifyIntakeRecorded(context, medicineId, reminderTime, false)
+                }
+
                 showToast(context, "Reminder skipped")
             }
         }
@@ -87,10 +123,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
     /**
      * Stop the alarm service to silence sound and vibration.
      */
-    private fun stopAlarmService(context: Context) {
+    private fun stopAlarmService(context: Context, alarmId: Int) {
         try {
-            AlarmService.stopAlarm(context)
-            Log.d(TAG, "Alarm service stopped")
+            if (alarmId > 0) {
+                AlarmService.stopAlarm(context, alarmId)
+                Log.d(TAG, "Stopped alarm service for alarmId=$alarmId")
+            } else {
+                AlarmService.stopAlarm(context)
+                Log.d(TAG, "Stopped alarm service for all alarms (missing alarmId)")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop alarm service: ${e.message}")
         }
@@ -122,57 +163,70 @@ class NotificationActionReceiver : BroadcastReceiver() {
      * - SKIP: Creates intake record only (no stock change)
      * - Queues offline actions if not connected
      */
-    private fun logMedicineAction(
+    private suspend fun logMedicineAction(
         context: Context,
         medicineId: String,
         medicineName: String,
         reminderTime: String?,
         taken: Boolean,
         source: String
+    ): Boolean {
+        if (medicineId.isEmpty()) return false
+
+        return try {
+            val offlineRepo = com.meditrack.app.data.repository.OfflineActionRepository(context)
+            val intakeService = com.meditrack.app.data.repository.MedicineIntakeService(
+                context,
+                offlineRepo
+            )
+
+            val result = if (taken) {
+                intakeService.markAsTaken(
+                    medicineId = medicineId,
+                    medicineName = medicineName,
+                    reminderTime = reminderTime,
+                    source = source
+                )
+            } else {
+                intakeService.markAsSkipped(
+                    medicineId = medicineId,
+                    medicineName = medicineName,
+                    reminderTime = reminderTime,
+                    source = source
+                )
+            }
+
+            when (result) {
+                is com.meditrack.app.data.model.Resource.Success -> {
+                    Log.d(TAG, "Medicine action logged successfully: $medicineId, taken=$taken")
+                    true
+                }
+                is com.meditrack.app.data.model.Resource.Error -> {
+                    Log.e(TAG, "Failed to log medicine action: ${result.message}")
+                    false
+                }
+                else -> false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in logMedicineAction: ${e.message}", e)
+            false
+        }
+    }
+
+    private fun notifyIntakeRecorded(
+        context: Context,
+        medicineId: String,
+        reminderTime: String?,
+        taken: Boolean
     ) {
         if (medicineId.isEmpty()) return
-
-        // Launch on background thread to log action asynchronously
-        Thread {
-            try {
-                val offlineRepo = com.meditrack.app.data.repository.OfflineActionRepository(context)
-                val intakeService = com.meditrack.app.data.repository.MedicineIntakeService(
-                    context,
-                    offlineRepo
-                )
-
-                // Use runBlocking to execute suspend function
-                kotlinx.coroutines.runBlocking {
-                    val result = if (taken) {
-                        intakeService.markAsTaken(
-                            medicineId = medicineId,
-                            medicineName = medicineName,
-                            reminderTime = reminderTime,
-                            source = source
-                        )
-                    } else {
-                        intakeService.markAsSkipped(
-                            medicineId = medicineId,
-                            medicineName = medicineName,
-                            reminderTime = reminderTime,
-                            source = source
-                        )
-                    }
-
-                    when (result) {
-                        is com.meditrack.app.data.model.Resource.Success -> {
-                            Log.d(TAG, "Medicine action logged successfully: $medicineId, taken=$taken")
-                        }
-                        is com.meditrack.app.data.model.Resource.Error -> {
-                            Log.e(TAG, "Failed to log medicine action: ${result.message}")
-                        }
-                        else -> {}
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in logMedicineAction: ${e.message}", e)
-            }
-        }.start()
+        val refreshIntent = Intent(ACTION_MEDICINE_INTAKE_RECORDED).apply {
+            setPackage(context.packageName)
+            putExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_ID, medicineId)
+            putExtra(MedicineAlarmReceiver.EXTRA_REMINDER_TIME, reminderTime)
+            putExtra(EXTRA_WAS_TAKEN, taken)
+        }
+        context.sendBroadcast(refreshIntent)
     }
 
     /**
@@ -183,7 +237,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
         alarmId: Int,
         medicineName: String,
         medicineId: String,
-        dosage: String
+        dosage: String,
+        reminderTime: String?
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -196,6 +251,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
             putExtra(MedicineAlarmReceiver.EXTRA_MEDICINE_ID, medicineId)
             putExtra(MedicineAlarmReceiver.EXTRA_DOSAGE, dosage)
             putExtra(MedicineAlarmReceiver.EXTRA_IS_REPEATING, false)
+            putExtra(MedicineAlarmReceiver.EXTRA_REMINDER_TIME, reminderTime)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

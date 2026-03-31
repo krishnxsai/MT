@@ -1,7 +1,9 @@
 package com.meditrack.app.data.model
 
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
@@ -62,7 +64,7 @@ data class DeliveryTracking(
         "speed" to speed,
         "bearing" to bearing,
         "accuracy" to accuracy,
-        "updatedAt" to updatedAt,
+        "updatedAt" to (updatedAt ?: FieldValue.serverTimestamp()),
         "deliveryPersonName" to deliveryPersonName,
         "deliveryPersonPhone" to deliveryPersonPhone
     )
@@ -71,7 +73,7 @@ data class DeliveryTracking(
      * Deserialize from Firestore map.
      */
     companion object {
-        fun fromMap(id: String, data: Map<String, Any>): DeliveryTracking {
+        fun fromMap(id: String, data: Map<String, Any?>): DeliveryTracking {
             return DeliveryTracking(
                 id = id,
                 orderId = data["orderId"] as? String ?: "",
@@ -81,7 +83,11 @@ data class DeliveryTracking(
                 speed = (data["speed"] as? Number)?.toDouble() ?: 0.0,
                 bearing = (data["bearing"] as? Number)?.toDouble() ?: 0.0,
                 accuracy = (data["accuracy"] as? Number)?.toDouble() ?: 0.0,
-                updatedAt = data["updatedAt"] as? Date,
+                updatedAt = when (val rawUpdatedAt = data["updatedAt"]) {
+                    is Timestamp -> rawUpdatedAt.toDate()
+                    is Date -> rawUpdatedAt
+                    else -> null
+                },
                 deliveryPersonName = data["deliveryPersonName"] as? String ?: "",
                 deliveryPersonPhone = data["deliveryPersonPhone"] as? String ?: ""
             )

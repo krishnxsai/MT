@@ -23,6 +23,7 @@
 
     <!-- Foreground Service Permission (Android 9+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Full-screen intent permission (Android 10+) -->

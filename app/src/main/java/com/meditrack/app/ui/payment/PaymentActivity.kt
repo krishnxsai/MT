@@ -92,7 +92,12 @@ class PaymentActivity : AppCompatActivity(), PaymentResultWithDataListener {
 
         if (meditrackOrderId.isEmpty() || amount <= 0) {
             Log.e(TAG, "Invalid payment parameters")
-            setResult(RESULT_CANCELED)
+            setResult(
+                RESULT_CANCELED,
+                Intent().apply {
+                    putExtra(EXTRA_ERROR_MESSAGE, "Invalid payment parameters")
+                }
+            )
             finish()
             return
         }
@@ -194,7 +199,12 @@ class PaymentActivity : AppCompatActivity(), PaymentResultWithDataListener {
     private fun setupUI() {
         binding.paymentToolbar.setNavigationOnClickListener {
             Log.d(TAG, "User cancelled payment")
-            setResult(RESULT_CANCELED)
+            setResult(
+                RESULT_CANCELED,
+                Intent().apply {
+                    putExtra(EXTRA_ERROR_MESSAGE, "Payment cancelled by user")
+                }
+            )
             finish()
         }
 
@@ -431,7 +441,12 @@ class PaymentActivity : AppCompatActivity(), PaymentResultWithDataListener {
             is com.meditrack.app.util.RazorpayErrorHandler.PaymentError.UserCancelled -> {
                 Log.d(TAG, "User cancelled payment - returning to caller")
                 // User cancelled - don't record as failure, just finish
-                setResult(RESULT_CANCELED)
+                setResult(
+                    RESULT_CANCELED,
+                    Intent().apply {
+                        putExtra(EXTRA_ERROR_MESSAGE, error.userMessage)
+                    }
+                )
                 finish()
             }
 

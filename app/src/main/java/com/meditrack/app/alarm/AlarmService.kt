@@ -56,17 +56,46 @@ class AlarmService : Service() {
         const val EXTRA_MEDICINE_NAME = "extra_medicine_name"
         const val EXTRA_MEDICINE_ID = "extra_medicine_id"
         const val EXTRA_DOSAGE = "extra_dosage"
+        const val EXTRA_STOP_ALL = "extra_stop_all"
 
         private var instance: AlarmService? = null
+        private val activeAlarmIds = mutableSetOf<Int>()
 
-        fun stopAlarm(context: Context) {
+        fun stopAlarm(context: Context, alarmId: Int? = null, stopAll: Boolean = alarmId == null) {
             val intent = Intent(context, AlarmService::class.java).apply {
                 action = ACTION_STOP_ALARM
+                putExtra(EXTRA_STOP_ALL, stopAll)
+                alarmId?.let { putExtra(EXTRA_ALARM_ID, it) }
             }
             try {
                 context.startService(intent)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to stop alarm service: ${e.message}")
+            }
+        }
+
+        private fun addActiveAlarm(alarmId: Int) {
+            synchronized(activeAlarmIds) {
+                activeAlarmIds.add(alarmId)
+            }
+        }
+
+        private fun removeActiveAlarm(alarmId: Int): Int {
+            return synchronized(activeAlarmIds) {
+                activeAlarmIds.remove(alarmId)
+                activeAlarmIds.size
+            }
+        }
+
+        private fun clearActiveAlarms() {
+            synchronized(activeAlarmIds) {
+                activeAlarmIds.clear()
+            }
+        }
+
+        private fun getActiveAlarmCount(): Int {
+            return synchronized(activeAlarmIds) {
+                activeAlarmIds.size
             }
         }
 
@@ -82,6 +111,7 @@ class AlarmService : Service() {
     private var audioFocusRequest: AudioFocusRequest? = null
     private val handler = Handler(Looper.getMainLooper())
     private var alarmTimeoutRunnable: Runnable? = null
+    private var lastMedicineName: String = "Medicine"
 
     override fun onCreate() {
         super.onCreate()
@@ -106,14 +136,20 @@ class AlarmService : Service() {
                 val medicineId = intent.getStringExtra(EXTRA_MEDICINE_ID) ?: ""
                 val dosage = intent.getStringExtra(EXTRA_DOSAGE) ?: ""
 
+                if (alarmId > 0) {
+                    addActiveAlarm(alarmId)
+                }
+                lastMedicineName = medicineName
+                val activeCount = getActiveAlarmCount().coerceAtLeast(1)
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     startForeground(
                         NOTIFICATION_ID,
-                        createServiceNotification(medicineName),
+                        createServiceNotification(medicineName, activeCount),
                         android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                     )
                 } else {
-                    startForeground(NOTIFICATION_ID, createServiceNotification(medicineName))
+                    startForeground(NOTIFICATION_ID, createServiceNotification(medicineName, activeCount))
                 }
                 acquireWakeLock()
                 startAlarm(alarmId, medicineName, medicineId, dosage)
@@ -122,17 +158,37 @@ class AlarmService : Service() {
                 scheduleAlarmTimeout()
             }
             ACTION_STOP_ALARM -> {
-                cancelAlarmTimeout()
-                stopAlarmSound()
-                stopVibration()
-                releaseAudioFocus()
-                releaseWakeLock()
-                restoreVolume()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                val alarmId = intent.getIntExtra(EXTRA_ALARM_ID, -1)
+                val stopAll = intent.getBooleanExtra(EXTRA_STOP_ALL, !intent.hasExtra(EXTRA_ALARM_ID))
+
+                val remainingCount = when {
+                    stopAll || alarmId <= 0 -> {
+                        clearActiveAlarms()
+                        0
+                    }
+                    else -> removeActiveAlarm(alarmId)
+                }
+
+                if (remainingCount > 0 && !stopAll) {
+                    updateServiceNotification(remainingCount)
+                    Log.d(TAG, "Alarm $alarmId dismissed, $remainingCount active alarms remain")
+                } else {
+                    shutdownAlarmService()
+                }
             }
         }
         return START_NOT_STICKY
+    }
+
+    private fun shutdownAlarmService() {
+        cancelAlarmTimeout()
+        stopAlarmSound()
+        stopVibration()
+        releaseAudioFocus()
+        releaseWakeLock()
+        restoreVolume()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     /**
@@ -168,6 +224,7 @@ class AlarmService : Service() {
         releaseAudioFocus()
         releaseWakeLock()
         restoreVolume()
+        clearActiveAlarms()
         instance = null
         Log.d(TAG, "AlarmService destroyed")
         super.onDestroy()
@@ -188,23 +245,38 @@ class AlarmService : Service() {
         }
     }
 
-    private fun createServiceNotification(medicineName: String): Notification {
+    private fun createServiceNotification(medicineName: String, activeCount: Int): Notification {
         val stopIntent = Intent(this, AlarmService::class.java).apply {
             action = ACTION_STOP_ALARM
+            putExtra(EXTRA_STOP_ALL, true)
         }
         val stopPendingIntent = PendingIntent.getService(
             this, 0, stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val contentText = if (activeCount > 1) {
+            "$activeCount medicine alarms are ringing"
+        } else {
+            "Alarm for $medicineName is ringing"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_pill)
             .setContentTitle("Medicine Alarm Active")
-            .setContentText("Alarm for $medicineName is ringing")
+            .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .addAction(R.drawable.ic_close, "Stop", stopPendingIntent)
             .build()
+    }
+
+    private fun updateServiceNotification(activeCount: Int) {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(
+            NOTIFICATION_ID,
+            createServiceNotification(lastMedicineName, activeCount)
+        )
     }
 
     private fun acquireWakeLock() {

@@ -13,6 +13,7 @@ import com.meditrack.app.data.model.Resource
 import com.meditrack.app.data.analytics.HealthAnalytics
 import com.meditrack.app.data.repository.MedicineIntakeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,6 +32,8 @@ class HomeDashboardViewModel @Inject constructor(
     val riskCardState: LiveData<RiskCardState?> = _riskCardState
 
     private var riskScoreJob: Job? = null
+    private var adherenceStatsJob: Job? = null
+    private var adherenceObserverKey: String? = null
 
     private val _adherenceStats = MutableLiveData<HealthAnalytics.AdherenceStats?>()
     val adherenceStats: LiveData<HealthAnalytics.AdherenceStats?> = _adherenceStats
@@ -72,5 +75,60 @@ class HomeDashboardViewModel @Inject constructor(
                 _adherenceStats.value = null
             }
         }
+    }
+
+    fun observeAdherenceStats(medicines: List<Medicine>) {
+        val activeMedicines = medicines.filter { it.isActive }
+        if (activeMedicines.isEmpty()) {
+            stopAdherenceObservation()
+            _adherenceStats.value = HealthAnalytics.AdherenceStats(
+                totalScheduled = 0,
+                taken = 0,
+                missed = 0,
+                pending = 0,
+                adherencePercentage = 100f
+            )
+            return
+        }
+
+        val nextKey = buildAdherenceObserverKey(activeMedicines)
+        if (adherenceObserverKey == nextKey && adherenceStatsJob?.isActive == true) {
+            return
+        }
+
+        adherenceObserverKey = nextKey
+        adherenceStatsJob?.cancel()
+        adherenceStatsJob = viewModelScope.launch {
+            intakeRepository.observeTodayAdherenceStats(activeMedicines).collectLatest { result ->
+                when (result) {
+                    is Resource.Success -> _adherenceStats.postValue(result.data)
+                    is Resource.Error -> _adherenceStats.postValue(null)
+                    is Resource.Loading -> {
+                        // Keep the previous value while loading to avoid flicker.
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopAdherenceObservation() {
+        adherenceStatsJob?.cancel()
+        adherenceStatsJob = null
+        adherenceObserverKey = null
+    }
+
+    private fun buildAdherenceObserverKey(medicines: List<Medicine>): String {
+        return medicines
+            .sortedBy { it.id }
+            .joinToString("|") { medicine ->
+                val reminderKey = medicine.reminderTimes.sorted().joinToString(",")
+                "${medicine.id}:$reminderKey"
+            }
+    }
+
+    override fun onCleared() {
+        riskScoreJob?.cancel()
+        adherenceStatsJob?.cancel()
+        super.onCleared()
     }
 }

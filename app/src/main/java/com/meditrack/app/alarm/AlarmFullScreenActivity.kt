@@ -186,7 +186,11 @@ class AlarmFullScreenActivity : AppCompatActivity() {
 
     private fun stopAlarm() {
         // Stop the foreground alarm service
-        AlarmService.stopAlarm(this)
+        if (alarmId > 0) {
+            AlarmService.stopAlarm(this, alarmId)
+        } else {
+            AlarmService.stopAlarm(this)
+        }
     }
 
     private fun getCurrentTimeFormatted(): String {

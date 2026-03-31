@@ -551,6 +551,20 @@
       ]
     },
     {
+      "collectionGroup": "pharmacyInventory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pharmacyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "medicineNameNormalized",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "riskScores",
       "queryScope": "COLLECTION",
       "fields": [

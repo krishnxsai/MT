@@ -29,6 +29,7 @@ import com.meditrack.app.R
 import com.meditrack.app.databinding.ActivityUnifiedOrderBinding
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.Pharmacy
+import com.meditrack.app.data.model.Resource
 import com.meditrack.app.ui.payment.PaymentActivity
 import com.meditrack.app.util.FeatureFlags
 import dagger.hilt.android.AndroidEntryPoint
@@ -89,16 +90,28 @@ class UnifiedOrderActivity : AppCompatActivity() {
                 if (currentPaymentOrderId != null) {
                     val intent = Intent(this, com.meditrack.app.ui.order.OrderTrackingActivity::class.java)
                     intent.putExtra(com.meditrack.app.ui.order.OrderTrackingActivity.EXTRA_ORDER_ID, currentPaymentOrderId)
+                    currentPaymentOrderId = null
                     startActivity(intent)
                     finish()
                 }
             }
             RESULT_CANCELED -> {
-                Toast.makeText(this, "Payment cancelled", Toast.LENGTH_SHORT).show()
+                val reason = result.data?.getStringExtra(PaymentActivity.EXTRA_ERROR_MESSAGE)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "Payment cancelled by user"
+                handleIncompletePaymentResult(
+                    userMessage = "Payment cancelled",
+                    cancelReason = reason
+                )
             }
             RESULT_FIRST_USER -> {
-                val errorMessage = result.data?.getStringExtra("error_message") ?: "Payment failed"
-                Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
+                val errorMessage = result.data?.getStringExtra(PaymentActivity.EXTRA_ERROR_MESSAGE)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "Payment failed"
+                handleIncompletePaymentResult(
+                    userMessage = errorMessage,
+                    cancelReason = "Payment failed: $errorMessage"
+                )
             }
         }
     }
@@ -429,6 +442,39 @@ class UnifiedOrderActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, "launchPaymentActivity: Exception occurred", e)
                 Toast.makeText(this@UnifiedOrderActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun handleIncompletePaymentResult(userMessage: String, cancelReason: String) {
+        val orderId = currentPaymentOrderId
+        currentPaymentOrderId = null
+
+        if (orderId.isNullOrBlank()) {
+            Toast.makeText(this, userMessage, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            when (val cancelResult = viewModel.cancelPendingOrderAfterPaymentExit(orderId, cancelReason)) {
+                is Resource.Success -> {
+                    Toast.makeText(
+                        this@UnifiedOrderActivity,
+                        "$userMessage. Order cancelled.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                is Resource.Error -> {
+                    val message = cancelResult.message ?: "Unknown error"
+                    Toast.makeText(
+                        this@UnifiedOrderActivity,
+                        "$userMessage. Unable to auto-cancel order: $message",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                is Resource.Loading -> {
+                    Toast.makeText(this@UnifiedOrderActivity, userMessage, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

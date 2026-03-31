@@ -206,6 +206,10 @@ class OrderTrackingActivity : AppCompatActivity(), OnMapReadyCallback {
             deliveryMarker?.remove()
             pharmacyMarker?.remove()
             patientMarker?.remove()
+            deliveryMarker = null
+            pharmacyMarker = null
+            patientMarker = null
+            lastDeliveryLocation = null
             routeManager.clearRoute(googleMap ?: return)
         }
     }
@@ -213,14 +217,11 @@ class OrderTrackingActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun initializeMapMarkers(order: RefillOrder) {
         val map = googleMap ?: return
 
-        // Get pharmacy location
-        val pharmacyLocation = if (order.pharmacyLocation != null) {
-            LatLng(order.pharmacyLocation!!.latitude, order.pharmacyLocation!!.longitude)
-        } else {
-            return  // Can't show map without pharmacy location
+        val pharmacyLocation = order.pharmacyLocation?.let {
+            LatLng(it.latitude, it.longitude)
         }
 
-        // Get patient delivery location
+        // Get patient delivery location when available for ETA/route rendering.
         val patientLocation = order.deliveryAddress?.let {
             // Validate coordinates are not null island (0, 0)
             if (it.latitude == 0.0 && it.longitude == 0.0) {
@@ -228,65 +229,94 @@ class OrderTrackingActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 LatLng(it.latitude, it.longitude)
             }
-        } ?: return  // Can't show map without delivery address
+        }
 
-        // Add pharmacy marker (green)
+        // Add pharmacy marker (green) when available.
         pharmacyMarker?.remove()
-        pharmacyMarker = map.addMarker(
-            MarkerOptions()
-                .position(pharmacyLocation)
-                .title("Pharmacy")
-                .snippet(order.pharmacyName)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
-        )
+        pharmacyMarker = pharmacyLocation?.let { sourceLocation ->
+            map.addMarker(
+                MarkerOptions()
+                    .position(sourceLocation)
+                    .title("Pharmacy")
+                    .snippet(order.pharmacyName)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+            )
+        }
 
-        // Add patient destination marker (red)
+        // Add patient destination marker (red) when destination coordinates exist.
         patientMarker?.remove()
-        patientMarker = map.addMarker(
-            MarkerOptions()
-                .position(patientLocation)
-                .title("Your Location")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
-        )
+        patientMarker = patientLocation?.let { destination ->
+            map.addMarker(
+                MarkerOptions()
+                    .position(destination)
+                    .title("Your Location")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+            )
+        }
+
+        val initialDeliveryLocation = order.currentLocation?.let {
+            LatLng(it.latitude, it.longitude)
+        } ?: pharmacyLocation ?: patientLocation ?: return
 
         // Add placeholder delivery marker (will be updated with real tracking data)
-        deliveryMarker?.remove()
-        deliveryMarker = map.addMarker(
-            MarkerOptions()
-                .position(pharmacyLocation)
-                .title("Delivery Person")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-        )
+        val marker = deliveryMarker
+        if (marker == null) {
+            deliveryMarker = map.addMarker(
+                MarkerOptions()
+                    .position(initialDeliveryLocation)
+                    .title("Delivery Person")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+            )
+        } else {
+            marker.position = initialDeliveryLocation
+        }
+        lastDeliveryLocation = initialDeliveryLocation
 
         // Animate camera to show all markers
-        val bounds = com.google.android.gms.maps.model.LatLngBounds.Builder()
-            .include(pharmacyLocation)
-            .include(patientLocation)
-            .build()
+        val boundsBuilder = com.google.android.gms.maps.model.LatLngBounds.Builder()
+            .include(initialDeliveryLocation)
+        patientLocation?.let { boundsBuilder.include(it) }
+        pharmacyLocation?.let { boundsBuilder.include(it) }
+
+        val bounds = boundsBuilder.build()
 
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
 
         // Fetch route from Directions API
-        lifecycleScope.launch {
-            routeManager.updateRouteWithDirections(
-                map = map,
-                deliveryLocation = pharmacyLocation,
-                patientLocation = patientLocation,
-                onRouteUpdate = { distanceMeters, durationSeconds ->
-                    // Update ETA with route data
-                    binding.tvEstimatedDelivery.text = "Delivery in ~${"%.0f".format(distanceMeters / 1000.0 / 25 * 60)} minutes"
-                },
-                onError = { error ->
-                    binding.tvEstimatedDelivery.text = "Calculating delivery time..."
-                }
-            )
+        if (patientLocation != null) {
+            lifecycleScope.launch {
+                routeManager.updateRouteWithDirections(
+                    map = map,
+                    deliveryLocation = initialDeliveryLocation,
+                    patientLocation = patientLocation,
+                    onRouteUpdate = { distanceMeters, durationSeconds ->
+                        // Update ETA with route data
+                        binding.tvEstimatedDelivery.text = "Delivery in ~${"%.0f".format(distanceMeters / 1000.0 / 25 * 60)} minutes"
+                    },
+                    onError = {
+                        binding.tvEstimatedDelivery.text = "Calculating delivery time..."
+                    }
+                )
+            }
         }
     }
 
     private fun updateDeliveryMarkerOnMap(tracking: com.meditrack.app.data.model.DeliveryTracking) {
         val map = googleMap ?: return
-        val marker = deliveryMarker ?: return
         val currentLocation = tracking.toLatLng()
+
+        var marker = deliveryMarker
+        if (marker == null) {
+            marker = map.addMarker(
+                MarkerOptions()
+                    .position(currentLocation)
+                    .title("Delivery Person")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+            )
+            deliveryMarker = marker
+        }
+
+        if (marker == null) return
 
         if (lastDeliveryLocation == null) {
             // First update, just set position

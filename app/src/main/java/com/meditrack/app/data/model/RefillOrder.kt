@@ -122,6 +122,8 @@ data class RefillOrder(
         "preferredDeliveryDate" to preferredDeliveryDate,
         "currentLocation" to currentLocation,
         "lastLocationUpdate" to lastLocationUpdate,
+        "deliveryTrackingId" to deliveryTrackingId,
+        "pharmacyLocation" to pharmacyLocation,
         "statusHistory" to statusHistory.map { it.toMap() },
         "cancelReason" to cancelReason,
         "estimatedDelivery" to estimatedDelivery,
@@ -146,6 +148,16 @@ data class RefillOrder(
 
             @Suppress("UNCHECKED_CAST")
             val deliveryDetailsMap = map["deliveryAddressDetails"] as? Map<String, Any?>
+
+            val pharmacyGeoPoint = when (val rawLocation = map["pharmacyLocation"]) {
+                is GeoPoint -> rawLocation
+                is Map<*, *> -> {
+                    val lat = (rawLocation["latitude"] as? Number ?: rawLocation["lat"] as? Number)?.toDouble()
+                    val lng = (rawLocation["longitude"] as? Number ?: rawLocation["lng"] as? Number)?.toDouble()
+                    if (lat != null && lng != null) GeoPoint(lat, lng) else null
+                }
+                else -> null
+            }
 
             @Suppress("UNCHECKED_CAST")
             val deliveryAddr = when {
@@ -178,6 +190,7 @@ data class RefillOrder(
                 prescriptionId = map["prescriptionId"] as? String ?: "",
                 pharmacyName = map["pharmacyName"] as? String ?: "",
                 pharmacyId = map["pharmacyId"] as? String ?: "",
+                paymentId = map["paymentId"] as? String ?: "",
                 items = itemsList,
                 subtotal = (map["subtotal"] as? Number)?.toDouble() ?: 0.0,
                 deliveryFee = (map["deliveryFee"] as? Number)?.toDouble() ?: 0.0,
@@ -196,7 +209,13 @@ data class RefillOrder(
                 } ?: DeliveryWindow.flexible()),
                 preferredDeliveryDate = (map["preferredDeliveryDate"] as? Timestamp)?.toDate(),
                 currentLocation = map["currentLocation"] as? GeoPoint,
-                lastLocationUpdate = (map["lastLocationUpdate"] as? Timestamp)?.toDate(),
+                lastLocationUpdate = when (val rawUpdate = map["lastLocationUpdate"]) {
+                    is Timestamp -> rawUpdate.toDate()
+                    is Date -> rawUpdate
+                    else -> null
+                },
+                deliveryTrackingId = map["deliveryTrackingId"] as? String ?: "",
+                pharmacyLocation = pharmacyGeoPoint,
                 statusHistory = historyList,
                 cancelReason = map["cancelReason"] as? String ?: "",
                 estimatedDelivery = (map["estimatedDelivery"] as? Timestamp)?.toDate(),

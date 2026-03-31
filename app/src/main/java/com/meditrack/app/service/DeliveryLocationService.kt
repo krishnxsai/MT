@@ -1,11 +1,19 @@
 package com.meditrack.app.service
 
+import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -13,13 +21,14 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.meditrack.app.R
 import com.meditrack.app.data.model.DeliveryTracking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.util.Date
+import kotlinx.coroutines.tasks.await
 
 /**
  * Background service for updating delivery person's real-time GPS location.
@@ -38,6 +47,9 @@ class DeliveryLocationService : Service() {
 
     companion object {
         private const val TAG = "DeliveryLocationService"
+        private const val CHANNEL_ID = "delivery_tracking_channel"
+        private const val CHANNEL_NAME = "Delivery Tracking"
+        private const val NOTIFICATION_ID = 43021
         private const val LOCATION_UPDATE_INTERVAL = 3000L    // 3 seconds
         private const val LOCATION_FASTEST_INTERVAL = 1000L   // 1 second minimum
         private const val THROTTLE_DISTANCE = 10f             // Only update if moved > 10 meters
@@ -67,6 +79,8 @@ class DeliveryLocationService : Service() {
         fusedLocationClient = com.google.android.gms.location.LocationServices
             .getFusedLocationProviderClient(this)
 
+        createNotificationChannel()
+
         // Setup location callback
         setupLocationCallback()
     }
@@ -88,6 +102,8 @@ class DeliveryLocationService : Service() {
 
         Log.d(TAG, "Starting location tracking for order: $currentOrderId")
 
+        startAsForeground(currentOrderId!!)
+
         // Start requesting location updates
         startLocationUpdates()
 
@@ -100,6 +116,7 @@ class DeliveryLocationService : Service() {
         super.onDestroy()
         Log.d(TAG, "DeliveryLocationService.onDestroy()")
         stopLocationUpdates()
+        stopForeground(STOP_FOREGROUND_REMOVE)
         serviceScope.cancel()
     }
 
@@ -125,37 +142,26 @@ class DeliveryLocationService : Service() {
 
     private fun startLocationUpdates() {
         try {
+            if (!hasLocationPermission()) {
+                Log.e(TAG, "Location permission missing, stopping delivery tracking service")
+                stopSelf()
+                return
+            }
+
             val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_UPDATE_INTERVAL)
                 .setMinUpdateIntervalMillis(LOCATION_FASTEST_INTERVAL)
                 .setMaxUpdateDelayMillis(LOCATION_UPDATE_INTERVAL + 2000)
                 .build()
 
-            // Request location updates (requires permission check)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Android 12+: Need BackgroundLocation permission
-                try {
-                    fusedLocationClient.requestLocationUpdates(
-                        locationRequest,
-                        locationCallback,
-                        this.mainLooper
-                    )
-                } catch (e: SecurityException) {
-                    Log.e(TAG, "Permission denied for location updates: ${e.message}")
-                }
-            } else {
-                // Android <12
-                try {
-                    fusedLocationClient.requestLocationUpdates(
-                        locationRequest,
-                        locationCallback,
-                        this.mainLooper
-                    )
-                } catch (e: SecurityException) {
-                    Log.e(TAG, "Permission denied for location updates: ${e.message}")
-                }
-            }
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                this.mainLooper
+            )
 
             Log.d(TAG, "Location updates started with interval: $LOCATION_UPDATE_INTERVAL ms")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied for location updates: ${e.message}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start location updates: ${e.message}")
         }
@@ -197,12 +203,9 @@ class DeliveryLocationService : Service() {
                     firestore.collection("deliveryTracking")
                         .document(trackingId)
                         .set(tracking.toMap())
-                        .addOnSuccessListener {
-                            Log.d(TAG, "Location updated for $orderId at (${location.latitude}, ${location.longitude})")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e(TAG, "Failed to update location: ${e.message}")
-                        }
+                        .await()
+
+                    Log.d(TAG, "Location updated for $orderId at (${location.latitude}, ${location.longitude})")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error updating Firestore: ${e.message}")
                 }
@@ -210,5 +213,58 @@ class DeliveryLocationService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error creating tracking data: ${e.message}")
         }
+    }
+
+    private fun hasLocationPermission(): Boolean {
+        val fineLocationGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val coarseLocationGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        return fineLocationGranted || coarseLocationGranted
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows active courier location tracking"
+            setShowBadge(false)
+        }
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager?.createNotificationChannel(channel)
+    }
+
+    private fun startAsForeground(orderId: String) {
+        val notification = createTrackingNotification(orderId)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun createTrackingNotification(orderId: String): Notification {
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_pill)
+            .setContentTitle("Live delivery tracking active")
+            .setContentText("Updating courier location for order ${orderId.take(8)}")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .build()
     }
 }

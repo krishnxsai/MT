@@ -61,14 +61,16 @@ class MedicineIntakeService(
             // Try to create intake record + decrement stock atomically
             try {
                 firestore.runTransaction { transaction ->
+                    // Firestore transactions require reads before writes.
+                    val medRef = firestore.collection("medicines").document(medicineId)
+                    val snapshot = transaction.get(medRef)
+                    val currentQuantity = (snapshot.getLong("currentQuantity") ?: -1L).toInt()
+
                     // 1. Add intake record
                     val intakeRef = firestore.collection("medicineIntakes").document()
                     transaction.set(intakeRef, intakeData)
 
                     // 2. Decrement stock (if refill tracking is enabled)
-                    val medRef = firestore.collection("medicines").document(medicineId)
-                    val snapshot = transaction.get(medRef)
-                    val currentQuantity = (snapshot.getLong("currentQuantity") ?: -1L).toInt()
 
                     if (currentQuantity > -1) {  // -1 means not tracked
                         val newQuantity = (currentQuantity - 1).coerceAtLeast(0)

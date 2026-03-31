@@ -29,6 +29,10 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+function normalizeMedicineName(value) {
+    return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
 // Test medicines with various stock scenarios
 const TEST_MEDICINES = [
     {
@@ -211,6 +215,7 @@ async function injectInventory(pharmacyId, pharmacyName) {
                 pharmacyId: pharmacyId,
                 medicineId: medicine.medicineName.toLowerCase().replace(/\s+/g, '_'),
                 medicineName: medicine.medicineName,
+                medicineNameNormalized: normalizeMedicineName(medicine.medicineName),
                 genericName: medicine.genericName,
                 manufacturer: medicine.manufacturer,
                 description: medicine.description,

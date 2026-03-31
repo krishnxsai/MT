@@ -4,6 +4,8 @@
 
 These scripts help you manage test data for pharmacy inventory in Firestore:
 - **inject-pharmacy-inventory.js** - Inject or update inventory for existing pharmacies
+- **backfill-paid-transactions.js** - Backfill/repair pharmacy PURCHASE transactions for historical paid orders
+- **backfill-inventory-normalized-name.js** - Backfill normalized medicine-name key for existing inventory docs
 
 ## Prerequisites
 
@@ -46,6 +48,57 @@ cp scripts/inventory-config.example.json my-inventory.json
 # Edit my-inventory.json with your desired inventory levels
 node scripts/inject-pharmacy-inventory.js my-inventory.json
 ```
+
+## Historical Revenue Backfill
+
+If older paid orders are missing pharmacy transaction/revenue entries, run:
+
+```bash
+# Preview only (no writes)
+node scripts/backfill-paid-transactions.js
+
+# Apply changes
+node scripts/backfill-paid-transactions.js --apply
+
+# Verbose output
+node scripts/backfill-paid-transactions.js --apply --verbose
+```
+
+What it does:
+- Scans historical orders in paid-like lifecycle states
+- Looks up captured payment records from `/payments`
+- Upserts one canonical `PURCHASE` transaction in `/transactions` per order
+- Repairs zero/missing amount and missing Razorpay reference fields when needed
+
+Safety:
+- Default mode is dry-run
+- Idempotent upsert behavior (safe to re-run)
+- Does not touch inventory stock levels (revenue/transaction backfill only)
+
+## Inventory Name Normalization Backfill
+
+If existing inventory records do not have `medicineNameNormalized`, run:
+
+```bash
+# Preview only (no writes)
+node scripts/backfill-inventory-normalized-name.js
+
+# Apply changes
+node scripts/backfill-inventory-normalized-name.js --apply
+
+# Verbose output
+node scripts/backfill-inventory-normalized-name.js --apply --verbose
+```
+
+What it does:
+- Scans `/pharmacyInventory` documents
+- Computes `medicineNameNormalized = trim(lowercase(medicineName))`
+- Updates only documents missing/outdated normalized values
+
+Safety:
+- Default mode is dry-run
+- Idempotent updates (safe to re-run)
+- Does not alter stock quantity values
 
 ### Config File Format
 
