@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meditrack.app.ui.auth.LoginActivity
+import com.meditrack.app.ui.profile.ProfileActivity
 import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.data.model.OrderStatus as DataOrderStatus
 import com.meditrack.app.ui.pharmacy.compose.OrderStatus
@@ -118,6 +119,7 @@ class PharmacyDashboardActivity : ComponentActivity() {
                         onUpdateMedicine = inventoryViewModel::updateMedicine,
                         onDeleteMedicine = inventoryViewModel::deleteMedicine,
                         onAdjustStock = inventoryViewModel::adjustStock,
+                        onProfileClick = ::openProfile,
                         onSignOut = ::signOut
                     )
                 }
@@ -316,6 +318,18 @@ class PharmacyDashboardActivity : ComponentActivity() {
 
     private fun requiresBackgroundLocationPermission(): Boolean {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    }
+
+    private fun openProfile() {
+        val pharmacyId = viewModel.uiState.value.pharmacyId
+        if (pharmacyId.isNotBlank()) {
+            startActivity(
+                Intent(this, PharmacyProfileSetupActivity::class.java)
+                    .putExtra("pharmacyId", pharmacyId)
+            )
+        } else {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
     }
 
     private fun signOut() {

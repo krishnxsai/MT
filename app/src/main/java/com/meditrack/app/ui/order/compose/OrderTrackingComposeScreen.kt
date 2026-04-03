@@ -79,6 +79,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.maps.model.LatLng
 import com.meditrack.app.data.model.DeliveryTracking
 import com.meditrack.app.data.model.OrderItem
 import com.meditrack.app.data.model.OrderStatus
@@ -86,6 +87,8 @@ import com.meditrack.app.data.model.OrderStatusEntry
 import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.ui.order.OrderTrackingViewModel
 import com.meditrack.app.util.CallUtils
+import com.meditrack.app.util.DeliveryRouteManager
+import com.meditrack.app.util.ETACalculator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -132,12 +135,14 @@ class OrderTrackingComposeActivity : ComponentActivity() {
             MaterialTheme {
                 val order by viewModel.order.collectAsStateWithLifecycle()
                 val tracking by viewModel.deliveryTracking.collectAsStateWithLifecycle()
+                val apiKey = getString(com.meditrack.app.R.string.google_maps_api_key)
 
                 Surface {
                     OrderTrackingScreen(
                         order = order,
                         tracking = tracking,
                         bindToRealtimeData = true,
+                        mapsApiKey = apiKey,
                         onBackClick = { finish() },
                         onSupportClick = { callPharmacy(order) },
                         onContactClick = { callPharmacy(order) }
@@ -184,6 +189,7 @@ fun OrderTrackingScreen(
     order: RefillOrder? = null,
     tracking: DeliveryTracking? = null,
     bindToRealtimeData: Boolean = false,
+    mapsApiKey: String = "",
     onBackClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onContactClick: () -> Unit = {},
@@ -193,6 +199,8 @@ fun OrderTrackingScreen(
     var demoLoading by remember { mutableStateOf(true) }
     var demoPaymentFailed by remember { mutableStateOf(false) }
     var demoActiveStepIndex by remember { mutableIntStateOf(2) }
+    val routeManager = remember(mapsApiKey) { DeliveryRouteManager(mapsApiKey) }
+    var liveRouteEtaText by remember(bindToRealtimeData, order?.id) { mutableStateOf<String?>(null) }
 
     val showLoading = if (bindToRealtimeData) order == null else demoLoading
     val paymentFailed = remember(order, bindToRealtimeData, demoPaymentFailed) {
@@ -249,12 +257,54 @@ fun OrderTrackingScreen(
         }
     }
 
-    val estimatedDeliveryText = remember(order, tracking, bindToRealtimeData) {
+    val estimatedDeliveryText = remember(order, tracking, bindToRealtimeData, liveRouteEtaText) {
         if (bindToRealtimeData) {
-            formatEstimatedDelivery(order, tracking)
+            formatEstimatedDelivery(order, tracking, liveRouteEtaText)
         } else {
             "Estimated delivery: Apr 02, 01:17 pm"
         }
+    }
+
+    LaunchedEffect(
+        bindToRealtimeData,
+        mapsApiKey,
+        order?.id,
+        order?.status,
+        order?.deliveryAddress?.latitude,
+        order?.deliveryAddress?.longitude,
+        tracking?.isActive,
+        tracking?.latitude,
+        tracking?.longitude
+    ) {
+        if (!bindToRealtimeData || mapsApiKey.isBlank()) {
+            liveRouteEtaText = null
+            return@LaunchedEffect
+        }
+
+        val currentOrder = order
+        val currentTracking = tracking
+
+        if (currentOrder?.status != OrderStatus.SHIPPED || currentTracking?.isActive != true) {
+            liveRouteEtaText = null
+            return@LaunchedEffect
+        }
+
+        val destination = currentOrder.deliveryAddress
+            ?.takeIf { !(it.latitude == 0.0 && it.longitude == 0.0) }
+            ?.let { LatLng(it.latitude, it.longitude) }
+
+        if (destination == null) {
+            liveRouteEtaText = null
+            return@LaunchedEffect
+        }
+
+        val routeData = routeManager.getRouteDataForEta(
+            deliveryLocation = currentTracking.toLatLng(),
+            patientLocation = destination
+        )
+
+        val etaMinutes = ((routeData.durationSeconds + 59) / 60).coerceAtLeast(1)
+        liveRouteEtaText = "ETA: ${etaMinutes} min"
     }
 
     val itemRows = remember(order, bindToRealtimeData) {
@@ -1068,7 +1118,11 @@ private fun formatDeliveryAddress(order: RefillOrder?): String {
     }
 }
 
-private fun formatEstimatedDelivery(order: RefillOrder?, tracking: DeliveryTracking?): String {
+private fun formatEstimatedDelivery(
+    order: RefillOrder?,
+    tracking: DeliveryTracking?,
+    liveRouteEtaText: String? = null
+): String {
     if (order == null) {
         return "Estimated delivery: calculating..."
     }
@@ -1078,12 +1132,28 @@ private fun formatEstimatedDelivery(order: RefillOrder?, tracking: DeliveryTrack
         return "Estimated delivery: ${format.format(deliveryDate)}"
     }
 
-    if (order.estimatedDeliveryMinutes > 0) {
-        return "Estimated delivery in ~${order.estimatedDeliveryMinutes} min"
+    if (order.status == OrderStatus.SHIPPED && tracking?.isActive == true) {
+        if (!liveRouteEtaText.isNullOrBlank()) {
+            return liveRouteEtaText
+        }
+
+        val destination = order.deliveryAddress
+            ?.takeIf { !(it.latitude == 0.0 && it.longitude == 0.0) }
+            ?.let { LatLng(it.latitude, it.longitude) }
+
+        val eta = ETACalculator.calculateETAHybrid(
+            deliveryTracking = tracking,
+            patientLocation = destination
+        )
+        if (eta != null) {
+            return "ETA: $eta"
+        }
+
+        return "Estimated delivery: courier is on the way"
     }
 
-    if (order.status == OrderStatus.SHIPPED && tracking?.isActive == true) {
-        return "Estimated delivery: courier is on the way"
+    if (order.estimatedDeliveryMinutes > 0) {
+        return "Estimated delivery in ~${order.estimatedDeliveryMinutes} min"
     }
 
     return "Estimated delivery: calculating..."

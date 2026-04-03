@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
@@ -145,6 +146,7 @@ fun PharmacyDashboardScreen(
     onUpdateMedicine: (InventoryMedicineDraft) -> Unit,
     onDeleteMedicine: (String) -> Unit,
     onAdjustStock: (String, Int) -> Unit,
+    onProfileClick: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -171,6 +173,12 @@ fun PharmacyDashboardScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh dashboard"
+                        )
+                    }
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Open pharmacy profile"
                         )
                     }
                     IconButton(onClick = onSignOut) {

@@ -153,6 +153,73 @@ class DeliveryRouteManager(private val mapsApiKey: String) {
         }
     }
 
+    /**
+     * Fetch route distance/duration for ETA calculations in non-map surfaces.
+     * Reuses cached route data when movement is minimal to limit API traffic.
+     */
+    suspend fun getRouteDataForEta(
+        deliveryLocation: LatLng,
+        patientLocation: LatLng,
+        travelMode: String = "DRIVING"
+    ): RouteData = withContext(Dispatchers.Default) {
+        try {
+            val movement = SphericalUtil.computeDistanceBetween(
+                lastDeliveryLocation ?: deliveryLocation,
+                deliveryLocation
+            )
+            val destinationMovement = SphericalUtil.computeDistanceBetween(
+                lastPatientLocation ?: patientLocation,
+                patientLocation
+            )
+            val now = System.currentTimeMillis()
+
+            val canReuseCachedRoute =
+                movement < MIN_MOVEMENT_FOR_REFRESH_METERS &&
+                    destinationMovement < MIN_MOVEMENT_FOR_REFRESH_METERS &&
+                    (now - lastRouteUpdatedAtMs) < MIN_ROUTE_REFRESH_INTERVAL_MS &&
+                    lastRouteDistance != null &&
+                    lastRouteDurationSeconds != null &&
+                    lastRouteOverviewPolyline.isNotEmpty()
+
+            if (canReuseCachedRoute) {
+                return@withContext RouteData(
+                    distanceMeters = lastRouteDistance ?: 0,
+                    durationSeconds = lastRouteDurationSeconds ?: 0,
+                    polylinePoints = lastRoutePolylineEncoded,
+                    overviewPolyline = lastRouteOverviewPolyline
+                )
+            }
+
+            val routeData = fetchRoadRoute(
+                deliveryLocation = deliveryLocation,
+                patientLocation = patientLocation,
+                travelMode = travelMode
+            ) ?: buildFallbackRouteData(deliveryLocation, patientLocation)
+
+            lastDeliveryLocation = deliveryLocation
+            lastPatientLocation = patientLocation
+            lastRouteDistance = routeData.distanceMeters
+            lastRouteDurationSeconds = routeData.durationSeconds
+            lastRoutePolylineEncoded = routeData.polylinePoints
+            lastRouteOverviewPolyline = routeData.overviewPolyline
+            lastRouteUpdatedAtMs = now
+
+            routeData
+        } catch (e: Exception) {
+            Log.w(TAG, "getRouteDataForEta failed: ${e.message}")
+
+            val fallback = buildFallbackRouteData(deliveryLocation, patientLocation)
+            lastDeliveryLocation = deliveryLocation
+            lastPatientLocation = patientLocation
+            lastRouteDistance = fallback.distanceMeters
+            lastRouteDurationSeconds = fallback.durationSeconds
+            lastRoutePolylineEncoded = fallback.polylinePoints
+            lastRouteOverviewPolyline = fallback.overviewPolyline
+            lastRouteUpdatedAtMs = System.currentTimeMillis()
+            fallback
+        }
+    }
+
     private suspend fun fetchRoadRoute(
         deliveryLocation: LatLng,
         patientLocation: LatLng,

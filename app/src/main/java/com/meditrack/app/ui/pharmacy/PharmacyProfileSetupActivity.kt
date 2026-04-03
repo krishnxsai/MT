@@ -251,4 +251,3 @@ class PharmacyProfileSetupActivity : AppCompatActivity() {
         binding.saveButton.isEnabled = !show
     }
 }
-
