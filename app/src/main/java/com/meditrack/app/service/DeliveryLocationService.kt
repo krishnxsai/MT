@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.location.Location
@@ -20,6 +21,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.meditrack.app.R
 import com.meditrack.app.data.model.DeliveryTracking
@@ -50,6 +52,18 @@ class DeliveryLocationService : Service() {
         private const val CHANNEL_ID = "delivery_tracking_channel"
         private const val CHANNEL_NAME = "Delivery Tracking"
         private const val NOTIFICATION_ID = 43021
+        private const val PREFS_NAME = "delivery_tracking_service"
+        private const val KEY_ACTIVE_ORDER_IDS = "active_order_ids"
+
+        const val ACTION_ADD_TRACKING = "com.meditrack.app.service.action.ADD_TRACKING"
+        const val ACTION_REMOVE_TRACKING = "com.meditrack.app.service.action.REMOVE_TRACKING"
+        const val ACTION_STOP_ALL_TRACKING = "com.meditrack.app.service.action.STOP_ALL_TRACKING"
+
+        const val EXTRA_ORDER_ID = "orderId"
+        const val EXTRA_DELIVERY_PERSON_ID = "deliveryPersonId"
+        const val EXTRA_DELIVERY_PERSON_NAME = "deliveryPersonName"
+        const val EXTRA_DELIVERY_PERSON_PHONE = "deliveryPersonPhone"
+
         private const val LOCATION_UPDATE_INTERVAL = 3000L    // 3 seconds
         private const val LOCATION_FASTEST_INTERVAL = 1000L   // 1 second minimum
         private const val THROTTLE_DISTANCE = 10f             // Only update if moved > 10 meters
@@ -60,14 +74,18 @@ class DeliveryLocationService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var servicePrefs: SharedPreferences
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var lastLocationUpdate: Location? = null
     private var lastLocationUpdateTime = 0L
-    private var currentOrderId: String? = null
+    private val activeOrderIds = linkedSetOf<String>()
+    private val activeOrderIdsLock = Any()
     private var currentDeliveryPersonId: String? = null
     private var currentDeliveryPersonName: String? = null
     private var currentDeliveryPersonPhone: String? = null
+    private var locationUpdatesRunning = false
+    private var foregroundStarted = false
 
     override fun onCreate() {
         super.onCreate()
@@ -76,38 +94,45 @@ class DeliveryLocationService : Service() {
         // Initialize Firebase and Location services
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
+        servicePrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         fusedLocationClient = com.google.android.gms.location.LocationServices
             .getFusedLocationProviderClient(this)
 
         createNotificationChannel()
+
+        loadPersistedActiveOrders()
+        hydrateDeliveryPersonContextFromAuth()
 
         // Setup location callback
         setupLocationCallback()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "DeliveryLocationService.onStartCommand()")
+        val action = intent?.action ?: ACTION_ADD_TRACKING
+        Log.d(TAG, "DeliveryLocationService.onStartCommand(action=$action)")
 
-        // Extract delivery context from intent extras
-        currentOrderId = intent?.getStringExtra("orderId")
-        currentDeliveryPersonId = intent?.getStringExtra("deliveryPersonId")
-        currentDeliveryPersonName = intent?.getStringExtra("deliveryPersonName") ?: "Delivery"
-        currentDeliveryPersonPhone = intent?.getStringExtra("deliveryPersonPhone") ?: ""
-
-        if (currentOrderId.isNullOrBlank()) {
-            Log.w(TAG, "No orderId provided, stopping service")
-            stopSelf()
-            return START_NOT_STICKY
+        when (action) {
+            ACTION_ADD_TRACKING -> handleAddTracking(intent)
+            ACTION_REMOVE_TRACKING -> handleRemoveTracking(intent)
+            ACTION_STOP_ALL_TRACKING -> handleStopAllTracking()
+            else -> {
+                Log.w(TAG, "Unknown action '$action', treating as add")
+                handleAddTracking(intent)
+            }
         }
 
-        Log.d(TAG, "Starting location tracking for order: $currentOrderId")
-
-        startAsForeground(currentOrderId!!)
-
-        // Start requesting location updates
-        startLocationUpdates()
-
-        return START_STICKY  // Restart if killed by system
+        val activeOrders = getActiveOrderIdsSnapshot()
+        return if (activeOrders.isNotEmpty()) {
+            startAsForeground(activeOrders)
+            startLocationUpdatesIfNeeded()
+            START_STICKY
+        } else {
+            stopLocationUpdates()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundStarted = false
+            stopSelf()
+            START_NOT_STICKY
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -117,7 +142,64 @@ class DeliveryLocationService : Service() {
         Log.d(TAG, "DeliveryLocationService.onDestroy()")
         stopLocationUpdates()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        foregroundStarted = false
         serviceScope.cancel()
+    }
+
+    private fun handleAddTracking(intent: Intent?) {
+        updateDeliveryPersonContextFromIntent(intent)
+
+        val orderId = intent?.getStringExtra(EXTRA_ORDER_ID)
+            ?: intent?.getStringExtra("orderId")
+
+        if (orderId.isNullOrBlank()) {
+            if (getActiveOrderIdsSnapshot().isNotEmpty()) {
+                Log.d(TAG, "No new order provided, continuing existing active tracking")
+            } else {
+                Log.w(TAG, "No orderId provided for add action")
+            }
+            return
+        }
+
+        val wasAdded = synchronized(activeOrderIdsLock) {
+            activeOrderIds.add(orderId)
+        }
+
+        if (wasAdded) {
+            persistActiveOrderIds()
+            Log.d(TAG, "Added order for live tracking: $orderId")
+        }
+
+        refreshForegroundNotification()
+    }
+
+    private fun handleRemoveTracking(intent: Intent?) {
+        val orderId = intent?.getStringExtra(EXTRA_ORDER_ID)
+            ?: intent?.getStringExtra("orderId")
+
+        if (orderId.isNullOrBlank()) {
+            Log.w(TAG, "No orderId provided for remove action")
+            return
+        }
+
+        val removed = synchronized(activeOrderIdsLock) {
+            activeOrderIds.remove(orderId)
+        }
+
+        if (removed) {
+            persistActiveOrderIds()
+            Log.d(TAG, "Removed order from live tracking: $orderId")
+        }
+
+        refreshForegroundNotification()
+    }
+
+    private fun handleStopAllTracking() {
+        synchronized(activeOrderIdsLock) {
+            activeOrderIds.clear()
+        }
+        persistActiveOrderIds()
+        Log.d(TAG, "Stopped tracking for all active orders")
     }
 
     // ─────────────── Location Updates ─────────────
@@ -132,7 +214,7 @@ class DeliveryLocationService : Service() {
                 val timeSinceLastUpdate = System.currentTimeMillis() - lastLocationUpdateTime
 
                 if (distance > THROTTLE_DISTANCE || timeSinceLastUpdate > THROTTLE_TIME) {
-                    updateFirestoreLocation(location)
+                    updateFirestoreLocationForActiveOrders(location)
                     lastLocationUpdate = location
                     lastLocationUpdateTime = System.currentTimeMillis()
                 }
@@ -140,7 +222,11 @@ class DeliveryLocationService : Service() {
         }
     }
 
-    private fun startLocationUpdates() {
+    private fun startLocationUpdatesIfNeeded() {
+        if (locationUpdatesRunning) {
+            return
+        }
+
         try {
             if (!hasLocationPermission()) {
                 Log.e(TAG, "Location permission missing, stopping delivery tracking service")
@@ -159,6 +245,7 @@ class DeliveryLocationService : Service() {
                 this.mainLooper
             )
 
+            locationUpdatesRunning = true
             Log.d(TAG, "Location updates started with interval: $LOCATION_UPDATE_INTERVAL ms")
         } catch (e: SecurityException) {
             Log.e(TAG, "Permission denied for location updates: ${e.message}")
@@ -168,51 +255,88 @@ class DeliveryLocationService : Service() {
     }
 
     private fun stopLocationUpdates() {
+        if (!locationUpdatesRunning) {
+            return
+        }
+
         try {
             fusedLocationClient.removeLocationUpdates(locationCallback)
+            locationUpdatesRunning = false
             Log.d(TAG, "Location updates stopped")
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping location updates: ${e.message}")
         }
     }
 
-    private fun updateFirestoreLocation(location: Location) {
-        val orderId = currentOrderId ?: return
+    private fun updateFirestoreLocationForActiveOrders(location: Location) {
+        val orderIds = getActiveOrderIdsSnapshot()
+        if (orderIds.isEmpty()) {
+            return
+        }
+
         val deliveryPersonId = currentDeliveryPersonId ?: auth.currentUser?.uid ?: return
 
         try {
-            // Create tracking data
-            val tracking = DeliveryTracking(
-                orderId = orderId,
-                deliveryPersonId = deliveryPersonId,
-                latitude = location.latitude,
-                longitude = location.longitude,
-                speed = location.speed * 3.6,  // Convert m/s to km/h
-                bearing = location.bearing.toDouble(),
-                accuracy = location.accuracy.toDouble(),
-                deliveryPersonName = currentDeliveryPersonName ?: "Delivery",
-                deliveryPersonPhone = currentDeliveryPersonPhone ?: ""
-            )
-
-            // Use trackingId = "ongoing_{orderId}" for easy querying
-            val trackingId = "ongoing_$orderId"
-
-            // Update Firestore asynchronously
             serviceScope.launch {
-                try {
-                    firestore.collection("deliveryTracking")
-                        .document(trackingId)
-                        .set(tracking.toMap())
-                        .await()
+                for (orderId in orderIds) {
+                    try {
+                        val tracking = DeliveryTracking(
+                            orderId = orderId,
+                            deliveryPersonId = deliveryPersonId,
+                            latitude = location.latitude,
+                            longitude = location.longitude,
+                            speed = location.speed * 3.6,  // Convert m/s to km/h
+                            bearing = location.bearing.toDouble(),
+                            accuracy = location.accuracy.toDouble(),
+                            isActive = true,
+                            trackingStatus = "ACTIVE",
+                            deliveryPersonName = currentDeliveryPersonName ?: "Delivery",
+                            deliveryPersonPhone = currentDeliveryPersonPhone ?: ""
+                        )
 
-                    Log.d(TAG, "Location updated for $orderId at (${location.latitude}, ${location.longitude})")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error updating Firestore: ${e.message}")
+                        val trackingId = "ongoing_$orderId"
+
+                        firestore.collection("deliveryTracking")
+                            .document(trackingId)
+                            .set(tracking.toMap())
+                            .await()
+
+                        appendTrackingPoint(trackingId, tracking)
+
+                        Log.d(
+                            TAG,
+                            "Location updated for $orderId at (${location.latitude}, ${location.longitude})"
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error updating Firestore for $orderId: ${e.message}")
+                    }
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error creating tracking data: ${e.message}")
         }
+    }
+
+    private suspend fun appendTrackingPoint(trackingId: String, tracking: DeliveryTracking) {
+        val point = mapOf(
+            "orderId" to tracking.orderId,
+            "deliveryPersonId" to tracking.deliveryPersonId,
+            "latitude" to tracking.latitude,
+            "longitude" to tracking.longitude,
+            "speed" to tracking.speed,
+            "bearing" to tracking.bearing,
+            "accuracy" to tracking.accuracy,
+            "trackingStatus" to tracking.trackingStatus,
+            "isActive" to tracking.isActive,
+            "recordedAt" to FieldValue.serverTimestamp()
+        )
+
+        firestore.collection("deliveryTracking")
+            .document(trackingId)
+            .collection("points")
+            .document()
+            .set(point)
+            .await()
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -245,8 +369,8 @@ class DeliveryLocationService : Service() {
         notificationManager?.createNotificationChannel(channel)
     }
 
-    private fun startAsForeground(orderId: String) {
-        val notification = createTrackingNotification(orderId)
+    private fun startAsForeground(activeOrders: List<String>) {
+        val notification = createTrackingNotification(activeOrders)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -256,15 +380,95 @@ class DeliveryLocationService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        foregroundStarted = true
     }
 
-    private fun createTrackingNotification(orderId: String): Notification {
+    private fun createTrackingNotification(activeOrders: List<String>): Notification {
+        val count = activeOrders.size
+        val summary = if (count == 1) {
+            "1 active order"
+        } else {
+            "$count active orders"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_pill)
             .setContentTitle("Live delivery tracking active")
-            .setContentText("Updating courier location for order ${orderId.take(8)}")
+            .setContentText("Updating courier location for $summary")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
+    }
+
+    private fun refreshForegroundNotification() {
+        if (!foregroundStarted) {
+            return
+        }
+
+        val notificationManager = getSystemService(NotificationManager::class.java) ?: return
+        notificationManager.notify(
+            NOTIFICATION_ID,
+            createTrackingNotification(getActiveOrderIdsSnapshot())
+        )
+    }
+
+    private fun getActiveOrderIdsSnapshot(): List<String> = synchronized(activeOrderIdsLock) {
+        activeOrderIds.toList()
+    }
+
+    private fun persistActiveOrderIds() {
+        val snapshot = synchronized(activeOrderIdsLock) {
+            activeOrderIds.toSet()
+        }
+        servicePrefs.edit().putStringSet(KEY_ACTIVE_ORDER_IDS, snapshot).apply()
+    }
+
+    private fun loadPersistedActiveOrders() {
+        val persisted = servicePrefs.getStringSet(KEY_ACTIVE_ORDER_IDS, emptySet()) ?: emptySet()
+        if (persisted.isNotEmpty()) {
+            synchronized(activeOrderIdsLock) {
+                activeOrderIds.clear()
+                activeOrderIds.addAll(persisted)
+            }
+            Log.d(TAG, "Recovered ${persisted.size} active tracking orders from disk")
+        }
+    }
+
+    private fun hydrateDeliveryPersonContextFromAuth() {
+        val user = auth.currentUser ?: return
+        currentDeliveryPersonId = user.uid
+        currentDeliveryPersonName = user.displayName ?: "Delivery"
+
+        serviceScope.launch {
+            try {
+                val userDoc = firestore.collection("users").document(user.uid).get().await()
+                currentDeliveryPersonPhone = userDoc.getString("phoneNumber") ?: ""
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not hydrate delivery phone from profile: ${e.message}")
+            }
+        }
+    }
+
+    private fun updateDeliveryPersonContextFromIntent(intent: Intent?) {
+        if (intent == null) {
+            return
+        }
+
+        val id = intent.getStringExtra(EXTRA_DELIVERY_PERSON_ID)
+            ?: intent.getStringExtra("deliveryPersonId")
+        val name = intent.getStringExtra(EXTRA_DELIVERY_PERSON_NAME)
+            ?: intent.getStringExtra("deliveryPersonName")
+        val phone = intent.getStringExtra(EXTRA_DELIVERY_PERSON_PHONE)
+            ?: intent.getStringExtra("deliveryPersonPhone")
+
+        if (!id.isNullOrBlank()) {
+            currentDeliveryPersonId = id
+        }
+        if (!name.isNullOrBlank()) {
+            currentDeliveryPersonName = name
+        }
+        if (phone != null) {
+            currentDeliveryPersonPhone = phone
+        }
     }
 }

@@ -4,12 +4,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meditrack.app.data.model.DeliveryTracking
+import com.meditrack.app.data.model.OrderStatus
 import com.meditrack.app.data.model.RefillOrder
 import com.meditrack.app.data.model.getDisplayStatus
 import com.meditrack.app.data.repository.DeliveryTrackingRepository
 import com.meditrack.app.data.repository.OrderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,6 +26,7 @@ import java.util.Locale
  * ViewModel for the order tracking screen.
  * Manages real-time order status updates from Firestore and live delivery GPS tracking.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class OrderTrackingViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
@@ -51,7 +56,15 @@ class OrderTrackingViewModel @Inject constructor(
      * Updates every 3-5 seconds from Firestore deliveryTracking collection.
      */
     val deliveryTracking: StateFlow<DeliveryTracking?> = deliveryTrackingRepository
-        .trackDeliveryFlow(orderId)
+        .let {
+            order.flatMapLatest { currentOrder ->
+                if (currentOrder?.status == OrderStatus.SHIPPED && currentOrder.id.isNotBlank()) {
+                    it.trackDeliveryFlow(currentOrder.id)
+                } else {
+                    flowOf(null)
+                }
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // ── Derived state: Display status label ────────────────────────────

@@ -18,6 +18,7 @@ data class InventoryItem(
     // ── Medicine info ────────────────────────────────────────────
     val medicineName: String = "",
     val medicineNameNormalized: String = "",
+    val dosage: String = "",
     val genericName: String = "",
     val category: String = "",
     val manufacturer: String = "",
@@ -53,6 +54,7 @@ data class InventoryItem(
             "pharmacyId" to pharmacyId,
             "medicineName" to medicineName,
             "medicineNameNormalized" to normalizedName,
+            "dosage" to dosage,
             "genericName" to genericName,
             "category" to category,
             "manufacturer" to manufacturer,
@@ -79,6 +81,7 @@ data class InventoryItem(
             medicineNameNormalized =
                 (map["medicineNameNormalized"] as? String)?.takeIf { it.isNotBlank() }
                     ?: normalizeMedicineName(map["medicineName"] as? String ?: ""),
+            dosage = map["dosage"] as? String ?: "",
             genericName = map["genericName"] as? String ?: "",
             category = map["category"] as? String ?: "",
             manufacturer = map["manufacturer"] as? String ?: "",

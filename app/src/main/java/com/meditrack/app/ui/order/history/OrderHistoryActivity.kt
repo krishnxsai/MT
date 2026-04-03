@@ -16,7 +16,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.meditrack.app.R
 import com.meditrack.app.data.model.RefillOrder
-import com.meditrack.app.ui.order.OrderTrackingActivity
+import com.meditrack.app.ui.order.compose.OrderTrackingComposeActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -184,8 +184,8 @@ class OrderHistoryActivity : AppCompatActivity() {
     }
 
     private fun navigateToOrderTracking(order: RefillOrder) {
-        val intent = Intent(this, OrderTrackingActivity::class.java).apply {
-            putExtra(OrderTrackingActivity.EXTRA_ORDER_ID, order.id)
+        val intent = Intent(this, OrderTrackingComposeActivity::class.java).apply {
+            putExtra(OrderTrackingComposeActivity.EXTRA_ORDER_ID, order.id)
         }
         startActivity(intent)
     }

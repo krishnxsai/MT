@@ -9,7 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.meditrack.app.R
 import com.meditrack.app.data.model.OrderStatus
-import com.meditrack.app.ui.order.OrderTrackingActivity
+import com.meditrack.app.ui.order.compose.OrderTrackingComposeActivity
 
 /**
  * Helper for order status notifications to patients.
@@ -113,9 +113,9 @@ object OrderNotificationHelper {
         body: String,
         priority: Int
     ) {
-        val intent = Intent(context, OrderTrackingActivity::class.java).apply {
+        val intent = Intent(context, OrderTrackingComposeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(OrderTrackingActivity.EXTRA_ORDER_ID, orderId)
+            putExtra(OrderTrackingComposeActivity.EXTRA_ORDER_ID, orderId)
         }
 
         val pendingIntent = PendingIntent.getActivity(

@@ -100,6 +100,43 @@ service cloud.firestore {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    // Helper: Order ownership supports both current (userId) and legacy (patientId) schemas.
+    function isOrderOwner(orderData) {
+      return isAuthenticated() &&
+             (orderData.get('userId', '') == request.auth.uid ||
+              orderData.get('patientId', '') == request.auth.uid);
+    }
+
+    function isTerminalOrderStatus(status) {
+      return status in ['DELIVERED', 'CANCELLED', 'RETURNED'];
+    }
+
+    function doesTrackingOrderExist(orderId) {
+      return exists(/databases/$(database)/documents/orders/$(orderId));
+    }
+
+    function getTrackingOrder(orderId) {
+      return get(/databases/$(database)/documents/orders/$(orderId)).data;
+    }
+
+    function isTrackingWriterAuthorized(orderId, deliveryPersonId) {
+      return doesTrackingOrderExist(orderId) &&
+             deliveryPersonId == request.auth.uid &&
+             getTrackingOrder(orderId).get('deliveryPersonId', '') == request.auth.uid;
+    }
+
+    function isTrackingLifecycleValid(orderId) {
+      let requestedActive = request.resource.data.get('isActive', true);
+      let orderStatus = getTrackingOrder(orderId).get('status', '');
+
+      return (requestedActive == true && orderStatus == 'SHIPPED') ||
+             (requestedActive == false && isTerminalOrderStatus(orderStatus));
+    }
+
+    function getTrackingDoc(trackingId) {
+      return get(/databases/$(database)/documents/deliveryTracking/$(trackingId)).data;
+    }
+
     // Helper: Validate order status transitions (state machine)
     function isValidOrderTransition() {
       let current = resource.data.status;
@@ -445,7 +482,7 @@ service cloud.firestore {
       // Pharmacy users can read orders assigned to their pharmacy only
       // Admins can read all orders
       allow read: if isAuthenticated() &&
-                  (resource.data.userId == request.auth.uid ||
+                  (isOrderOwner(resource.data) ||
                    isAdmin() ||
                    (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId)));
 
@@ -461,7 +498,7 @@ service cloud.firestore {
       // Pharmacy users can update only their own pharmacy's orders
       // Admins can update any order
       allow update: if isAuthenticated() &&
-                    (resource.data.userId == request.auth.uid ||
+                    (isOrderOwner(resource.data) ||
                      isAdmin() ||
                      (isApprovedPharmacy() && isPharmacyOwner(resource.data.pharmacyId))) &&
                     isValidOrderTransition();
@@ -599,17 +636,51 @@ service cloud.firestore {
       // Rule: Check if this tracking document belongs to a delivery of user's order
       allow read: if isAuthenticated() &&
                   exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
-                  get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.userId == request.auth.uid;
+                  isOrderOwner(get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data);
 
-      // Delivery person can create/update tracking for their active deliveries
-      // Write permission: deliveryPersonId matches authenticated user OR
-      // Coming from Delivery Location Service (all write operations)
-      allow create, update: if isAuthenticated() &&
-                            request.resource.data.deliveryPersonId == request.auth.uid &&
-                            request.resource.data.orderId != "";
+      // Delivery person can create tracking for active SHIPPED orders only.
+      allow create: if isAuthenticated() &&
+                    hasRequiredFields(['orderId', 'deliveryPersonId', 'latitude', 'longitude']) &&
+                    request.resource.data.orderId is string &&
+                    request.resource.data.orderId != '' &&
+                    trackingId == ('ongoing_' + request.resource.data.orderId) &&
+                    isTrackingWriterAuthorized(
+                      request.resource.data.orderId,
+                      request.resource.data.deliveryPersonId
+                    ) &&
+                    isTrackingLifecycleValid(request.resource.data.orderId);
+
+      // Delivery person can update own tracking docs and only within valid lifecycle states.
+      allow update: if isAuthenticated() &&
+                    request.resource.data.orderId == resource.data.orderId &&
+                    request.resource.data.deliveryPersonId == resource.data.deliveryPersonId &&
+                    trackingId == ('ongoing_' + request.resource.data.orderId) &&
+                    isTrackingWriterAuthorized(
+                      request.resource.data.orderId,
+                      request.resource.data.deliveryPersonId
+                    ) &&
+                    isTrackingLifecycleValid(request.resource.data.orderId);
 
       // Only delivery persons can write tracking data (no patients, no direct deletes)
       allow delete: if false;
+
+      // Immutable history points retained for analytics/support and retention cleanup.
+      match /points/{pointId} {
+        allow read: if isAuthenticated() &&
+                    exists(/databases/$(database)/documents/deliveryTracking/$(trackingId)) &&
+                    exists(/databases/$(database)/documents/orders/$(getTrackingDoc(trackingId).orderId)) &&
+                    isOrderOwner(get(/databases/$(database)/documents/orders/$(getTrackingDoc(trackingId).orderId)).data);
+
+        allow create: if isAuthenticated() &&
+                      exists(/databases/$(database)/documents/deliveryTracking/$(trackingId)) &&
+                      request.resource.data.orderId == getTrackingDoc(trackingId).orderId &&
+                      request.resource.data.deliveryPersonId == request.auth.uid &&
+                      getTrackingDoc(trackingId).deliveryPersonId == request.auth.uid &&
+                      request.resource.data.latitude is number &&
+                      request.resource.data.longitude is number;
+
+        allow update, delete: if false;
+      }
     }
 
     // ==================== Payments Collection (Razorpay) ====================

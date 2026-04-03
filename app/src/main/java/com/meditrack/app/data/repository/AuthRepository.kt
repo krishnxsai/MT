@@ -20,6 +20,11 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+data class UserProfileSummary(
+    val displayName: String,
+    val phoneNumber: String?
+)
+
 class AuthRepository(private val context: Context? = null) {
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
@@ -361,6 +366,43 @@ class AuthRepository(private val context: Context? = null) {
             Resource.Success(names)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to fetch user names")
+        }
+    }
+
+    /**
+     * Batch-fetch user profile summaries for a list of user IDs.
+     * Includes display name and phone number for dashboard patient cards.
+     */
+    suspend fun getUserProfileSummaries(userIds: List<String>): Resource<Map<String, UserProfileSummary>> = withContext(Dispatchers.IO) {
+        try {
+            if (userIds.isEmpty()) return@withContext Resource.Success(emptyMap())
+
+            val profiles = mutableMapOf<String, UserProfileSummary>()
+            // Firestore whereIn supports max 30 document IDs per query
+            for (batch in userIds.distinct().chunked(30)) {
+                val snapshot = usersCollection
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), batch)
+                    .get()
+                    .await()
+
+                for (doc in snapshot.documents) {
+                    val displayName = doc.getString("displayName")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Patient"
+                    val phoneNumber = doc.getString("phoneNumber")
+                        ?.trim()
+                        ?.takeIf { it.isNotEmpty() }
+
+                    profiles[doc.id] = UserProfileSummary(
+                        displayName = displayName,
+                        phoneNumber = phoneNumber
+                    )
+                }
+            }
+
+            Resource.Success(profiles)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to fetch user profiles")
         }
     }
 

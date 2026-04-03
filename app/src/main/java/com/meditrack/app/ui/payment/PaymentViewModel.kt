@@ -138,37 +138,37 @@ class PaymentViewModel @Inject constructor(
                 )
 
                 when (recordResult) {
+                    is Resource.Success -> Log.d(TAG, "Payment recorded successfully")
+                    is Resource.Error -> {
+                        // Verification has already completed server-side; treat local sync failure as non-fatal.
+                        Log.w(TAG, "Payment verified but local payment sync failed: ${recordResult.message}")
+                    }
+                    else -> Unit
+                }
+
+                // Step 3: Try to update order status to CONFIRMED.
+                // Do not block successful payment completion if this sync fails.
+                val updateResult = orderRepository.updateOrderStatus(
+                    orderId = meditrackOrderId,
+                    newStatus = com.meditrack.app.data.model.OrderStatus.CONFIRMED,
+                    note = "Payment confirmed via $paymentMethod"
+                )
+
+                when (updateResult) {
                     is Resource.Success -> {
-                        Log.d(TAG, "Payment recorded successfully")
-
-                        // Step 3: Update order status to CONFIRMED
-                        val updateResult = orderRepository.updateOrderStatus(
-                            orderId = meditrackOrderId,
-                            newStatus = com.meditrack.app.data.model.OrderStatus.CONFIRMED,
-                            note = "Payment confirmed via $paymentMethod"
-                        )
-
-                        when (updateResult) {
-                            is Resource.Success -> {
-                                Log.d(TAG, "Order status updated to CONFIRMED")
-                                _paymentState.value = PaymentUIState.PaymentSuccess
-                                _paymentSuccess.value = razorpayPaymentId
-                            }
-                            is Resource.Error -> {
-                                Log.e(TAG, "Failed to update order: ${updateResult.message}")
-                                _errorMessage.value = "Order update failed: ${updateResult.message}"
-                                _paymentState.value = PaymentUIState.Error(updateResult.message)
-                            }
-                            else -> {}
-                        }
+                        Log.d(TAG, "Order status updated to CONFIRMED")
                     }
                     is Resource.Error -> {
-                        Log.e(TAG, "Failed to record payment: ${recordResult.message}")
-                        _errorMessage.value = recordResult.message
-                        _paymentState.value = PaymentUIState.Error(recordResult.message)
+                        Log.w(
+                            TAG,
+                            "Payment captured but order status sync failed: ${updateResult.message}"
+                        )
                     }
-                    else -> {}
+                    else -> Unit
                 }
+
+                _paymentState.value = PaymentUIState.PaymentSuccess
+                _paymentSuccess.value = razorpayPaymentId
             } catch (e: Exception) {
                 Log.e(TAG, "Exception handling payment success: ${e.message}")
                 _errorMessage.value = "Failed to process payment confirmation"

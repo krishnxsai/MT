@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.util.Date
 
 /**
  * Repository for real-time delivery tracking data.
@@ -50,10 +49,9 @@ class DeliveryTrackingRepository {
             return@callbackFlow
         }
 
+        val trackingId = "ongoing_$orderId"
         val listener = trackingCol
-            .whereEqualTo("orderId", orderId)
-            .orderBy("updatedAt", Query.Direction.DESCENDING)
-            .limit(1)
+            .document(trackingId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(TAG, "trackDeliveryFlow error: ${error.message}")
@@ -61,8 +59,8 @@ class DeliveryTrackingRepository {
                     return@addSnapshotListener
                 }
 
-                val tracking = snapshot?.documents?.firstOrNull()?.let { doc ->
-                    doc.data?.let { DeliveryTracking.fromMap(doc.id, it) }
+                val tracking = snapshot?.data?.let {
+                    DeliveryTracking.fromMap(snapshot.id, it)
                 }
                 trySend(tracking)
             }
@@ -156,8 +154,23 @@ class DeliveryTrackingRepository {
     suspend fun endTracking(orderId: String): Resource<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                // Mark tracking as ended by updating a flag would require schema change
-                // For now, just log the end
+                val trackingId = "ongoing_$orderId"
+                val trackingDoc = trackingCol.document(trackingId)
+                val snapshot = trackingDoc.get().await()
+
+                if (!snapshot.exists()) {
+                    return@withContext Resource.Success(Unit)
+                }
+
+                trackingDoc.update(
+                    mapOf(
+                        "isActive" to false,
+                        "trackingStatus" to "ENDED",
+                        "endedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+
                 Log.d(TAG, "Tracking ended for order: $orderId")
                 Resource.Success(Unit)
             } catch (e: Exception) {

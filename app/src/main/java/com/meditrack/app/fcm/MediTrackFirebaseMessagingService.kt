@@ -13,7 +13,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.meditrack.app.R
 import com.meditrack.app.data.model.NotificationType
 import com.meditrack.app.data.repository.NotificationPreferenceRepository
-import com.meditrack.app.ui.order.OrderTrackingActivity
+import com.meditrack.app.ui.order.compose.OrderTrackingComposeActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -103,9 +103,9 @@ class MediTrackFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun showOrderNotification(orderId: String, title: String, body: String) {
-        val intent = Intent(this, OrderTrackingActivity::class.java).apply {
+        val intent = Intent(this, OrderTrackingComposeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(OrderTrackingActivity.EXTRA_ORDER_ID, orderId)
+            putExtra(OrderTrackingComposeActivity.EXTRA_ORDER_ID, orderId)
         }
 
         val pendingIntent = PendingIntent.getActivity(

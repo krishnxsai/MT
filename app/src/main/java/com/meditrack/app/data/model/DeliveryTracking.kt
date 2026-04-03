@@ -38,9 +38,21 @@ data class DeliveryTracking(
     /** Location accuracy in meters */
     val accuracy: Double = 0.0,
 
+    /** Whether tracking is currently active for this order */
+    val isActive: Boolean = true,
+
+    /** ACTIVE / DELIVERED / CANCELLED / RETURNED */
+    val trackingStatus: String = "ACTIVE",
+
     /** Server timestamp of this update */
     @ServerTimestamp
     val updatedAt: Date? = null,
+
+    /** Tracking start timestamp */
+    val startedAt: Date? = null,
+
+    /** Tracking end timestamp when delivery reaches terminal status */
+    val endedAt: Date? = null,
 
     /** Delivery person's name (denormalized for UI) */
     val deliveryPersonName: String = "",
@@ -64,7 +76,11 @@ data class DeliveryTracking(
         "speed" to speed,
         "bearing" to bearing,
         "accuracy" to accuracy,
+        "isActive" to isActive,
+        "trackingStatus" to trackingStatus,
         "updatedAt" to (updatedAt ?: FieldValue.serverTimestamp()),
+        "startedAt" to startedAt,
+        "endedAt" to endedAt,
         "deliveryPersonName" to deliveryPersonName,
         "deliveryPersonPhone" to deliveryPersonPhone
     )
@@ -83,9 +99,21 @@ data class DeliveryTracking(
                 speed = (data["speed"] as? Number)?.toDouble() ?: 0.0,
                 bearing = (data["bearing"] as? Number)?.toDouble() ?: 0.0,
                 accuracy = (data["accuracy"] as? Number)?.toDouble() ?: 0.0,
+                isActive = data["isActive"] as? Boolean ?: true,
+                trackingStatus = data["trackingStatus"] as? String ?: "ACTIVE",
                 updatedAt = when (val rawUpdatedAt = data["updatedAt"]) {
                     is Timestamp -> rawUpdatedAt.toDate()
                     is Date -> rawUpdatedAt
+                    else -> null
+                },
+                startedAt = when (val rawStartedAt = data["startedAt"]) {
+                    is Timestamp -> rawStartedAt.toDate()
+                    is Date -> rawStartedAt
+                    else -> null
+                },
+                endedAt = when (val rawEndedAt = data["endedAt"]) {
+                    is Timestamp -> rawEndedAt.toDate()
+                    is Date -> rawEndedAt
                     else -> null
                 },
                 deliveryPersonName = data["deliveryPersonName"] as? String ?: "",

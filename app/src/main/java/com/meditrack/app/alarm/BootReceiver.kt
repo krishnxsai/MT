@@ -3,11 +3,13 @@ package com.meditrack.app.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import com.meditrack.app.data.model.Appointment
 import com.meditrack.app.data.model.AppointmentStatus
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.RepeatType
+import com.meditrack.app.service.DeliveryLocationService
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -99,6 +101,9 @@ class BootReceiver : BroadcastReceiver() {
 
                 // ── Reschedule appointment reminders ──
                 rescheduleAppointmentReminders(context, firestore, userId)
+
+                // ── Restore live delivery tracking after reboot ──
+                restoreActiveDeliveryTracking(context, firestore, userId)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to reschedule alarms: ${e.message}")
             } finally {
@@ -148,6 +153,57 @@ class BootReceiver : BroadcastReceiver() {
             Log.d(TAG, "Rescheduled reminders for $count upcoming appointments")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to reschedule appointment reminders: ${e.message}")
+        }
+    }
+
+    private suspend fun restoreActiveDeliveryTracking(
+        context: Context,
+        firestore: FirebaseFirestore,
+        userId: String
+    ) {
+        try {
+            val shippedOrders = firestore.collection("orders")
+                .whereEqualTo("status", "SHIPPED")
+                .whereEqualTo("deliveryPersonId", userId)
+                .get()
+                .await()
+
+            if (shippedOrders.isEmpty) {
+                Log.d(TAG, "No active SHIPPED orders to restore tracking")
+                return
+            }
+
+            val userDoc = firestore.collection("users")
+                .document(userId)
+                .get()
+                .await()
+
+            val deliveryName = userDoc.getString("displayName")
+                ?: FirebaseAuth.getInstance().currentUser?.displayName
+                ?: "Delivery"
+            val deliveryPhone = userDoc.getString("phoneNumber") ?: ""
+
+            var restoredCount = 0
+            for (orderDoc in shippedOrders.documents) {
+                val serviceIntent = Intent(context, DeliveryLocationService::class.java).apply {
+                    action = DeliveryLocationService.ACTION_ADD_TRACKING
+                    putExtra(DeliveryLocationService.EXTRA_ORDER_ID, orderDoc.id)
+                    putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_ID, userId)
+                    putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_NAME, deliveryName)
+                    putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_PHONE, deliveryPhone)
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+                restoredCount++
+            }
+
+            Log.d(TAG, "Restored live tracking for $restoredCount active SHIPPED orders")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore active delivery tracking: ${e.message}")
         }
     }
 }

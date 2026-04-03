@@ -508,6 +508,12 @@ class OrderRepository @Inject constructor(
             val order = orderDoc.data?.let { RefillOrder.fromMap(orderDoc.id, it) }
                 ?: return@withContext Resource.Error("Order not found")
 
+            val deliveryContext = if (newStatus == OrderStatus.SHIPPED) {
+                resolveDeliveryPersonContext()
+            } else {
+                null
+            }
+
             val statusEntry = OrderStatusEntry(
                 status = newStatus.name,
                 changedAt = Date(),
@@ -524,6 +530,18 @@ class OrderRepository @Inject constructor(
 
             if (newStatus == OrderStatus.SHIPPED) {
                 updates["deliveryTrackingId"] = "ongoing_$orderId"
+                updates["trackingStatus"] = "ACTIVE"
+                updates["trackingStartedAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
+                deliveryContext?.let {
+                    updates["deliveryPersonId"] = it.id
+                    updates["deliveryPersonName"] = it.name
+                    updates["deliveryPersonPhone"] = it.phone
+                }
+            }
+
+            if (newStatus.isTerminal()) {
+                updates["trackingStatus"] = "ENDED"
+                updates["trackingEndedAt"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
             }
 
             // If delivered, record delivery time and update medicine stock
@@ -540,7 +558,12 @@ class OrderRepository @Inject constructor(
             ordersCol.document(orderId).update(updates).await()
 
             if (newStatus == OrderStatus.SHIPPED) {
-                startDeliveryLocationTracking(orderId)
+                startDeliveryLocationTracking(orderId, deliveryContext)
+            }
+
+            if (newStatus.isTerminal()) {
+                stopDeliveryLocationTracking(orderId)
+                markTrackingDocumentInactive(orderId, newStatus)
             }
 
             Resource.Success(Unit)
@@ -550,37 +573,62 @@ class OrderRepository @Inject constructor(
         }
     }
 
+    private data class DeliveryPersonContext(
+        val id: String,
+        val name: String,
+        val phone: String
+    )
+
+    private suspend fun resolveDeliveryPersonContext(): DeliveryPersonContext? {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            Log.w(TAG, "Cannot resolve delivery context: user not authenticated")
+            return null
+        }
+
+        val deliveryPersonId = currentUser.uid
+        val deliveryPersonName = currentUser.displayName ?: "Delivery Person"
+
+        val deliveryPersonPhone = try {
+            val userDoc = FirebaseFirestore.getInstance().collection("users")
+                .document(deliveryPersonId)
+                .get()
+                .await()
+            userDoc.getString("phoneNumber") ?: ""
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not fetch delivery person phone: ${e.message}")
+            ""
+        }
+
+        return DeliveryPersonContext(
+            id = deliveryPersonId,
+            name = deliveryPersonName,
+            phone = deliveryPersonPhone
+        )
+    }
+
     /**
      * Start delivery location tracking service when order transitions to SHIPPED.
      * The delivery person's location will be tracked in real-time and written to Firestore.
      */
-    private suspend fun startDeliveryLocationTracking(orderId: String) {
+    private suspend fun startDeliveryLocationTracking(
+        orderId: String,
+        deliveryContext: DeliveryPersonContext?
+    ) {
         try {
-            val currentUser = FirebaseAuth.getInstance().currentUser
-            if (currentUser == null) {
-                Log.w(TAG, "Cannot start delivery tracking: user not authenticated")
+            val contextData = deliveryContext ?: resolveDeliveryPersonContext()
+            if (contextData == null) {
+                Log.w(TAG, "Cannot start delivery tracking: missing delivery context")
                 return
-            }
-
-            val deliveryPersonId = currentUser.uid
-            val deliveryPersonName = currentUser.displayName ?: "Delivery Person"
-
-            // Get pharmacy details for additional info (optional)
-            var deliveryPersonPhone = ""
-            try {
-                val userDoc = FirebaseFirestore.getInstance().collection("users")
-                    .document(deliveryPersonId).get().await()
-                deliveryPersonPhone = userDoc.getString("phoneNumber") ?: ""
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not fetch delivery person phone: ${e.message}")
             }
 
             // Start the delivery location service
             val serviceIntent = Intent(context, DeliveryLocationService::class.java).apply {
-                putExtra("orderId", orderId)
-                putExtra("deliveryPersonId", deliveryPersonId)
-                putExtra("deliveryPersonName", deliveryPersonName)
-                putExtra("deliveryPersonPhone", deliveryPersonPhone)
+                action = DeliveryLocationService.ACTION_ADD_TRACKING
+                putExtra(DeliveryLocationService.EXTRA_ORDER_ID, orderId)
+                putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_ID, contextData.id)
+                putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_NAME, contextData.name)
+                putExtra(DeliveryLocationService.EXTRA_DELIVERY_PERSON_PHONE, contextData.phone)
             }
 
             // Start the service using foreground service for Android 12+
@@ -593,6 +641,48 @@ class OrderRepository @Inject constructor(
             Log.d(TAG, "Delivery location tracking started for order: $orderId")
         } catch (e: Exception) {
             Log.e(TAG, "Error starting delivery location tracking: ${e.message}")
+        }
+    }
+
+    private fun stopDeliveryLocationTracking(orderId: String) {
+        try {
+            val serviceIntent = Intent(context, DeliveryLocationService::class.java).apply {
+                action = DeliveryLocationService.ACTION_REMOVE_TRACKING
+                putExtra(DeliveryLocationService.EXTRA_ORDER_ID, orderId)
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+
+            Log.d(TAG, "Requested stop for delivery tracking order: $orderId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping delivery location tracking: ${e.message}")
+        }
+    }
+
+    private suspend fun markTrackingDocumentInactive(orderId: String, terminalStatus: OrderStatus) {
+        try {
+            val trackingDoc = firestore.collection("deliveryTracking")
+                .document("ongoing_$orderId")
+
+            val snapshot = trackingDoc.get().await()
+            if (!snapshot.exists()) {
+                return
+            }
+
+            trackingDoc.update(
+                mapOf(
+                    "isActive" to false,
+                    "trackingStatus" to terminalStatus.name,
+                    "endedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+            ).await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not mark tracking inactive for $orderId: ${e.message}")
         }
     }
 

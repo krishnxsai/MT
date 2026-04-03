@@ -180,7 +180,7 @@ class OrderTrackingActivity : AppCompatActivity(), OnMapReadyCallback {
                 // Observe delivery tracking updates (real-time GPS)
                 launch {
                     viewModel.deliveryTracking.collectLatest { tracking ->
-                        if (tracking != null && currentOrder?.status == OrderStatus.SHIPPED) {
+                        if (tracking != null && tracking.isActive && currentOrder?.status == OrderStatus.SHIPPED) {
                             updateDeliveryMarkerOnMap(tracking)
                         }
                     }

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
@@ -29,12 +30,14 @@ val releaseRazorpayKey = providers.gradleProperty("razorpay.live.key").orNull
 
 android {
     namespace = "com.meditrack.app"
-    compileSdk = 36
+    // Keep SDK level on a widely supported stable API to avoid IDE Live Edit
+    // tooling crashes on AndroidApiLevel formatting in older Studio builds.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.meditrack.app"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 2
         versionName = "1.0.1"
 
@@ -85,6 +88,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        compose = true
     }
 }
 
@@ -96,11 +100,22 @@ dependencies {
 
     // Activity and Fragment KTX
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.fragment.ktx)
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Jetpack Compose (Material 3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    debugImplementation(libs.androidx.compose.ui.tooling)
 
     // Navigation
     implementation(libs.androidx.navigation.fragment.ktx)

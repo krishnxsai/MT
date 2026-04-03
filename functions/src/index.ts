@@ -18,12 +18,20 @@ const INVENTORY_ADJUSTMENTS_COLLECTION = "inventoryAdjustments";
 const PAYMENTS_COLLECTION = "payments";
 const TRANSACTIONS_COLLECTION = "transactions";
 const PURCHASE_TRANSACTION_DOC_PREFIX = "purchase_";
+const TRACKING_COLLECTION = "deliveryTracking";
 const ROLLBACK_ELIGIBLE_STATUSES = new Set([
   "CONFIRMED",
   "PREPARING",
   "READY",
   "SHIPPED",
 ]);
+const ACTIVE_TRACKING_ORDER_STATUS = "SHIPPED";
+const TERMINAL_TRACKING_ORDER_STATUSES = new Set([
+  "DELIVERED",
+  "CANCELLED",
+  "RETURNED",
+]);
+const TRACKING_RETENTION_DAYS = 90;
 
 interface InventoryOrderItem {
   medicineNameRaw: string;
@@ -316,6 +324,84 @@ async function syncRevenueTransactionForConfirmedOrder(
   });
 }
 
+async function syncDeliveryTrackingForOrderStatusChange(
+  orderId: string,
+  newStatus: string,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<void> {
+  const trackingId = `ongoing_${orderId}`;
+  const trackingRef = db.collection(TRACKING_COLLECTION).doc(trackingId);
+
+  if (newStatus === ACTIVE_TRACKING_ORDER_STATUS) {
+    const deliveryPersonId = asString(orderData.deliveryPersonId).trim();
+    const deliveryPersonName = asString(orderData.deliveryPersonName).trim();
+    const deliveryPersonPhone = asString(orderData.deliveryPersonPhone).trim();
+
+    const payload: Record<string, unknown> = {
+      orderId,
+      isActive: true,
+      trackingStatus: "ACTIVE",
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (deliveryPersonId) {
+      payload.deliveryPersonId = deliveryPersonId;
+    }
+    if (deliveryPersonName) {
+      payload.deliveryPersonName = deliveryPersonName;
+    }
+    if (deliveryPersonPhone) {
+      payload.deliveryPersonPhone = deliveryPersonPhone;
+    }
+
+    await trackingRef.set(payload, { merge: true });
+    return;
+  }
+
+  if (!TERMINAL_TRACKING_ORDER_STATUSES.has(newStatus)) {
+    return;
+  }
+
+  await trackingRef.set(
+    {
+      orderId,
+      isActive: false,
+      trackingStatus: newStatus,
+      endedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+async function deleteTrackingPoints(
+  trackingRef: FirebaseFirestore.DocumentReference
+): Promise<number> {
+  let deletedCount = 0;
+
+  while (true) {
+    const pointsSnapshot = await trackingRef.collection("points").limit(400).get();
+
+    if (pointsSnapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    pointsSnapshot.docs.forEach((pointDoc) => {
+      batch.delete(pointDoc.ref);
+    });
+    await batch.commit();
+    deletedCount += pointsSnapshot.size;
+
+    if (pointsSnapshot.size < 400) {
+      break;
+    }
+  }
+
+  return deletedCount;
+}
+
 async function applyInventoryItemsDelta(
   transaction: FirebaseFirestore.Transaction,
   orderId: string,
@@ -570,6 +656,9 @@ export const onOrderStatusChange = functions.firestore
 
     // Revenue transaction sync runs on paid confirmation transitions.
     await syncRevenueTransactionForConfirmedOrder(orderId, oldStatus, newStatus, afterData);
+
+    // Keep delivery tracking lifecycle aligned with order state transitions.
+    await syncDeliveryTrackingForOrderStatusChange(orderId, newStatus, afterData);
 
     // Get patient's FCM token
     const patientId = afterData.patientId;
@@ -843,6 +932,76 @@ export const cleanupNotificationLogs = functions.pubsub
 
     await batch.commit();
     console.log(`Cleaned up ${oldLogs.size} old notification logs`);
+    return null;
+  });
+
+/**
+ * Scheduled function to clean up delivery tracking history.
+ * Retains data for TRACKING_RETENTION_DAYS and prunes both points and ended tracking docs.
+ */
+export const cleanupDeliveryTrackingHistory = functions.pubsub
+  .schedule("30 2 * * *")
+  .timeZone("Asia/Kolkata")
+  .onRun(async () => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - TRACKING_RETENTION_DAYS);
+
+    let deletedPoints = 0;
+    let deletedTrackingDocs = 0;
+
+    while (true) {
+      const stalePointsSnapshot = await db
+        .collectionGroup("points")
+        .where("recordedAt", "<", cutoffDate)
+        .limit(400)
+        .get();
+
+      if (stalePointsSnapshot.empty) {
+        break;
+      }
+
+      const batch = db.batch();
+      stalePointsSnapshot.docs.forEach((pointDoc) => {
+        batch.delete(pointDoc.ref);
+      });
+      await batch.commit();
+      deletedPoints += stalePointsSnapshot.size;
+
+      if (stalePointsSnapshot.size < 400) {
+        break;
+      }
+    }
+
+    while (true) {
+      const staleTrackingSnapshot = await db
+        .collection(TRACKING_COLLECTION)
+        .where("isActive", "==", false)
+        .where("endedAt", "<", cutoffDate)
+        .limit(100)
+        .get();
+
+      if (staleTrackingSnapshot.empty) {
+        break;
+      }
+
+      const batch = db.batch();
+
+      for (const trackingDoc of staleTrackingSnapshot.docs) {
+        deletedPoints += await deleteTrackingPoints(trackingDoc.ref);
+        batch.delete(trackingDoc.ref);
+      }
+
+      await batch.commit();
+      deletedTrackingDocs += staleTrackingSnapshot.size;
+
+      if (staleTrackingSnapshot.size < 100) {
+        break;
+      }
+    }
+
+    console.log(
+      `cleanupDeliveryTrackingHistory: deletedTrackingDocs=${deletedTrackingDocs}, deletedPoints=${deletedPoints}`
+    );
     return null;
   });
 

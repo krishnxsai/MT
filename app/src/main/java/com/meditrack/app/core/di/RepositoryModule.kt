@@ -23,6 +23,10 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideCartRepository(): CartRepository = CartRepository()
+
+    @Provides
+    @Singleton
     fun provideHealthLogRepository(): HealthLogRepository = HealthLogRepository()
 
     @Provides

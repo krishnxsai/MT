@@ -118,34 +118,56 @@ data class RazorpayPaymentResponse(
     }
 
     companion object {
+        private fun toStringAnyNullableMap(value: Any?): Map<String, Any?> {
+            val rawMap = value as? Map<*, *> ?: return emptyMap()
+            return rawMap.entries.mapNotNull { entry ->
+                val key = entry.key as? String ?: return@mapNotNull null
+                key to entry.value
+            }.toMap()
+        }
+
+        private fun toStringAnyMap(value: Any?): Map<String, Any> {
+            val rawMap = value as? Map<*, *> ?: return emptyMap()
+            return rawMap.entries.mapNotNull { entry ->
+                val key = entry.key as? String ?: return@mapNotNull null
+                val mapValue = entry.value ?: return@mapNotNull null
+                key to mapValue
+            }.toMap()
+        }
+
         /**
          * Parse Razorpay API JSON response.
          *
          * Handles field mapping from Razorpay's API response format.
          */
-        fun fromMap(map: Map<String, Any?>): RazorpayPaymentResponse = RazorpayPaymentResponse(
-            id = map["id"] as? String ?: "",
-            orderId = map["order_id"] as? String ?: "",
-            receiptId = map["receipt"] as? String ?: "",
-            amount = (map["amount"] as? Number)?.toInt() ?: 0,
-            currency = map["currency"] as? String ?: "INR",
-            amountRefunded = (map["amount_refunded"] as? Number)?.toInt() ?: 0,
-            method = map["method"] as? String ?: "",
-            description = map["description"] as? String ?: "",
-            signature = (map["acquirer_data"] as? Map<String, Any?>)?.get("auth") as? String ?: "",
-            email = map["email"] as? String ?: "",
-            contact = map["contact"] as? String ?: "",
-            status = map["status"] as? String ?: "captured",
-            captured = map["captured"] as? Boolean ?: false,
-            failed = map["failed"] as? Boolean ?: false,
-            notes = map["notes"] as? Map<String, Any> ?: emptyMap(),
-            fee = (map["fee"] as? Number)?.toInt() ?: 0,
-            tax = (map["tax"] as? Number)?.toInt() ?: 0,
-            refundStatus = map["refund_status"] as? String ?: "",
-            refundCount = (map["refund_count"] as? Number)?.toInt() ?: 0,
-            createdAt = (map["created_at"] as? Number)?.toLong() ?: 0L,
-            capturedAt = (map["captured_at"] as? Number)?.toLong() ?: 0L
-        )
+        fun fromMap(map: Map<String, Any?>): RazorpayPaymentResponse {
+            val acquirerData = toStringAnyNullableMap(map["acquirer_data"])
+            val notes = toStringAnyMap(map["notes"])
+
+            return RazorpayPaymentResponse(
+                id = map["id"] as? String ?: "",
+                orderId = map["order_id"] as? String ?: "",
+                receiptId = map["receipt"] as? String ?: "",
+                amount = (map["amount"] as? Number)?.toInt() ?: 0,
+                currency = map["currency"] as? String ?: "INR",
+                amountRefunded = (map["amount_refunded"] as? Number)?.toInt() ?: 0,
+                method = map["method"] as? String ?: "",
+                description = map["description"] as? String ?: "",
+                signature = acquirerData["auth"] as? String ?: "",
+                email = map["email"] as? String ?: "",
+                contact = map["contact"] as? String ?: "",
+                status = map["status"] as? String ?: "captured",
+                captured = map["captured"] as? Boolean ?: false,
+                failed = map["failed"] as? Boolean ?: false,
+                notes = notes,
+                fee = (map["fee"] as? Number)?.toInt() ?: 0,
+                tax = (map["tax"] as? Number)?.toInt() ?: 0,
+                refundStatus = map["refund_status"] as? String ?: "",
+                refundCount = (map["refund_count"] as? Number)?.toInt() ?: 0,
+                createdAt = (map["created_at"] as? Number)?.toLong() ?: 0L,
+                capturedAt = (map["captured_at"] as? Number)?.toLong() ?: 0L
+            )
+        }
     }
 }
 

@@ -1,326 +1,367 @@
 package com.meditrack.app.ui.pharmacy
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.view.View
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.meditrack.app.R
-import com.meditrack.app.data.repository.StockForecastRepository
-import com.meditrack.app.data.model.OrderStatus
-import com.meditrack.app.data.model.RefillOrder
-import com.meditrack.app.data.model.Resource
-import com.meditrack.app.databinding.ActivityPharmacyDashboardRedesignedBinding
-import com.meditrack.app.domain.usecase.AcceptOrderResult
-import com.meditrack.app.domain.usecase.VerifyAndAcceptOrderUseCase
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meditrack.app.ui.auth.LoginActivity
-import com.meditrack.app.ui.profile.ProfileActivity
+import com.meditrack.app.data.model.RefillOrder
+import com.meditrack.app.data.model.OrderStatus as DataOrderStatus
+import com.meditrack.app.ui.pharmacy.compose.OrderStatus
+import com.meditrack.app.ui.pharmacy.compose.InventoryViewModel
+import com.meditrack.app.ui.pharmacy.compose.PharmacyDashboardEvent
+import com.meditrack.app.ui.pharmacy.compose.PharmacyDashboardScreen
+import com.meditrack.app.ui.pharmacy.compose.PharmacyDashboardUiState
+import com.meditrack.app.ui.pharmacy.compose.PharmacyViewModel
 import com.meditrack.app.util.CallUtils
-import com.meditrack.app.util.PharmacyNotificationHelper
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
-class PharmacyDashboardActivity : AppCompatActivity() {
+class PharmacyDashboardActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityPharmacyDashboardRedesignedBinding
+    // Kept for backward compatibility with legacy pharmacy fragments.
     val dashboardViewModel: PharmacyDashboardViewModel by viewModels()
-    @Inject lateinit var verifyAndAcceptOrderUseCase: VerifyAndAcceptOrderUseCase
-    @Inject lateinit var stockForecastRepository: StockForecastRepository
-    private lateinit var tabAdapter: PharmacyTabAdapter
-    private var activeStatFilter: String? = null
 
-    private val tabTitles = arrayOf("Orders", "Inventory", "Analytics")
+    private val viewModel: PharmacyViewModel by viewModels()
+    private val inventoryViewModel: InventoryViewModel by viewModels()
+
+    private var pendingShipmentOrderId: String? = null
+
+    private val foregroundLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (!granted) {
+            pendingShipmentOrderId = null
+            Toast.makeText(
+                this,
+                "Location permission is required before marking order Out for Delivery",
+                Toast.LENGTH_LONG
+            ).show()
+            return@registerForActivityResult
+        }
+
+        continueBackgroundPermissionFlow()
+    }
+
+    private val backgroundLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted || !requiresBackgroundLocationPermission()) {
+            proceedPendingShipmentOrder()
+            return@registerForActivityResult
+        }
+
+        handleBackgroundPermissionDenied()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityPharmacyDashboardRedesignedBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        observeEvents()
 
-        setupTabs()
-        setupQuickStatsFilters()
-        setupBottomNavigation()
-        setupClickListeners()
-        displayStockForecastCard()
-        observeViewModel()
+        setContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val inventoryState by inventoryViewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(state.pharmacyId) {
+                inventoryViewModel.bindPharmacy(state.pharmacyId)
+            }
+
+            MaterialTheme {
+                Surface {
+                    PharmacyDashboardScreen(
+                        state = state,
+                        inventoryState = inventoryState,
+                        onRefresh = {
+                            viewModel.refresh()
+                            inventoryViewModel.refresh()
+                        },
+                        onTabSelected = viewModel::onTabSelected,
+                        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                        onOrderExpandedToggle = viewModel::onToggleOrderExpanded,
+                        onAdvanceOrderStatus = { orderId ->
+                            handleAdvanceOrderAction(state, orderId)
+                        },
+                        onRejectOrder = viewModel::rejectOrder,
+                        onCallPatient = { order ->
+                            if (order.patient.phone.isBlank()) {
+                                Toast.makeText(this, "Patient phone number unavailable", Toast.LENGTH_LONG).show()
+                            } else {
+                                CallUtils.dialPhoneNumber(this, order.patient.phone, order.patient.name)
+                            }
+                        },
+                        onInventorySearchQueryChanged = inventoryViewModel::onSearchQueryChanged,
+                        onInventorySortChanged = inventoryViewModel::onSortOptionSelected,
+                        onAddMedicine = inventoryViewModel::addMedicine,
+                        onUpdateMedicine = inventoryViewModel::updateMedicine,
+                        onDeleteMedicine = inventoryViewModel::deleteMedicine,
+                        onAdjustStock = inventoryViewModel::adjustStock,
+                        onSignOut = ::signOut
+                    )
+                }
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        dashboardViewModel.loadPharmacyProfile(forceRefresh = true)
+        viewModel.refresh()
+        inventoryViewModel.refresh()
+
+        if (pendingShipmentOrderId != null &&
+            hasForegroundLocationPermission() &&
+            (!requiresBackgroundLocationPermission() || hasBackgroundLocationPermission())
+        ) {
+            proceedPendingShipmentOrder()
+        }
     }
 
-    // ── Tab Setup ─────────────────────────────────────────────
-
-    private fun setupTabs() {
-        tabAdapter = PharmacyTabAdapter(this)
-        binding.viewPager.adapter = tabAdapter
-        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-            tab.text = tabTitles[position]
-        }.attach()
-    }
-
-    // ── Quick Stats Clickable Filters ─────────────────────────
-
-    private fun setupQuickStatsFilters() {
-        binding.statPendingCard.setOnClickListener { toggleFilter("PENDING") }
-        binding.statPreparingCard.setOnClickListener { toggleFilter("PREPARING") }
-        binding.statReadyCard.setOnClickListener { toggleFilter("SHIPPED") }
-        binding.statDeliveredCard.setOnClickListener { toggleFilter("DELIVERED") }
-    }
-
-    private fun toggleFilter(status: String) {
-        activeStatFilter = if (activeStatFilter == status) null else status
-        // Switch to Orders tab
-        binding.viewPager.currentItem = 0
-        tabAdapter.getOrdersFragment().setStatusFilter(activeStatFilter)
-
-        // Highlight the active filter card
-        updateStatCardSelection()
-    }
-
-    private fun updateStatCardSelection() {
-        val elevation0 = 0f
-        val elevationActive = 4f
-        binding.statPendingCard.cardElevation = if (activeStatFilter == "PENDING") elevationActive else elevation0
-        binding.statPreparingCard.cardElevation = if (activeStatFilter == "PREPARING") elevationActive else elevation0
-        binding.statReadyCard.cardElevation = if (activeStatFilter == "SHIPPED") elevationActive else elevation0
-        binding.statDeliveredCard.cardElevation = if (activeStatFilter == "DELIVERED") elevationActive else elevation0
-    }
-
-    // ── Bottom Navigation ─────────────────────────────────────
-
-    private fun setupBottomNavigation() {
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_pharmacy_dashboard -> {
-                    binding.viewPager.currentItem = 0
-                    true
-                }
-                R.id.nav_pharmacy_orders -> {
-                    binding.viewPager.currentItem = 0
-                    true
-                }
-                R.id.nav_pharmacy_inventory -> {
-                    binding.viewPager.currentItem = 1
-                    true
-                }
-                R.id.nav_pharmacy_transactions -> {
-                    val pharmacyId = dashboardViewModel.getPharmacyId()
-                    if (pharmacyId != null) {
-                        startActivity(
-                            Intent(this, TransactionHistoryActivity::class.java)
-                                .putExtra("pharmacyId", pharmacyId)
-                        )
-                    } else {
-                        Toast.makeText(this, "Set up pharmacy profile first", Toast.LENGTH_SHORT).show()
+    private fun observeEvents() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.events.collectLatest { event ->
+                        when (event) {
+                            is PharmacyDashboardEvent.ShowMessage -> {
+                                Toast.makeText(this@PharmacyDashboardActivity, event.message, Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
-                    true
                 }
-                R.id.nav_pharmacy_profile -> {
-                    val pharmacyId = dashboardViewModel.getPharmacyId()
-                    if (pharmacyId != null) {
-                        startActivity(
-                            Intent(this, PharmacyProfileSetupActivity::class.java)
-                                .putExtra("pharmacyId", pharmacyId)
-                        )
-                    } else {
-                        startActivity(Intent(this, ProfileActivity::class.java))
+
+                launch {
+                    inventoryViewModel.events.collectLatest { message ->
+                        Toast.makeText(this@PharmacyDashboardActivity, message, Toast.LENGTH_SHORT).show()
                     }
-                    true
                 }
-                else -> false
             }
         }
     }
 
-    // ── Click Listeners ───────────────────────────────────────
+    private fun handleAdvanceOrderAction(state: PharmacyDashboardUiState, orderId: String) {
+        val order = state.activeOrders.firstOrNull { it.id == orderId } ?: return
 
-    private fun setupClickListeners() {
-        binding.signOutButton.setOnClickListener {
-            dashboardViewModel.signOut()
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
+        if (order.status == OrderStatus.READY) {
+            pendingShipmentOrderId = orderId
+            ensureDeliveryTrackingPermissions()
+            return
         }
 
-        binding.setupProfileCard.setOnClickListener {
-            startActivity(Intent(this, PharmacyProfileSetupActivity::class.java))
-        }
-
-        binding.notificationButton.setOnClickListener {
-            // Navigate to Orders tab filtered by pending orders
-            binding.viewPager.currentItem = 0
-            activeStatFilter = "PENDING"
-            tabAdapter.getOrdersFragment().setStatusFilter("PENDING")
-            updateStatCardSelection()
-            Toast.makeText(this, "Showing pending orders", Toast.LENGTH_SHORT).show()
-        }
+        viewModel.advanceOrderStatus(orderId)
     }
 
-    // ── Stock Forecast Display ───────────────────────────────
+    private fun ensureDeliveryTrackingPermissions() {
+        if (!hasForegroundLocationPermission()) {
+            requestForegroundLocationPermissions()
+            return
+        }
 
-    /**
-     * Display ML-based stock forecast card with 14-day predictions.
-     *
-     * Shows:
-     * - Next 7 days predicted demand with confidence intervals
-     * - Model accuracy metrics (MAE, RMSE)
-     * - Re-order recommendation based on current inventory
-     */
-    private fun displayStockForecastCard() {
-        try {
-            val bundle = stockForecastRepository.getForecastBundle()
-            val forecastText = StringBuilder()
+        continueBackgroundPermissionFlow()
+    }
 
-            forecastText.append("14-Day Stock Forecast (ARIMA Model)\n")
-            forecastText.append("Model Accuracy: MAE=${bundle.metrics.mae.toInt()} units\n")
-            forecastText.append("─".repeat(40)).append("\n")
+    private fun continueBackgroundPermissionFlow() {
+        if (!requiresBackgroundLocationPermission() || hasBackgroundLocationPermission()) {
+            proceedPendingShipmentOrder()
+            return
+        }
 
-            // Display next 7 days
-            bundle.forecasts.take(7).forEach { forecast ->
-                forecastText.append(
-                    "Day ${forecast.dayAhead}: ${forecast.predictedUnits} units " +
-                    "[${forecast.confidenceMin}, ${forecast.confidenceMax}]\n"
-                )
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+            showBackgroundLocationRationale()
+            return
+        }
+
+        backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    }
+
+    private fun requestForegroundLocationPermissions() {
+        if (
+            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) ||
+            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+        ) {
+            AlertDialog.Builder(this)
+                .setTitle("Location Permission Required")
+                .setMessage("Foreground location is required to publish live delivery tracking to patients.")
+                .setPositiveButton("Continue") { _, _ ->
+                    foregroundLocationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+                .setNegativeButton("Not Now") { _, _ ->
+                    pendingShipmentOrderId = null
+                    Toast.makeText(
+                        this,
+                        "Cannot mark Out for Delivery without location permission",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                .show()
+            return
+        }
+
+        foregroundLocationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
+
+    private fun showBackgroundLocationRationale() {
+        AlertDialog.Builder(this)
+            .setTitle("Allow All-Time Location")
+            .setMessage("Background location keeps tracking active when the app is minimized or screen is locked.")
+            .setPositiveButton("Allow") { _, _ ->
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             }
+            .setNegativeButton("Cancel") { _, _ ->
+                pendingShipmentOrderId = null
+                Toast.makeText(
+                    this,
+                    "Background location is required for reliable delivery tracking",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .show()
+    }
 
-            // Log to Logcat for development/debug
-            android.util.Log.d("PharmacyDashboard", forecastText.toString())
+    private fun handleBackgroundPermissionDenied() {
+        val canAskAgain = shouldShowRequestPermissionRationale(
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        )
 
-            // Display as toast for quick feedback (production: would use CardView in layout)
+        if (canAskAgain) {
             Toast.makeText(
                 this,
-                "Stock forecast updated: Avg=${bundle.forecasts.map { it.predictedUnits }.average().toInt()} units/day",
+                "Background location permission was denied",
                 Toast.LENGTH_LONG
             ).show()
-
-        } catch (e: Exception) {
-            android.util.Log.e("PharmacyDashboard", "Error loading stock forecast", e)
+            return
         }
+
+        AlertDialog.Builder(this)
+            .setTitle("Enable Background Location")
+            .setMessage("Background location is permanently denied. Open app settings and choose 'Allow all the time' to continue.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                pendingShipmentOrderId = null
+            }
+            .show()
     }
 
-    // ── Order Actions (called from OrdersFragment) ────────────
+    private fun openAppSettings() {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:$packageName")
+        )
+        startActivity(intent)
+    }
 
-    fun handleAcceptOrder(order: RefillOrder) {
-        lifecycleScope.launch {
-            when (val result = verifyAndAcceptOrderUseCase.execute(order)) {
-                is AcceptOrderResult.Accepted -> {
-                    Toast.makeText(this@PharmacyDashboardActivity, result.message, Toast.LENGTH_SHORT).show()
-                }
-                is AcceptOrderResult.PrescriptionInvalid -> {
-                    Toast.makeText(this@PharmacyDashboardActivity, "Prescription invalid: ${result.reason}", Toast.LENGTH_LONG).show()
-                }
-                is AcceptOrderResult.Error -> {
-                    Toast.makeText(this@PharmacyDashboardActivity, result.message, Toast.LENGTH_LONG).show()
-                }
-                is AcceptOrderResult.StatusAdvanced -> {
-                    Toast.makeText(this@PharmacyDashboardActivity, "Order updated", Toast.LENGTH_SHORT).show()
-                }
-            }
+    private fun proceedPendingShipmentOrder() {
+        val orderId = pendingShipmentOrderId ?: return
+        pendingShipmentOrderId = null
+        viewModel.advanceOrderStatus(orderId)
+    }
+
+    private fun hasForegroundLocationPermission(): Boolean {
+        val fine = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val coarse = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        return fine || coarse
+    }
+
+    private fun hasBackgroundLocationPermission(): Boolean {
+        if (!requiresBackgroundLocationPermission()) {
+            return true
         }
+
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requiresBackgroundLocationPermission(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    }
+
+    private fun signOut() {
+        viewModel.signOut()
+        val intent = Intent(this, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    // Legacy callbacks retained so old fragment classes continue to compile.
+    fun handleAcceptOrder(order: RefillOrder) {
+        if (order.status == DataOrderStatus.READY) {
+            pendingShipmentOrderId = order.id
+            ensureDeliveryTrackingPermissions()
+            return
+        }
+
+        viewModel.advanceOrderStatus(order.id)
     }
 
     fun handleRejectOrder(order: RefillOrder) {
-        dashboardViewModel.updateOrderStatus(order.id, OrderStatus.CANCELLED.name)
-        PharmacyNotificationHelper.notifyOrderCancelled(this, order.medicineName, order.id)
-        Toast.makeText(this, "Order rejected", Toast.LENGTH_SHORT).show()
+        viewModel.rejectOrder(order.id)
     }
 
     fun handleCallPatient(order: RefillOrder) {
         val fallbackPhone = order.deliveryAddress?.contactPhone.orEmpty()
-        val patientName = dashboardViewModel.patientNames.value?.get(order.userId) ?: "Patient"
+        val cachedPhone = viewModel.uiState.value.activeOrders
+            .firstOrNull { it.id == order.id }
+            ?.patient
+            ?.phone
+            .orEmpty()
 
-        FirebaseFirestore.getInstance().collection("users")
-            .document(order.userId)
-            .get()
-            .addOnSuccessListener { doc ->
-                val userPhone = doc.getString("phoneNumber").orEmpty()
-                val phoneToCall = if (userPhone.isNotBlank()) userPhone else fallbackPhone
-                CallUtils.dialPhoneNumber(this, phoneToCall, patientName)
-            }
-            .addOnFailureListener {
-                // Fall back to delivery contact phone if user lookup fails.
-                CallUtils.dialPhoneNumber(this, fallbackPhone, patientName)
-            }
-    }
+        val phoneToDial = if (cachedPhone.isNotBlank()) cachedPhone else fallbackPhone
+        val displayName = viewModel.uiState.value.activeOrders
+            .firstOrNull { it.id == order.id }
+            ?.patient
+            ?.name
+            ?: "Patient"
 
-    // ── Observe ViewModel ─────────────────────────────────────
-
-    private fun observeViewModel() {
-        dashboardViewModel.pharmacy.observe(this) { result ->
-            when (result) {
-                is Resource.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.setupProfileCard.visibility = View.GONE
-                    setDashboardSectionsVisible(false)
-                }
-                is Resource.Success -> {
-                    binding.progressBar.visibility = View.GONE
-                    if (result.data == null) {
-                        binding.setupProfileCard.visibility = View.VISIBLE
-                        setDashboardSectionsVisible(false)
-                        binding.emptyStateText.visibility = View.VISIBLE
-                        binding.emptyStateText.text = getString(R.string.setup_pharmacy_subtitle)
-                    } else {
-                        binding.setupProfileCard.visibility = View.GONE
-                        setDashboardSectionsVisible(true)
-                    }
-                }
-                is Resource.Error -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.setupProfileCard.visibility = View.GONE
-                    setDashboardSectionsVisible(false)
-                    Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
-                }
-            }
+        if (phoneToDial.isBlank()) {
+            Toast.makeText(this, "Patient phone number unavailable", Toast.LENGTH_LONG).show()
+            return
         }
 
-        // Quick Stats counts
-        dashboardViewModel.orderCounts.observe(this) { counts ->
-            binding.pendingCount.text = (counts["pending"] ?: 0).toString()
-            binding.preparingCount.text = (counts["preparing"] ?: 0).toString()
-            binding.readyCount.text = (counts["ready"] ?: 0).toString()
-            binding.deliveredTodayCount.text = (counts["deliveredToday"] ?: 0).toString()
-
-            // Update notification badge with pending count
-            val pending = counts["pending"] ?: 0
-            if (pending > 0) {
-                binding.notificationBadge.text = if (pending > 9) "9+" else pending.toString()
-                binding.notificationBadge.visibility = View.VISIBLE
-            } else {
-                binding.notificationBadge.visibility = View.GONE
-            }
-        }
-
-        // Show error if orders fail to load
-        dashboardViewModel.orders.observe(this) { result ->
-            if (result is Resource.Error) {
-                Toast.makeText(this, "Orders: ${result.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        // Update error
-        dashboardViewModel.updateError.observe(this) { error ->
-            if (error != null) {
-                Toast.makeText(this, "Update failed: $error", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun setDashboardSectionsVisible(visible: Boolean) {
-        val visibility = if (visible) View.VISIBLE else View.GONE
-        binding.quickStatsLayout.visibility = visibility
-        binding.tabLayout.visibility = visibility
-        binding.viewPager.visibility = visibility
-        binding.bottomNavigation.visibility = visibility
-        binding.emptyStateText.visibility = if (visible) View.GONE else binding.emptyStateText.visibility
+        CallUtils.dialPhoneNumber(this, phoneToDial, displayName)
     }
 }
-

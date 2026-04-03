@@ -215,6 +215,12 @@
             android:exported="false"
             android:label="Order Tracking" />
 
+        <!-- Order Tracking Compose Activity -->
+        <activity
+            android:name=".ui.order.compose.OrderTrackingComposeActivity"
+            android:exported="false"
+            android:label="Order Tracking" />
+
         <!-- Order History Activity -->
         <activity
             android:name=".ui.order.history.OrderHistoryActivity"
