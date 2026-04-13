@@ -1,0 +1,56 @@
+{
+  "admin": {
+    "uid": "gTVkSU0ctQgi7JP1UJpGS4UX2nV2",
+    "email": "suresh.admin@meditrack.in",
+    "displayName": "Suresh Admin",
+    "phoneNumber": "+91-9000000001"
+  },
+  "doctors": [
+    {
+      "uid": "NmL3MJpHEgce1xwHtb68ZERGQ6Z2",
+      "email": "dr.ananya.sharma@meditrack.in",
+      "displayName": "Dr. Ananya Sharma",
+      "phoneNumber": "+91-9000000002"
+    },
+    {
+      "uid": "B6dB17N6m8ej8dE3SC1JhrtyrEG3",
+      "email": "dr.rohan.gupta@meditrack.in",
+      "displayName": "Dr. Rohan Gupta",
+      "phoneNumber": "+91-9000000003"
+    }
+  ],
+  "patients": [
+    {
+      "uid": "6PiDhEGj47SXX2jSbQsnLvDOgkW2",
+      "email": "vikram.mehta@gmail.com",
+      "displayName": "Vikram Mehta",
+      "phoneNumber": "+91-9000000004"
+    },
+    {
+      "uid": "GuwWWdLMqZfVuEgrv5GI7voWTf52",
+      "email": "sneha.iyer@gmail.com",
+      "displayName": "Sneha Iyer",
+      "phoneNumber": "+91-9000000005"
+    }
+  ],
+  "pharmacies": [
+    {
+      "uid": "t0oP9GCF95bu12RwtZWvow4c7GI2",
+      "email": "rajesh@srisaimedicals.in",
+      "displayName": "Sri Sai Medicals",
+      "phoneNumber": "+91-9000000006"
+    },
+    {
+      "uid": "HpHt0Ts9VDNLwymryqSDA3aDuuP2",
+      "email": "kavitha@vijayadrugs.in",
+      "displayName": "Vijaya Drugs",
+      "phoneNumber": "+91-9000000007"
+    },
+    {
+      "uid": "favF3khwlyRBq5F2lHHgNadZ0Ph2",
+      "email": "manoj@lakshmipharmacy.in",
+      "displayName": "Lakshmi Pharmacy",
+      "phoneNumber": "+91-9000000008"
+    }
+  ]
+}

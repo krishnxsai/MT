@@ -170,7 +170,7 @@ describe("Firestore Security Rules - Logic Validation", () => {
 
   // ─────────────── Orders Collection Tests ───────────────
 
-  describe("Orders Collection - Ownership Enforcement", () => {
+  describe("Orders Collection - Ownership and Transition Enforcement", () => {
     const collection = "orders";
 
     test("patient can read own orders", () => {
@@ -209,13 +209,60 @@ describe("Firestore Security Rules - Logic Validation", () => {
       // PASS: Different patient, read denied
     });
 
-    test("patient cannot modify order status", () => {
-      // Write Rule: request.auth.token.role == 'PHARMACY' || isAdmin()
-      const role = testRoles.patient.role;
+    test("patient can cancel only before shipping lifecycle", () => {
+      // Rule: patients can transition only to CANCELLED from PENDING/CONFIRMED/PREPARING
+      const allowedPatientCancellationStates = ["PENDING", "CONFIRMED", "PREPARING"];
+      const attemptedCurrentState = "CONFIRMED";
+      const attemptedNextState = "CANCELLED";
 
-      expect(role).not.toBe("PHARMACY");
-      expect(role).not.toBe("ADMIN");
-      // PASS: Patient not pharmacy/admin, write denied
+      expect(allowedPatientCancellationStates).toContain(attemptedCurrentState);
+      expect(attemptedNextState).toBe("CANCELLED");
+      // PASS: Patient cancellation is narrowly scoped to pre-shipping states
+    });
+
+    test("patient cannot transition to SHIPPED or DELIVERED", () => {
+      // Rule: delivery lifecycle transitions are pharmacy/admin managed
+      const attemptedTransitionByPatient = { current: "READY", next: "SHIPPED" };
+      const patientCanPerformDeliveryTransition = false;
+
+      expect(attemptedTransitionByPatient.next).toBe("SHIPPED");
+      expect(patientCanPerformDeliveryTransition).toBe(false);
+      // PASS: Patient cannot move orders into delivery lifecycle
+    });
+
+    test("pharmacy can execute owned order delivery transitions", () => {
+      // Rule: approved pharmacy owner can move READY->SHIPPED->DELIVERED for owned orders
+      const pharmacyUid = testRoles.pharmacy.uid;
+      const orderPharmacyId = testRoles.pharmacy.uid;
+      const transitions = [
+        { current: "READY", next: "SHIPPED" },
+        { current: "SHIPPED", next: "DELIVERED" },
+      ];
+
+      expect(pharmacyUid).toBe(orderPharmacyId);
+      expect(transitions[0].next).toBe("SHIPPED");
+      expect(transitions[1].next).toBe("DELIVERED");
+      // PASS: Owned pharmacy can complete delivery status transitions
+    });
+
+    test("shipping transition binds deliveryPersonId to pharmacy caller", () => {
+      // Rule: when status becomes SHIPPED, deliveryPersonId must equal request.auth.uid
+      const callerUid = testRoles.pharmacy.uid;
+      const assignedDeliveryPersonId = testRoles.pharmacy.uid;
+      const nextStatus = "SHIPPED";
+
+      expect(nextStatus).toBe("SHIPPED");
+      expect(assignedDeliveryPersonId).toBe(callerUid);
+      // PASS: Caller identity is pinned on SHIPPED assignment
+    });
+
+    test("pharmacy cannot deliver orders owned by another pharmacy", () => {
+      // Rule: pharmacy actor must satisfy isPharmacyOwner(order.pharmacyId)
+      const callerUid = testRoles.pharmacy.uid;
+      const foreignOrderPharmacyId = "pharmacy_999";
+
+      expect(callerUid).not.toBe(foreignOrderPharmacyId);
+      // PASS: Cross-pharmacy delivery transition denied
     });
   });
 

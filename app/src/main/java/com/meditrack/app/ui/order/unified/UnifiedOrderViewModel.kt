@@ -279,11 +279,9 @@ class UnifiedOrderViewModel @Inject constructor(
         viewModelScope.launch {
             val currentState = _uiState.value
             if (currentState is UiState.Success) {
-                val pharmaciesResult = pharmacyRepository.getPharmacies()
-                if (pharmaciesResult is Resource.Success) {
-                    val updatedPharmacies = processPharmacies(pharmaciesResult.data)
-                    _uiState.value = currentState.copy(nearbyPharmacies = updatedPharmacies)
-                }
+                val currentPharmacies = currentState.nearbyPharmacies.map { it.pharmacy }
+                val updatedPharmacies = processPharmacies(currentPharmacies)
+                _uiState.value = currentState.copy(nearbyPharmacies = updatedPharmacies)
             }
         }
     }

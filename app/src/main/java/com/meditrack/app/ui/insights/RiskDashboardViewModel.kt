@@ -18,6 +18,8 @@ import com.meditrack.app.data.repository.MedicineIntakeRepository
 import com.meditrack.app.data.repository.MedicineRepository
 import com.meditrack.app.data.repository.RiskScoreRepository
 import com.meditrack.app.data.repository.AuthRepository
+import com.meditrack.app.data.repository.FeatureFlagRepository
+import com.meditrack.app.data.repository.VertexRiskRepository
 import kotlinx.coroutines.flow.collectLatest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -29,7 +31,9 @@ class RiskDashboardViewModel @Inject constructor(
     private val medicineRepository: MedicineRepository,
     private val intakeRepository: MedicineIntakeRepository,
     private val riskScoreRepository: RiskScoreRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val vertexRiskRepository: VertexRiskRepository
 ) : ViewModel() {
 
     // ── Risk Score ──────────────────────────────────────────────
@@ -56,6 +60,13 @@ class RiskDashboardViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    // ── Cloud Risk (Vertex via callable) ─────────────────────
+    private val _cloudRiskPrediction = MutableLiveData<VertexRiskRepository.VertexRiskPrediction?>()
+    val cloudRiskPrediction: LiveData<VertexRiskRepository.VertexRiskPrediction?> = _cloudRiskPrediction
+
+    private val _cloudRiskError = MutableLiveData<String?>()
+    val cloudRiskError: LiveData<String?> = _cloudRiskError
+
     // ── Internal data ───────────────────────────────────────────
     private var healthLogs: List<HealthLog> = emptyList()
     private var medicines: List<Medicine> = emptyList()
@@ -70,6 +81,9 @@ class RiskDashboardViewModel @Inject constructor(
     private var lastPersistedCategory: RiskScoreEngine.RiskCategory? = null
     private var lastPersistedTime: Long = 0L
     private val persistDebounceMs = 6 * 60 * 60 * 1000L // 6 hours
+    private var lastCloudScoringAttemptTime: Long = 0L
+    private val cloudScoringDebounceMs = 15 * 60 * 1000L // 15 minutes
+    private val cloudRiskFlagName = "cloud_risk_scoring_enabled"
 
     init {
         loadAllData()
@@ -179,6 +193,9 @@ class RiskDashboardViewModel @Inject constructor(
                 _trendAnalysis.postValue(insight.trendAnalysis)
                 _suggestions.postValue(insight.suggestions)
 
+                // Cloud scoring runs in shadow mode first; local scoring remains source of truth.
+                maybeRefreshCloudRiskScore()
+
                 // Persist risk score with debounce
                 persistRiskScoreIfNeeded(insight.riskScore)
 
@@ -222,6 +239,34 @@ class RiskDashboardViewModel @Inject constructor(
             riskScoreRepository.saveRiskScore(riskScore)
             lastPersistedCategory = result.category
             lastPersistedTime = now
+        }
+    }
+
+    private suspend fun maybeRefreshCloudRiskScore() {
+        val now = System.currentTimeMillis()
+        if ((now - lastCloudScoringAttemptTime) < cloudScoringDebounceMs) {
+            return
+        }
+
+        val isEnabled = featureFlagRepository.isEnabled(cloudRiskFlagName)
+        if (!isEnabled) {
+            _cloudRiskPrediction.postValue(null)
+            _cloudRiskError.postValue(null)
+            return
+        }
+
+        lastCloudScoringAttemptTime = now
+
+        val latestLog = healthLogs.maxByOrNull { it.date.time }
+        when (val cloudResult = vertexRiskRepository.scoreRisk(latestLog, adherencePercentage)) {
+            is Resource.Success -> {
+                _cloudRiskPrediction.postValue(cloudResult.data)
+                _cloudRiskError.postValue(null)
+            }
+            is Resource.Error -> {
+                _cloudRiskError.postValue(cloudResult.message)
+            }
+            is Resource.Loading -> Unit
         }
     }
 }

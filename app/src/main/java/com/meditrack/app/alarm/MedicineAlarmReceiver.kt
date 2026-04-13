@@ -10,6 +10,8 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -79,37 +81,58 @@ class MedicineAlarmReceiver : BroadcastReceiver() {
 
         // Acquire a wake lock to ensure the device wakes up
         val wakeLock = acquireWakeLock(context)
+        val pendingResult = goAsync()
 
-        try {
-            // Start the alarm service for sound and vibration
-            startAlarmService(context, alarmId, medicineName, medicineId, dosage)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val preferenceRepo = NotificationPreferenceRepository()
+                val isAllowed = preferenceRepo.isNotificationAllowed(
+                    type = NotificationType.PRESCRIPTION,
+                    bypassQuietHours = true
+                )
 
-            // Check notification preferences before showing notification
-            val preferenceRepo = NotificationPreferenceRepository()
-            CoroutineScope(Dispatchers.IO).launch {
-                val isAllowed = preferenceRepo.isNotificationAllowed(NotificationType.PRESCRIPTION)
                 if (isAllowed) {
-                    // Show the alarm notification with full-screen intent
-                    showAlarmNotification(context, alarmId, medicineName, medicineId, dosage, reminderTime)
-                    Log.d(TAG, "Notification shown for $medicineName (preferences allowed)")
-                } else {
-                    Log.d(TAG, "Notification suppressed for $medicineName (quiet hours or disabled)")
-                }
-            }
+                    // Start alarm playback only when medicine reminders are enabled.
+                    startAlarmService(context, alarmId, medicineName, medicineId, dosage)
 
-            // If this is a repeating alarm, schedule the next occurrence
-            if (isRepeating && reminderTime != null) {
-                scheduleNextAlarm(context, intent, reminderTime)
-            }
-        } finally {
-            // Release the wake lock after a short delay to allow UI to show
-            wakeLock?.let {
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    if (it.isHeld) {
-                        it.release()
+                    val notificationShown = showAlarmNotification(
+                        context = context,
+                        notificationId = alarmId,
+                        medicineName = medicineName,
+                        medicineId = medicineId,
+                        dosage = dosage,
+                        reminderTime = reminderTime
+                    )
+
+                    if (notificationShown) {
+                        Log.d(TAG, "Notification shown for $medicineName")
+                    } else {
+                        Log.w(TAG, "Visual notification unavailable for $medicineName; alarm audio remains active")
                     }
-                }, 5000)
+                } else {
+                    Log.d(TAG, "Medicine reminder disabled for $medicineName; skipping alarm playback")
+                }
+
+                // If this is a repeating alarm, schedule the next occurrence
+                if (isRepeating && reminderTime != null) {
+                    scheduleNextAlarm(context, intent, reminderTime)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed processing medicine alarm: ${e.message}", e)
+            } finally {
+                releaseWakeLockLater(wakeLock)
+                pendingResult.finish()
             }
+        }
+    }
+
+    private fun releaseWakeLockLater(wakeLock: PowerManager.WakeLock?) {
+        wakeLock?.let {
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (it.isHeld) {
+                    it.release()
+                }
+            }, 5000)
         }
     }
 
@@ -165,11 +188,17 @@ class MedicineAlarmReceiver : BroadcastReceiver() {
         medicineId: String,
         dosage: String,
         reminderTime: String?
-    ) {
+    ): Boolean {
+        if (!AlarmPermissionHelper.hasNotificationPermission(context)) {
+            Log.w(TAG, "POST_NOTIFICATIONS not granted; cannot display reminder notification")
+            return false
+        }
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val canUseFullScreen = AlarmPermissionHelper.canUseFullScreenIntent(context)
 
         // Create notification channel with alarm sound
-        createNotificationChannel(context, notificationManager)
+        createNotificationChannel(notificationManager)
 
         // Full-screen intent for lock screen display
         val fullScreenIntent = Intent(context, AlarmFullScreenActivity::class.java).apply {
@@ -235,7 +264,14 @@ class MedicineAlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val fullScreenSettingsPendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId + 4000,
+            AlarmPermissionHelper.createFullScreenSettingsIntent(context),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_pill)
             .setContentTitle("⏰ Time to take $medicineName")
             .setContentText(if (dosage.isNotEmpty()) "Dosage: $dosage" else "Don't forget your medicine!")
@@ -248,18 +284,35 @@ class MedicineAlarmReceiver : BroadcastReceiver() {
             .setOngoing(true)
             .setContentIntent(fullScreenPendingIntent)
             .setDeleteIntent(dismissPendingIntent)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(R.drawable.ic_check, "✓ Take", takenPendingIntent)
             .addAction(R.drawable.ic_clock, "⏰ Snooze", snoozePendingIntent)
             .addAction(R.drawable.ic_close, "✗ Skip", dismissPendingIntent)
             .setDefaults(0) // We handle sound/vibration via service
-            .build()
+        
+        if (canUseFullScreen) {
+            notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true)
+        } else {
+            notificationBuilder.addAction(
+                R.drawable.ic_settings,
+                "Enable popup",
+                fullScreenSettingsPendingIntent
+            )
+            Log.w(TAG, "Full-screen alarm permission is disabled; showing heads-up fallback")
+        }
 
-        notificationManager.notify(notificationId, notification)
-        Log.d(TAG, "Alarm notification shown for $medicineName")
+        val notification = notificationBuilder.build()
+
+        return try {
+            notificationManager.notify(notificationId, notification)
+            Log.d(TAG, "Alarm notification shown for $medicineName")
+            true
+        } catch (se: SecurityException) {
+            Log.e(TAG, "Failed to show alarm notification due to permission error: ${se.message}")
+            false
+        }
     }
 
-    private fun createNotificationChannel(context: Context, notificationManager: NotificationManager) {
+    private fun createNotificationChannel(notificationManager: NotificationManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Get alarm sound URI
             val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)

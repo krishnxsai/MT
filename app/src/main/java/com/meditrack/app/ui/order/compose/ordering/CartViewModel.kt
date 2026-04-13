@@ -374,6 +374,17 @@ class CartViewModel @Inject constructor(
         viewModelScope.launch {
             _isPlacingOrder.value = true
 
+            val inventoryValidationError = validateCartInventoryForCheckout(
+                pharmacy = selectedPharmacyValue,
+                items = cartItemsValue
+            )
+            if (inventoryValidationError != null) {
+                refreshPricesForSelectedPharmacy()
+                emitMessage(inventoryValidationError)
+                _isPlacingOrder.value = false
+                return@launch
+            }
+
             val orderItems = cartItemsValue.map {
                 OrderItem(
                     medicineId = it.medicine.id,
@@ -419,6 +430,43 @@ class CartViewModel @Inject constructor(
 
             _isPlacingOrder.value = false
         }
+    }
+
+    private suspend fun validateCartInventoryForCheckout(
+        pharmacy: Pharmacy,
+        items: List<CartItem>
+    ): String? {
+        for (cartItem in items) {
+            when (
+                val inventoryResult = pharmacyInventoryRepository.getInventoryItem(
+                    pharmacyId = pharmacy.id,
+                    medicineName = cartItem.medicine.originalName
+                )
+            ) {
+                is Resource.Success -> {
+                    val inventoryItem = inventoryResult.data
+                        ?: return "${cartItem.medicine.name} is unavailable at ${pharmacy.name}"
+
+                    val availableStock = inventoryItem.stockQuantity.coerceAtLeast(0)
+                    if (availableStock <= 0) {
+                        return "${cartItem.medicine.name} is out of stock at ${pharmacy.name}"
+                    }
+
+                    if (availableStock < cartItem.quantity) {
+                        return "Only $availableStock units available for ${cartItem.medicine.name}"
+                    }
+                }
+
+                is Resource.Error -> {
+                    return inventoryResult.message
+                        ?: "Unable to verify stock for ${cartItem.medicine.name}. Please try again."
+                }
+
+                is Resource.Loading -> Unit
+            }
+        }
+
+        return null
     }
 
     private fun loadInitialData() {
@@ -515,7 +563,7 @@ class CartViewModel @Inject constructor(
                                 stock = item.stockQuantity.coerceAtLeast(0)
                             )
                         } else {
-                            medicine
+                            medicine.copy(stock = 0)
                         }
                     }
                     is Resource.Error -> medicine

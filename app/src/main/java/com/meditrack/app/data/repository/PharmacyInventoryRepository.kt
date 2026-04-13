@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import java.util.Locale
 
 /**
  * Repository for pharmacy inventory management.
@@ -25,6 +26,10 @@ class PharmacyInventoryRepository @Inject constructor() {
 
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
     private val inventoryCol by lazy { firestore.collection("pharmacyInventory") }
+
+    private fun normalizeMedicineName(value: String): String {
+        return value.trim().lowercase(Locale.ROOT)
+    }
 
     // ══════════════════════════════════════════════════════════════
     // Real-time inventory listing
@@ -319,6 +324,30 @@ class PharmacyInventoryRepository @Inject constructor() {
         medicineName: String
     ): Resource<InventoryItem?> = withContext(Dispatchers.IO) {
         try {
+            val normalizedName = normalizeMedicineName(medicineName)
+
+            if (normalizedName.isNotEmpty()) {
+                try {
+                    val normalizedSnapshot = inventoryCol
+                        .whereEqualTo("pharmacyId", pharmacyId)
+                        .whereEqualTo("isActive", true)
+                        .whereEqualTo("medicineNameNormalized", normalizedName)
+                        .limit(1)
+                        .get()
+                        .await()
+
+                    val normalizedMatch = normalizedSnapshot.documents.firstOrNull()?.data?.let { data ->
+                        InventoryItem.fromMap(normalizedSnapshot.documents.first().id, data)
+                    }
+                    if (normalizedMatch != null) {
+                        Log.d(TAG, "Found inventory item (normalized): ${normalizedMatch.medicineName}, stock: ${normalizedMatch.stockQuantity}, price: ₹${normalizedMatch.unitPrice}")
+                        return@withContext Resource.Success(normalizedMatch)
+                    }
+                } catch (queryError: Exception) {
+                    Log.w(TAG, "Normalized lookup failed, falling back to legacy match: ${queryError.message}")
+                }
+            }
+
             val snapshot = inventoryCol
                 .whereEqualTo("pharmacyId", pharmacyId)
                 .whereEqualTo("isActive", true)
@@ -331,11 +360,20 @@ class PharmacyInventoryRepository @Inject constructor() {
                 return@withContext Resource.Success(null)
             }
 
-            // Match by medicine name (case-insensitive) since medicineName is the key field
+            // Legacy fallback for older docs or missing normalized-name indexes.
             val item = snapshot.documents
                 .mapNotNull { doc -> InventoryItem.fromMap(doc.id, doc.data!!) }
                 .filter { it.isActive }
-                .find { it.medicineName.equals(medicineName, ignoreCase = true) }
+                .find {
+                    val normalizedMedicineName = normalizeMedicineName(it.medicineName)
+                    val normalizedStoredName = normalizeMedicineName(it.medicineNameNormalized)
+
+                    if (normalizedName.isBlank()) {
+                        it.medicineName.equals(medicineName, ignoreCase = true)
+                    } else {
+                        normalizedMedicineName == normalizedName || normalizedStoredName == normalizedName
+                    }
+                }
 
             if (item != null) {
                 Log.d(TAG, "Found inventory item: ${item.medicineName}, stock: ${item.stockQuantity}, price: ₹${item.unitPrice}")

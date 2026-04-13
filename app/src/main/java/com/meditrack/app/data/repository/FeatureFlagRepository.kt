@@ -91,7 +91,8 @@ class FeatureFlagRepository @Inject constructor() {
                 "notification_prefs_enabled" to remoteConfig.getBoolean("notification_prefs_enabled"),
                 "inventory_validation_enabled" to remoteConfig.getBoolean("inventory_validation_enabled"),
                 "delivery_windows_enabled" to remoteConfig.getBoolean("delivery_windows_enabled"),
-                "retention_cleanup_enabled" to remoteConfig.getBoolean("retention_cleanup_enabled")
+                "retention_cleanup_enabled" to remoteConfig.getBoolean("retention_cleanup_enabled"),
+                "cloud_risk_scoring_enabled" to remoteConfig.getBoolean("cloud_risk_scoring_enabled")
             )
 
             Log.d(TAG, "Fetched ${flags.size} feature flags from Remote Config")

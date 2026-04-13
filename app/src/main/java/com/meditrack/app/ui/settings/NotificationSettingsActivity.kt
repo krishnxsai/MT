@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import com.meditrack.app.R
+import com.meditrack.app.alarm.AlarmPermissionHelper
 import com.meditrack.app.data.model.NotificationType
 import com.meditrack.app.databinding.ActivityNotificationSettingsBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -90,6 +91,14 @@ class NotificationSettingsActivity : AppCompatActivity() {
         binding.btnSetQuietHourEnd.setOnClickListener {
             showTimePickerForEnd()
         }
+
+        binding.btnManagePopupAlerts.setOnClickListener {
+            try {
+                startActivity(AlarmPermissionHelper.createFullScreenSettingsIntent(this))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Unable to open popup alert settings", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun observeViewModel() {
@@ -141,6 +150,36 @@ class NotificationSettingsActivity : AppCompatActivity() {
             "No notifications between ${prefs.quietHourStart} and ${prefs.quietHourEnd}"
         } else {
             "Quiet hours disabled"
+        }
+
+        updateCriticalAlertStatus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateCriticalAlertStatus()
+    }
+
+    private fun updateCriticalAlertStatus() {
+        val notificationsEnabled = AlarmPermissionHelper.hasNotificationPermission(this)
+        val popupEnabled = AlarmPermissionHelper.canUseFullScreenIntent(this)
+
+        binding.tvFullScreenAlertStatus.text = when {
+            notificationsEnabled && popupEnabled -> {
+                "Notifications and popup alarms are enabled"
+            }
+
+            !notificationsEnabled && !popupEnabled -> {
+                "Notifications and popup alarms are disabled"
+            }
+
+            !notificationsEnabled -> {
+                "Notifications are disabled; popup alarms may not appear"
+            }
+
+            else -> {
+                "Popup alarms are disabled; reminders will use heads-up notifications"
+            }
         }
     }
 

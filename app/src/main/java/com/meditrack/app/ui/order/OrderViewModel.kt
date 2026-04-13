@@ -5,6 +5,7 @@ import com.meditrack.app.data.model.*
 import com.meditrack.app.data.repository.OrderRepository
 import com.meditrack.app.data.repository.PharmacyRepository
 import com.meditrack.app.data.repository.PrescriptionVerification
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.collectLatest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -42,6 +43,18 @@ class OrderViewModel @Inject constructor(
     // ── Pharmacies ──
     private val _pharmacies = MutableLiveData<Resource<List<Pharmacy>>>()
     val pharmacies: LiveData<Resource<List<Pharmacy>>> = _pharmacies
+
+    private val _isLoadingMorePharmacies = MutableLiveData(false)
+    val isLoadingMorePharmacies: LiveData<Boolean> = _isLoadingMorePharmacies
+
+    private val _hasMorePharmacies = MutableLiveData(false)
+    val hasMorePharmacies: LiveData<Boolean> = _hasMorePharmacies
+
+    private var pharmaciesCursor: DocumentSnapshot? = null
+    private var isPharmacyPageInFlight = false
+    private var canLoadMorePharmacies = true
+    private val loadedPharmacies = mutableListOf<Pharmacy>()
+    private val pharmacyPageSize = 30L
 
     // ── Prescription verification ──
     private val _prescriptionVerification = MutableLiveData<Resource<PrescriptionVerification>>()
@@ -230,10 +243,79 @@ class OrderViewModel @Inject constructor(
     // ═══════════════════════════════════════════════════════════
 
     fun loadPharmacies() {
+        if (isPharmacyPageInFlight) return
+
+        pharmaciesCursor = null
+        canLoadMorePharmacies = true
+        loadedPharmacies.clear()
+
+        _hasMorePharmacies.postValue(false)
+        _pharmacies.postValue(Resource.Loading)
+
+        requestPharmacyPage(loadMore = false)
+    }
+
+    fun loadMorePharmacies() {
+        if (isPharmacyPageInFlight || !canLoadMorePharmacies) return
+
+        requestPharmacyPage(loadMore = true)
+    }
+
+    private fun requestPharmacyPage(loadMore: Boolean) {
         viewModelScope.launch {
-            pharmacyRepository.getPharmaciesFlow().collectLatest {
-                _pharmacies.postValue(it)
+            isPharmacyPageInFlight = true
+            if (loadMore) {
+                _isLoadingMorePharmacies.postValue(true)
             }
+
+            when (
+                val pageResult = pharmacyRepository.getPharmaciesPage(
+                    pageSize = pharmacyPageSize,
+                    startAfter = pharmaciesCursor
+                )
+            ) {
+                is Resource.Success -> {
+                    val page = pageResult.data
+
+                    if (!loadMore) {
+                        loadedPharmacies.clear()
+                    }
+
+                    val existingIds = loadedPharmacies
+                        .asSequence()
+                        .map { it.id }
+                        .toMutableSet()
+
+                    val uniquePharmacies = page.pharmacies.filter { pharmacy ->
+                        existingIds.add(pharmacy.id)
+                    }
+
+                    loadedPharmacies.addAll(uniquePharmacies)
+                    pharmaciesCursor = page.lastDocument
+                    canLoadMorePharmacies = page.hasMore && pharmaciesCursor != null
+
+                    _hasMorePharmacies.postValue(canLoadMorePharmacies)
+                    _pharmacies.postValue(Resource.Success(loadedPharmacies.toList()))
+                }
+
+                is Resource.Error -> {
+                    if (loadMore && loadedPharmacies.isNotEmpty()) {
+                        // Keep existing list visible when a load-more page fails.
+                        _pharmacies.postValue(Resource.Success(loadedPharmacies.toList()))
+                    } else {
+                        canLoadMorePharmacies = false
+                        _pharmacies.postValue(Resource.Error(pageResult.message))
+                    }
+                }
+
+                is Resource.Loading -> Unit
+            }
+
+            _hasMorePharmacies.postValue(canLoadMorePharmacies)
+            if (loadMore) {
+                _isLoadingMorePharmacies.postValue(false)
+            }
+            isPharmacyPageInFlight = false
         }
     }
 

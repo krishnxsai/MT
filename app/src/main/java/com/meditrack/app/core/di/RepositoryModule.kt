@@ -103,4 +103,8 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideFeatureFlagRepository(): FeatureFlagRepository = FeatureFlagRepository()
+
+    @Provides
+    @Singleton
+    fun provideVertexRiskRepository(): VertexRiskRepository = VertexRiskRepository()
 }

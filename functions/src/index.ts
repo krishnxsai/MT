@@ -1023,3 +1023,9 @@ export {
   onSyncSecretsScheduled,
   verifySyncConfiguration,
 } from "./syncSecretsToRemoteConfig";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cross-Project Vertex AI Risk Scoring
+// ═══════════════════════════════════════════════════════════════════════════
+
+export { scoreRiskWithVertex } from "./scoreRiskWithVertex";

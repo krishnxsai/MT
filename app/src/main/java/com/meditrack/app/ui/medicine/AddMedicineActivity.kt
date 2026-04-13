@@ -2,7 +2,6 @@ package com.meditrack.app.ui.medicine
 
 import android.Manifest
 import android.app.TimePickerDialog
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -10,9 +9,11 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.meditrack.app.R
+import com.meditrack.app.alarm.AlarmPermissionHelper
 import com.meditrack.app.alarm.AlarmScheduler
 import com.meditrack.app.data.model.Medicine
 import com.meditrack.app.data.model.RepeatType
@@ -38,6 +39,7 @@ class AddMedicineActivity : AppCompatActivity() {
     private val reminderTimes = mutableListOf<String>()
     private var selectedColor = "teal"
     private var selectedRepeatType = RepeatType.DAILY
+    private var hasShownFullScreenPrompt = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -62,7 +64,7 @@ class AddMedicineActivity : AppCompatActivity() {
         setupColorSelection()
         setupClickListeners()
         observeViewModel()
-        requestNotificationPermission()
+        requestCriticalAlarmPermissionsForSetup()
 
         if (editingMedicineId != null) {
             loadMedicine()
@@ -165,9 +167,57 @@ class AddMedicineActivity : AppCompatActivity() {
 
         binding.saveMedicineButton.setOnClickListener {
             if (validateInputs()) {
-                saveMedicine()
+                if (selectedRepeatType == RepeatType.AS_NEEDED) {
+                    saveMedicine()
+                } else {
+                    confirmReminderAlertCapabilitiesBeforeSaving()
+                }
             }
         }
+    }
+
+    private fun confirmReminderAlertCapabilitiesBeforeSaving() {
+        val missingNotificationPermission = !AlarmPermissionHelper.hasNotificationPermission(this)
+        val missingFullScreenPermission = !AlarmPermissionHelper.canUseFullScreenIntent(this)
+
+        if (!missingNotificationPermission && !missingFullScreenPermission) {
+            saveMedicine()
+            return
+        }
+
+        val message = buildString {
+            append("Medicine reminders work best with notifications and popup alerts enabled.")
+            if (missingNotificationPermission) {
+                append("\n\n- Notification permission is currently disabled.")
+            }
+            if (missingFullScreenPermission) {
+                append("\n- Full-screen popup alarms are currently disabled.")
+            }
+            append("\n\nYou can enable now, or save anyway and update later in settings.")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Enable reliable medicine alerts")
+            .setMessage(message)
+            .setPositiveButton("Enable now") { _, _ ->
+                when {
+                    missingNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+
+                    missingNotificationPermission -> {
+                        startActivity(AlarmPermissionHelper.createNotificationSettingsIntent(this))
+                    }
+
+                    missingFullScreenPermission -> {
+                        startActivity(AlarmPermissionHelper.createFullScreenSettingsIntent(this))
+                    }
+                }
+            }
+            .setNegativeButton("Save anyway") { _, _ ->
+                saveMedicine()
+            }
+            .show()
     }
 
     private fun showTimePicker() {
@@ -398,15 +448,34 @@ class AddMedicineActivity : AppCompatActivity() {
         binding.toolbar.title = "Edit Medicine"
     }
 
+    private fun requestCriticalAlarmPermissionsForSetup() {
+        requestNotificationPermission()
+        promptFullScreenPermissionIfNeeded()
+    }
+
     private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !AlarmPermissionHelper.hasNotificationPermission(this)
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    private fun promptFullScreenPermissionIfNeeded() {
+        if (hasShownFullScreenPrompt || AlarmPermissionHelper.canUseFullScreenIntent(this)) {
+            return
+        }
+
+        hasShownFullScreenPrompt = true
+        AlertDialog.Builder(this)
+            .setTitle("Allow popup medicine alarms")
+            .setMessage(
+                "Enable popup alarms so reminders can appear full-screen when medicine is due, even on the lock screen."
+            )
+            .setPositiveButton("Open settings") { _, _ ->
+                startActivity(AlarmPermissionHelper.createFullScreenSettingsIntent(this))
+            }
+            .setNegativeButton("Not now", null)
+            .show()
     }
 }

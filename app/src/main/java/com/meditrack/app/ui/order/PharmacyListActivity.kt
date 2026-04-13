@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.meditrack.app.R
 import com.meditrack.app.data.model.Pharmacy
 import com.meditrack.app.data.model.Resource
@@ -45,6 +46,10 @@ class PharmacyListActivity : AppCompatActivity() {
     private lateinit var adapter: PharmacyAdapter
 
     private var prescriptionValid = false
+    private var hasMorePharmacies = false
+    private var isLoadingMorePharmacies = false
+
+    private val loadMoreThreshold = 5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,9 +103,26 @@ class PharmacyListActivity : AppCompatActivity() {
         adapter = PharmacyAdapter { pharmacy ->
             selectPharmacy(pharmacy)
         }
+
+        val linearLayoutManager = LinearLayoutManager(this@PharmacyListActivity)
         binding.pharmacyRecyclerView.apply {
-            layoutManager = LinearLayoutManager(this@PharmacyListActivity)
+            layoutManager = linearLayoutManager
             adapter = this@PharmacyListActivity.adapter
+
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    if (dy <= 0 || !hasMorePharmacies || isLoadingMorePharmacies) return
+
+                    val totalCount = linearLayoutManager.itemCount
+                    if (totalCount == 0) return
+
+                    val lastVisible = linearLayoutManager.findLastVisibleItemPosition()
+                    if (lastVisible >= totalCount - loadMoreThreshold) {
+                        viewModel.loadMorePharmacies()
+                    }
+                }
+            })
         }
     }
 
@@ -108,7 +130,9 @@ class PharmacyListActivity : AppCompatActivity() {
         viewModel.pharmacies.observe(this) { result ->
             when (result) {
                 is Resource.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
+                    if (adapter.currentList.isEmpty()) {
+                        binding.progressBar.visibility = View.VISIBLE
+                    }
                 }
                 is Resource.Success -> {
                     binding.progressBar.visibility = View.GONE
@@ -126,6 +150,14 @@ class PharmacyListActivity : AppCompatActivity() {
                     Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+
+        viewModel.hasMorePharmacies.observe(this) { hasMore ->
+            hasMorePharmacies = hasMore == true
+        }
+
+        viewModel.isLoadingMorePharmacies.observe(this) { loadingMore ->
+            isLoadingMorePharmacies = loadingMore == true
         }
     }
 

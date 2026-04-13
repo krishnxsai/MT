@@ -71,7 +71,8 @@ class MediTrackApplication : Application() {
             remoteConfig.setConfigSettingsAsync(settings)
             remoteConfig.setDefaultsAsync(
                 mapOf(
-                    "razorpay_key_id" to ""
+                    "razorpay_key_id" to "",
+                    "cloud_risk_scoring_enabled" to false
                 )
             )
 

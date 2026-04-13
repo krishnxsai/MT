@@ -129,7 +129,10 @@ class NotificationPreferenceRepository @Inject constructor() {
      * @param type The notification type to check
      * @return true if notification should be sent, false otherwise
      */
-    suspend fun isNotificationAllowed(type: NotificationType): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isNotificationAllowed(
+        type: NotificationType,
+        bypassQuietHours: Boolean = false
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
             val prefsResult = getPreferences()
             if (prefsResult !is Resource.Success) {
@@ -150,6 +153,11 @@ class NotificationPreferenceRepository @Inject constructor() {
             if (!isTypeEnabled) {
                 Log.d(TAG, "Notification type $type is disabled")
                 return@withContext false
+            }
+
+            // Critical reminders can intentionally bypass quiet-hour suppression.
+            if (bypassQuietHours) {
+                return@withContext true
             }
 
             // Check quiet hours

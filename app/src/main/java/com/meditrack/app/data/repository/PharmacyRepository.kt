@@ -3,6 +3,7 @@ package com.meditrack.app.data.repository
 import android.util.Log
 import com.meditrack.app.data.model.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +21,14 @@ class PharmacyRepository {
     companion object {
         private const val TAG = "PharmacyRepository"
         private const val VERIFIED_STATUS_APPROVED = "APPROVED"
+        private const val DEFAULT_PHARMACY_PAGE_SIZE = 30L
     }
+
+    data class PharmacyPage(
+        val pharmacies: List<Pharmacy>,
+        val lastDocument: DocumentSnapshot?,
+        val hasMore: Boolean
+    )
 
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
@@ -37,17 +45,20 @@ class PharmacyRepository {
     // Pharmacy Listing
     // ══════════════════════════════════════════════════════════════
 
+    private fun activeApprovedPharmaciesQuery(): Query {
+        return pharmaciesCol
+            .whereEqualTo("isActive", true)
+            .whereEqualTo("verificationStatus", VERIFIED_STATUS_APPROVED)
+            .orderBy("rating", Query.Direction.DESCENDING)
+    }
+
     /**
      * Real-time flow of all active pharmacies.
      */
     fun getPharmaciesFlow(): Flow<Resource<List<Pharmacy>>> = callbackFlow {
         trySend(Resource.Loading)
 
-        val listener = pharmaciesCol
-            .whereEqualTo("isActive", true)
-            .whereEqualTo("verificationStatus", VERIFIED_STATUS_APPROVED)
-            .orderBy("rating", Query.Direction.DESCENDING)
-            .limit(50)
+        val listener = activeApprovedPharmaciesQuery()
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Resource.Error(error.message ?: "Failed to load pharmacies"))
@@ -66,20 +77,80 @@ class PharmacyRepository {
      * One-shot fetch of active pharmacies.
      */
     suspend fun getPharmacies(): Resource<List<Pharmacy>> = withContext(Dispatchers.IO) {
-        try {
-            val snapshot = pharmaciesCol
-                .whereEqualTo("isActive", true)
-                .whereEqualTo("verificationStatus", VERIFIED_STATUS_APPROVED)
-                .orderBy("rating", Query.Direction.DESCENDING)
-                .limit(50)
-                .get().await()
+        getAllPharmacies()
+    }
 
+    /**
+     * Paged fetch of active APPROVED pharmacies.
+     */
+    suspend fun getPharmaciesPage(
+        pageSize: Long = DEFAULT_PHARMACY_PAGE_SIZE,
+        startAfter: DocumentSnapshot? = null
+    ): Resource<PharmacyPage> = withContext(Dispatchers.IO) {
+        try {
+            val resolvedPageSize = pageSize.coerceAtLeast(1L)
+            var query = activeApprovedPharmaciesQuery().limit(resolvedPageSize)
+            if (startAfter != null) {
+                query = query.startAfter(startAfter)
+            }
+
+            val snapshot = query.get().await()
             val list = snapshot.documents.mapNotNull { it.toObject(Pharmacy::class.java) }
-            Resource.Success(list)
+            val lastDocument = snapshot.documents.lastOrNull()
+            val hasMore = snapshot.size().toLong() == resolvedPageSize
+
+            Resource.Success(
+                PharmacyPage(
+                    pharmacies = list,
+                    lastDocument = lastDocument,
+                    hasMore = hasMore
+                )
+            )
         } catch (e: Exception) {
-            Log.e(TAG, "getPharmacies error: ${e.message}")
+            Log.e(TAG, "getPharmaciesPage error: ${e.message}")
             Resource.Error(e.message ?: "Failed to load pharmacies")
         }
+    }
+
+    /**
+     * Fetches all active APPROVED pharmacies by traversing all pages.
+     */
+    suspend fun getAllPharmacies(pageSize: Long = DEFAULT_PHARMACY_PAGE_SIZE): Resource<List<Pharmacy>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val allPharmacies = mutableListOf<Pharmacy>()
+                var cursor: DocumentSnapshot? = null
+                var hasMore = true
+
+                while (hasMore) {
+                    when (val pageResult = getPharmaciesPage(pageSize = pageSize, startAfter = cursor)) {
+                        is Resource.Success -> {
+                            val page = pageResult.data
+                            if (page.pharmacies.isEmpty()) {
+                                hasMore = false
+                                continue
+                            }
+
+                            allPharmacies.addAll(page.pharmacies)
+                            cursor = page.lastDocument
+                            hasMore = page.hasMore && cursor != null
+                        }
+
+                        is Resource.Error -> {
+                            return@withContext Resource.Error(
+                                pageResult.message ?: "Failed to load pharmacies"
+                            )
+                        }
+
+                        is Resource.Loading -> Unit
+                    }
+                }
+
+                Resource.Success(allPharmacies)
+            } catch (e: Exception) {
+                Log.e(TAG, "getAllPharmacies error: ${e.message}")
+                Resource.Error(e.message ?: "Failed to load pharmacies")
+            }
     }
 
     /**
@@ -450,8 +521,17 @@ class PharmacyRepository {
         withContext(Dispatchers.IO) {
             try {
                 if (pharmacy.id.isNotEmpty()) {
+                    // Keep moderation fields controlled by admin flows.
+                    val existingDoc = pharmaciesCol.document(pharmacy.id).get().await()
+                    val updateData = pharmacy.toMap().toMutableMap().apply {
+                        this["verificationStatus"] =
+                            existingDoc.getString("verificationStatus") ?: pharmacy.verificationStatus
+                        this["isActive"] =
+                            existingDoc.getBoolean("isActive") ?: pharmacy.isActive
+                    }
+
                     // Update existing
-                    pharmaciesCol.document(pharmacy.id).update(pharmacy.toMap()).await()
+                    pharmaciesCol.document(pharmacy.id).update(updateData).await()
                     Log.d(TAG, "Updated pharmacy profile: ${pharmacy.id}")
                     Resource.Success(pharmacy)
                 } else {
