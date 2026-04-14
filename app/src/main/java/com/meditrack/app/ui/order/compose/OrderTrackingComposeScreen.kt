@@ -808,11 +808,11 @@ private fun LiveTrackingMap(
     AndroidView(
         factory = {
             mapView.apply {
-                getMapAsync { googleMap ->
-                    googleMap.uiSettings.isMapToolbarEnabled = false
-                    googleMap.uiSettings.isZoomControlsEnabled = true
-                    this@LiveTrackingMap.googleMap = googleMap
-                    renderTrackingMap(googleMap, order, tracking)
+                getMapAsync { map ->
+                    map.uiSettings.isMapToolbarEnabled = false
+                    map.uiSettings.isZoomControlsEnabled = true
+                    googleMap = map
+                    renderTrackingMap(map, order, tracking)
                 }
             }
         },
@@ -902,7 +902,8 @@ private fun renderTrackingMap(
     val bounds = boundsBuilder.build()
     try {
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
-    } catch (_: IllegalStateException) {
+    } catch (error: IllegalStateException) {
+        android.util.Log.w("OrderTrackingComposeMap", "Camera bounds update failed: ${error.message}")
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(deliveryLocation, 15f))
     }
 }
