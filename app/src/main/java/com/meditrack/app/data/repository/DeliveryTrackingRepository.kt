@@ -45,7 +45,7 @@ class DeliveryTrackingRepository {
      */
     fun trackDeliveryFlow(
         orderId: String,
-        trackingIdHint: String? = null
+        providedTrackingId: String? = null
     ): Flow<DeliveryTracking?> = callbackFlow {
         if (orderId.isBlank()) {
             trySend(null)
@@ -55,9 +55,9 @@ class DeliveryTrackingRepository {
 
         var fallbackListener: com.google.firebase.firestore.ListenerRegistration? = null
         val defaultTrackingId = "ongoing_$orderId"
-        val trackingId = trackingIdHint?.takeIf { it.isNotBlank() } ?: defaultTrackingId
+        val trackingId = providedTrackingId?.takeIf { it.isNotBlank() } ?: defaultTrackingId
 
-        fun ensureFallbackListener() {
+        fun setupFallbackListener() {
             if (fallbackListener != null) return
             fallbackListener = trackingCol
                 .whereEqualTo("orderId", orderId)
@@ -90,14 +90,14 @@ class DeliveryTrackingRepository {
                     } else {
                         Log.w(TAG, "trackDeliveryFlow error for $orderId (doc=$trackingId): ${error.message}")
                     }
-                    ensureFallbackListener()
+                    setupFallbackListener()
                     trySend(null)
                     return@addSnapshotListener
                 }
 
                 if (snapshot == null || !snapshot.exists()) {
                     Log.d(TAG, "trackDeliveryFlow missing doc $trackingId for $orderId, using fallback query")
-                    ensureFallbackListener()
+                    setupFallbackListener()
                     trySend(null)
                     return@addSnapshotListener
                 }
