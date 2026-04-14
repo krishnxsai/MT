@@ -60,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -72,14 +73,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MarkerOptions
 import com.meditrack.app.data.model.DeliveryTracking
 import com.meditrack.app.data.model.OrderItem
 import com.meditrack.app.data.model.OrderStatus
@@ -426,14 +438,18 @@ fun OrderTrackingScreen(
                 }
 
                 item {
-                    LiveTrackingPlaceholder(
-                        isEnabled = if (bindToRealtimeData) {
-                            order?.status == OrderStatus.SHIPPED && (tracking?.isActive == true)
-                        } else {
-                            currentActiveIndex >= 4 && !paymentFailed
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (bindToRealtimeData) {
+                        LiveTrackingSection(
+                            order = order,
+                            tracking = tracking,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        LiveTrackingPlaceholder(
+                            isEnabled = currentActiveIndex >= 4 && !paymentFailed,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 if (paymentFailed) {
@@ -745,8 +761,159 @@ private fun StatusProgressCard(
 }
 
 @Composable
+private fun LiveTrackingSection(
+    order: RefillOrder?,
+    tracking: DeliveryTracking?,
+    modifier: Modifier = Modifier
+) {
+    val currentOrder = order
+    val currentTracking = tracking
+
+    if (currentOrder?.status != OrderStatus.SHIPPED) {
+        LiveTrackingPlaceholder(
+            isEnabled = false,
+            message = "Map unlocks when order reaches Out for delivery",
+            modifier = modifier
+        )
+        return
+    }
+
+    if (currentTracking?.isActive != true) {
+        LiveTrackingPlaceholder(
+            isEnabled = false,
+            message = "Waiting for courier location updates...",
+            modifier = modifier
+        )
+        return
+    }
+
+    OrderCard(modifier = modifier, title = "Live Delivery Tracking") {
+        LiveTrackingMap(
+            order = currentOrder,
+            tracking = currentTracking,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(RoundedCornerShape(14.dp))
+        )
+    }
+}
+
+@Composable
+private fun LiveTrackingMap(
+    order: RefillOrder,
+    tracking: DeliveryTracking,
+    modifier: Modifier = Modifier
+) {
+    val mapView = rememberMapViewWithLifecycle()
+    var map by remember { mutableStateOf<GoogleMap?>(null) }
+
+    AndroidView(
+        factory = {
+            mapView.apply {
+                getMapAsync { googleMap ->
+                    googleMap.uiSettings.isMapToolbarEnabled = false
+                    googleMap.uiSettings.isZoomControlsEnabled = true
+                    map = googleMap
+                    renderTrackingMap(googleMap, order, tracking)
+                }
+            }
+        },
+        update = {
+            map?.let { googleMap ->
+                renderTrackingMap(googleMap, order, tracking)
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun rememberMapViewWithLifecycle(): MapView {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val mapView = remember {
+        MapView(context).apply {
+            onCreate(Bundle())
+        }
+    }
+
+    DisposableEffect(lifecycle, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+        }
+    }
+
+    return mapView
+}
+
+private fun renderTrackingMap(
+    map: GoogleMap,
+    order: RefillOrder,
+    tracking: DeliveryTracking
+) {
+    val deliveryLocation = tracking.toLatLng()
+    val patientLocation = order.deliveryAddress
+        ?.takeIf { !(it.latitude == 0.0 && it.longitude == 0.0) }
+        ?.let { LatLng(it.latitude, it.longitude) }
+    val pharmacyLocation = order.pharmacyLocation
+        ?.let { LatLng(it.latitude, it.longitude) }
+
+    map.clear()
+    map.addMarker(
+        MarkerOptions()
+            .position(deliveryLocation)
+            .title("Delivery Person")
+            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+    )
+    pharmacyLocation?.let {
+        map.addMarker(
+            MarkerOptions()
+                .position(it)
+                .title(order.pharmacyName.ifBlank { "Pharmacy" })
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+        )
+    }
+    patientLocation?.let {
+        map.addMarker(
+            MarkerOptions()
+                .position(it)
+                .title("Your Location")
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        )
+    }
+
+    val points = listOfNotNull(deliveryLocation, patientLocation, pharmacyLocation)
+    if (points.size == 1) {
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(deliveryLocation, 15f))
+        return
+    }
+
+    val boundsBuilder = LatLngBounds.Builder()
+    points.forEach { boundsBuilder.include(it) }
+    val bounds = boundsBuilder.build()
+    try {
+        map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
+    } catch (_: IllegalStateException) {
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(deliveryLocation, 15f))
+    }
+}
+
+@Composable
 private fun LiveTrackingPlaceholder(
     isEnabled: Boolean,
+    message: String? = null,
     modifier: Modifier = Modifier
 ) {
     OrderCard(modifier = modifier, title = "Live Delivery Tracking") {
@@ -774,7 +941,7 @@ private fun LiveTrackingPlaceholder(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (isEnabled) {
+                    text = message ?: if (isEnabled) {
                         "Live map placeholder: courier location updates in real time"
                     } else {
                         "Map unlocks when order reaches Out for delivery"

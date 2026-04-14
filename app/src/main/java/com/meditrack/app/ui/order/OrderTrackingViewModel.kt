@@ -1,5 +1,6 @@
 package com.meditrack.app.ui.order
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,9 +38,11 @@ class OrderTrackingViewModel @Inject constructor(
 
     companion object {
         const val EXTRA_ORDER_ID = "order_id"
+        private const val TAG = "OrderTrackingViewModel"
     }
 
     private val orderId = savedStateHandle.get<String>(EXTRA_ORDER_ID) ?: ""
+    val hasValidOrderId: Boolean = orderId.isNotBlank()
 
     // ── Main order data with real-time updates ────────────────────────
     /**
@@ -47,6 +51,13 @@ class OrderTrackingViewModel @Inject constructor(
      */
     val order: StateFlow<RefillOrder?> = orderRepository
         .getOrderFlow(orderId)
+        .onEach { order ->
+            if (order == null) {
+                Log.d(TAG, "Order flow update: null for orderId=$orderId")
+            } else {
+                Log.d(TAG, "Order flow update: ${order.id} status=${order.status}")
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // ── Real-time delivery tracking GPS data ────────────────────────────
@@ -59,10 +70,29 @@ class OrderTrackingViewModel @Inject constructor(
         .let {
             order.flatMapLatest { currentOrder ->
                 if (currentOrder?.status == OrderStatus.SHIPPED && currentOrder.id.isNotBlank()) {
-                    it.trackDeliveryFlow(currentOrder.id)
+                    val trackingIdHint = currentOrder.deliveryTrackingId.takeIf { id -> id.isNotBlank() }
+                    Log.d(
+                        TAG,
+                        "Starting tracking flow for order=${currentOrder.id} trackingIdHint=${trackingIdHint ?: "none"}"
+                    )
+                    it.trackDeliveryFlow(currentOrder.id, trackingIdHint)
                 } else {
+                    Log.d(
+                        TAG,
+                        "Stopping tracking flow for order=${currentOrder?.id.orEmpty()} status=${currentOrder?.status}"
+                    )
                     flowOf(null)
                 }
+            }
+        }
+        .onEach { tracking ->
+            if (tracking == null) {
+                Log.d(TAG, "Tracking flow update: null")
+            } else {
+                Log.d(
+                    TAG,
+                    "Tracking flow update: order=${tracking.orderId}, active=${tracking.isActive}, lat=${tracking.latitude}, lng=${tracking.longitude}"
+                )
             }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -119,5 +149,13 @@ class OrderTrackingViewModel @Inject constructor(
      */
     suspend fun getPharmacyPhoneForOrder(orderId: String): com.meditrack.app.data.model.Resource<String?> {
         return orderRepository.getPharmacyPhoneForOrder(orderId)
+    }
+
+    init {
+        if (!hasValidOrderId) {
+            Log.w(TAG, "Missing order_id in SavedStateHandle for tracking screen")
+        } else {
+            Log.d(TAG, "Initialized with orderId=$orderId")
+        }
     }
 }

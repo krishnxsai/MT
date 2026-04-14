@@ -5,6 +5,7 @@ import com.meditrack.app.data.model.DeliveryTracking
 import com.meditrack.app.data.model.Resource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -42,19 +43,61 @@ class DeliveryTrackingRepository {
      *
      * Used in patient app to track delivery person movement.
      */
-    fun trackDeliveryFlow(orderId: String): Flow<DeliveryTracking?> = callbackFlow {
+    fun trackDeliveryFlow(
+        orderId: String,
+        trackingIdHint: String? = null
+    ): Flow<DeliveryTracking?> = callbackFlow {
         if (orderId.isBlank()) {
             trySend(null)
             close()
             return@callbackFlow
         }
 
-        val trackingId = "ongoing_$orderId"
-        val listener = trackingCol
-            .document(trackingId)
+        var fallbackListener: com.google.firebase.firestore.ListenerRegistration? = null
+        val defaultTrackingId = "ongoing_$orderId"
+        val trackingId = trackingIdHint?.takeIf { it.isNotBlank() } ?: defaultTrackingId
+
+        fun ensureFallbackListener() {
+            if (fallbackListener != null) return
+            fallbackListener = trackingCol
+                .whereEqualTo("orderId", orderId)
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(1)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        val code = (error as? FirebaseFirestoreException)?.code
+                        if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            Log.e(TAG, "trackDeliveryFlow fallback denied for $orderId")
+                        } else {
+                            Log.w(TAG, "trackDeliveryFlow fallback error for $orderId: ${error.message}")
+                        }
+                        trySend(null)
+                        return@addSnapshotListener
+                    }
+
+                    val doc = snapshot?.documents?.firstOrNull()
+                    val tracking = doc?.data?.let { DeliveryTracking.fromMap(doc.id, it) }
+                    trySend(tracking)
+                }
+        }
+
+        val listener = trackingCol.document(trackingId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "trackDeliveryFlow error: ${error.message}")
+                    val code = (error as? FirebaseFirestoreException)?.code
+                    if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                        Log.e(TAG, "trackDeliveryFlow denied for $orderId (doc=$trackingId)")
+                    } else {
+                        Log.w(TAG, "trackDeliveryFlow error for $orderId (doc=$trackingId): ${error.message}")
+                    }
+                    ensureFallbackListener()
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot == null || !snapshot.exists()) {
+                    Log.d(TAG, "trackDeliveryFlow missing doc $trackingId for $orderId, using fallback query")
+                    ensureFallbackListener()
                     trySend(null)
                     return@addSnapshotListener
                 }
@@ -65,7 +108,10 @@ class DeliveryTrackingRepository {
                 trySend(tracking)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            listener.remove()
+            fallbackListener?.remove()
+        }
     }
 
     // ─────────────── Location Update (Delivery App) ───────────────
