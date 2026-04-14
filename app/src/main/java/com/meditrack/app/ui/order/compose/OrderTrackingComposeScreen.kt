@@ -766,10 +766,7 @@ private fun LiveTrackingSection(
     tracking: DeliveryTracking?,
     modifier: Modifier = Modifier
 ) {
-    val currentOrder = order
-    val currentTracking = tracking
-
-    if (currentOrder?.status != OrderStatus.SHIPPED) {
+    if (order?.status != OrderStatus.SHIPPED) {
         LiveTrackingPlaceholder(
             isEnabled = false,
             message = "Map unlocks when order reaches Out for delivery",
@@ -778,7 +775,7 @@ private fun LiveTrackingSection(
         return
     }
 
-    if (currentTracking?.isActive != true) {
+    if (tracking?.isActive != true) {
         LiveTrackingPlaceholder(
             isEnabled = false,
             message = "Waiting for courier location updates...",
@@ -789,8 +786,8 @@ private fun LiveTrackingSection(
 
     OrderCard(modifier = modifier, title = "Live Delivery Tracking") {
         LiveTrackingMap(
-            order = currentOrder,
-            tracking = currentTracking,
+            order = order,
+            tracking = tracking,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
@@ -806,7 +803,7 @@ private fun LiveTrackingMap(
     modifier: Modifier = Modifier
 ) {
     val mapView = rememberMapViewWithLifecycle()
-    var map by remember { mutableStateOf<GoogleMap?>(null) }
+    var googleMap by remember { mutableStateOf<GoogleMap?>(null) }
 
     AndroidView(
         factory = {
@@ -814,14 +811,14 @@ private fun LiveTrackingMap(
                 getMapAsync { googleMap ->
                     googleMap.uiSettings.isMapToolbarEnabled = false
                     googleMap.uiSettings.isZoomControlsEnabled = true
-                    map = googleMap
+                    this@LiveTrackingMap.googleMap = googleMap
                     renderTrackingMap(googleMap, order, tracking)
                 }
             }
         },
         update = {
-            map?.let { googleMap ->
-                renderTrackingMap(googleMap, order, tracking)
+            googleMap?.let { map ->
+                renderTrackingMap(map, order, tracking)
             }
         },
         modifier = modifier

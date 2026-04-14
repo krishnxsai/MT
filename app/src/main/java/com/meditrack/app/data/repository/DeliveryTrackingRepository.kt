@@ -76,7 +76,9 @@ class DeliveryTrackingRepository {
                     }
 
                     val doc = snapshot?.documents?.firstOrNull()
-                    val tracking = doc?.data?.let { DeliveryTracking.fromMap(doc.id, it) }
+                    val tracking = doc?.let { snapshotDoc ->
+                        snapshotDoc.data?.let { DeliveryTracking.fromMap(snapshotDoc.id, it) }
+                    }
                     trySend(tracking)
                 }
         }
