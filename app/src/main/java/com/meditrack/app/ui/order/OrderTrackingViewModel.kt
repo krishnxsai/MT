@@ -70,7 +70,7 @@ class OrderTrackingViewModel @Inject constructor(
         .let {
             order.flatMapLatest { currentOrder ->
                 if (currentOrder?.status == OrderStatus.SHIPPED && currentOrder.id.isNotBlank()) {
-                    val providedTrackingId = currentOrder.deliveryTrackingId.takeIf { trackingId -> trackingId.isNotBlank() }
+                    val providedTrackingId = currentOrder.deliveryTrackingId.takeIf { id -> id.isNotBlank() }
                     Log.d(
                         TAG,
                         "Starting tracking flow for order=${currentOrder.id} providedTrackingId=${providedTrackingId ?: "none"}"

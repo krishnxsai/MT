@@ -6,6 +6,7 @@ import com.meditrack.app.data.model.Resource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -53,7 +54,7 @@ class DeliveryTrackingRepository {
             return@callbackFlow
         }
 
-        var fallbackListener: com.google.firebase.firestore.ListenerRegistration? = null
+        var fallbackListener: ListenerRegistration? = null
         val defaultTrackingId = "ongoing_$orderId"
         val trackingId = providedTrackingId?.takeIf { it.isNotBlank() } ?: defaultTrackingId
 
