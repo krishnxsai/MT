@@ -55,33 +55,36 @@ class DeliveryTrackingRepository {
         }
 
         var fallbackListener: ListenerRegistration? = null
+        val fallbackLock = Any()
         val defaultTrackingId = "ongoing_$orderId"
         val trackingId = providedTrackingId?.takeIf { it.isNotBlank() } ?: defaultTrackingId
 
         fun setupFallbackListener() {
-            if (fallbackListener != null) return
-            fallbackListener = trackingCol
-                .whereEqualTo("orderId", orderId)
-                .orderBy("updatedAt", Query.Direction.DESCENDING)
-                .limit(1)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        val code = (error as? FirebaseFirestoreException)?.code
-                        if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
-                            Log.e(TAG, "trackDeliveryFlow fallback denied for $orderId")
-                        } else {
-                            Log.w(TAG, "trackDeliveryFlow fallback error for $orderId: ${error.message}")
+            synchronized(fallbackLock) {
+                if (fallbackListener != null) return
+                fallbackListener = trackingCol
+                    .whereEqualTo("orderId", orderId)
+                    .orderBy("updatedAt", Query.Direction.DESCENDING)
+                    .limit(1)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error != null) {
+                            val code = (error as? FirebaseFirestoreException)?.code
+                            if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                                Log.e(TAG, "trackDeliveryFlow fallback denied for $orderId")
+                            } else {
+                                Log.w(TAG, "trackDeliveryFlow fallback error for $orderId: ${error.message}")
+                            }
+                            trySend(null)
+                            return@addSnapshotListener
                         }
-                        trySend(null)
-                        return@addSnapshotListener
-                    }
 
-                    val doc = snapshot?.documents?.firstOrNull()
-                    val tracking = doc?.let { snapshotDoc ->
-                        snapshotDoc.data?.let { DeliveryTracking.fromMap(snapshotDoc.id, it) }
+                        val doc = snapshot?.documents?.firstOrNull()
+                        val tracking = doc?.let { snapshotDoc ->
+                            snapshotDoc.data?.let { DeliveryTracking.fromMap(snapshotDoc.id, it) }
+                        }
+                        trySend(tracking)
                     }
-                    trySend(tracking)
-                }
+            }
         }
 
         val listener = trackingCol.document(trackingId)
@@ -105,7 +108,7 @@ class DeliveryTrackingRepository {
                     return@addSnapshotListener
                 }
 
-                val tracking = snapshot?.data?.let {
+                val tracking = snapshot.data?.let {
                     DeliveryTracking.fromMap(snapshot.id, it)
                 }
                 trySend(tracking)

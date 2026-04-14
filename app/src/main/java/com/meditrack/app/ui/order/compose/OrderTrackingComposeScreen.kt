@@ -115,6 +115,7 @@ private val TrackingGray = Color(0xFFD0D5DD)
 private val TrackingGrayText = Color(0xFF667085)
 private val TrackingCardTint = Color(0xFFF2F7F4)
 private val TrackingRed = Color(0xFFD92D20)
+private const val MAP_LOG_TAG = "OrderTrackingComposeMap"
 
 enum class StepStatus { COMPLETED, ACTIVE, PENDING }
 
@@ -769,7 +770,7 @@ private fun LiveTrackingSection(
     if (order?.status != OrderStatus.SHIPPED) {
         LiveTrackingPlaceholder(
             isEnabled = false,
-            message = "Map unlocks when order reaches Out for delivery",
+            message = "Map unlocks when order is out for delivery",
             modifier = modifier
         )
         return
@@ -778,7 +779,7 @@ private fun LiveTrackingSection(
     if (tracking?.isActive != true) {
         LiveTrackingPlaceholder(
             isEnabled = false,
-            message = "Waiting for courier location updates...",
+            message = "Waiting for courier location updates",
             modifier = modifier
         )
         return
@@ -903,7 +904,7 @@ private fun renderTrackingMap(
     try {
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
     } catch (error: IllegalStateException) {
-        android.util.Log.w("OrderTrackingComposeMap", "Camera bounds update failed: ${error.message}")
+        android.util.Log.w(MAP_LOG_TAG, "Camera bounds update failed: ${error.message}")
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(deliveryLocation, 15f))
     }
 }
@@ -942,7 +943,7 @@ private fun LiveTrackingPlaceholder(
                     text = message ?: if (isEnabled) {
                         "Live map placeholder: courier location updates in real time"
                     } else {
-                        "Map unlocks when order reaches Out for delivery"
+                        "Map unlocks when order is out for delivery"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = TrackingGrayText,
